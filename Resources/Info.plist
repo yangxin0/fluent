@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>com.yangxin.inputmethod.EnglishInput</string>
+    <key>CFBundleName</key>
+    <string>EnglishInput</string>
+    <key>CFBundleDisplayName</key>
+    <string>English Input</string>
+    <key>CFBundleExecutable</key>
+    <string>EnglishInput</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>LSBackgroundOnly</key>
+    <true/>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+
+    <key>InputMethodConnectionName</key>
+    <string>com.yangxin.inputmethod.EnglishInput_Connection</string>
+    <key>InputMethodServerControllerClass</key>
+    <string>InputController</string>
+    <key>TISInputSourceID</key>
+    <string>com.yangxin.inputmethod.EnglishInput</string>
+    <key>TISIntendedLanguage</key>
+    <string>en</string>
+    <key>tsInputMethodCharacterRepertoireKey</key>
+    <array>
+        <string>Latn</string>
+    </array>
+    <key>tsInputMethodIconFileKey</key>
+    <string>icon.tiff</string>
+</dict>
+</plist>
