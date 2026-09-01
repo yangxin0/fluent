@@ -22,8 +22,7 @@ while composing. The last mode is remembered.
 ## Install
 
 ```sh
-make install    # build, assemble EnglishInput.app, install to ~/Library/Input Methods, ad-hoc sign
-make register   # one-time: register the input source with macOS
+make install    # build, assemble EnglishInput.app, install to ~/Library/Input Methods, ad-hoc sign, register
 ```
 
 Then (one-time, macOS requires manual consent for third-party input sources):

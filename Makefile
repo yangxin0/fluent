@@ -29,17 +29,19 @@ bundle: build icon
 	cp Resources/Info.plist "$(DIST)/Contents/Info.plist"
 	cp Resources/icon.tiff "$(DIST)/Contents/Resources/icon.tiff"
 
+# Sync bundle contents in place: deleting the installed .app would silently
+# un-register and disable the input source in Text Input Services.
 install: bundle
-	mkdir -p "$(INSTALL_DIR)"
-	rm -rf "$(INSTALLED)"
-	cp -R "$(DIST)" "$(INSTALLED)"
+	mkdir -p "$(INSTALLED)"
+	rsync -a --delete "$(DIST)/" "$(INSTALLED)/"
 	codesign --force --sign - "$(INSTALLED)"
+	swift Scripts/register.swift
 
 # macOS relaunches the IME on the next keystroke in a client app.
 reload:
 	pkill -f "$(APP_NAME).app/Contents/MacOS/$(APP_NAME)" || true
 
-# One-time: makes the input source appear in System Settings > Keyboard.
+# Re-register/enable the input source with TIS (also runs as part of install).
 register:
 	swift Scripts/register.swift
 

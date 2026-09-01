@@ -15,7 +15,7 @@ The `Makefile` is the entrypoint for every task — use `make <target>`, not raw
 `swift`/`codesign`/`log` commands, so this doc and the build stay in sync.
 
 - `make build` · `make test` (core library only, no GUI needed)
-- First-time setup: `make install` (build → bundle → copy to `~/Library/Input Methods` → ad-hoc codesign) then `make register` (one-time; makes the source appear in System Settings ▸ Keyboard)
+- First-time setup: `make install` (build → bundle → rsync into `~/Library/Input Methods` → ad-hoc codesign → register/enable with TIS). Never `rm -rf` the installed bundle: deleting it un-registers and disables the input source, which is why `install` syncs contents in place and re-registers every time.
 - Iterate: `make dev` (= `install` + `reload`: rebuild → reinstall → `pkill` the IME; macOS relaunches it on next keystroke). `make reload` alone just kills the running process.
 - `make logs` · API smoke test: `make cli ARGS='--mode polish "helo wrld"'`
 - `make clean` removes `.build/` and `dist/`
