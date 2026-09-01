@@ -42,12 +42,16 @@ also reachable via IME menu ▸ *Open Config File*):
   "baseURL": "https://api.openai.com/v1",
   "apiKey": "sk-...",
   "model": "gpt-4o-mini",
+  "appearance": "auto",
   "debounceMs": 350,
   "timeoutSeconds": 10
 }
 ```
 
 Any Responses-compatible provider works — point `baseURL` at its `/v1` root.
+`appearance` controls the preview panel's color scheme: `"auto"` follows the
+system light/dark setting (and updates live when it changes), or force it with
+`"light"` / `"dark"`.
 Config changes are picked up automatically (or use IME menu ▸ *Reload Config*).
 
 ## Keys while composing

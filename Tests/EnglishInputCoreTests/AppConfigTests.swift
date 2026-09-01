@@ -10,6 +10,18 @@ final class AppConfigTests: XCTestCase {
         XCTAssertTrue(config.isConfigured)
     }
 
+    func testAppearancePreferenceNormalization() throws {
+        func pref(_ json: String) throws -> String {
+            try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8)).appearancePreference
+        }
+        let base = #""baseURL":"https://x/v1","apiKey":"sk-x","model":"m""#
+        XCTAssertEqual(try pref("{\(base)}"), "auto")
+        XCTAssertEqual(try pref("{\(base),\"appearance\":\"AUTO\"}"), "auto")
+        XCTAssertEqual(try pref("{\(base),\"appearance\":\"Light\"}"), "light")
+        XCTAssertEqual(try pref("{\(base),\"appearance\":\"dark\"}"), "dark")
+        XCTAssertEqual(try pref("{\(base),\"appearance\":\"nonsense\"}"), "auto")
+    }
+
     func testPlaceholderKeyIsNotConfigured() throws {
         let json = #"{"baseURL":"https://api.openai.com/v1","apiKey":"sk-REPLACE_ME","model":"m"}"#
         let config = try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8))

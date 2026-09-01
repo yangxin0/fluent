@@ -252,9 +252,11 @@ class InputController: IMKInputController {
         case .failed(let message):
             status = "⚠ \(message) — ↵ inserts as typed"
         }
+        let appearance = Shared.configStore.current()?.appearancePreference ?? "auto"
         PreviewPanelController.shared.show(mode: Shared.mode,
                                            text: state.improved,
                                            status: status,
+                                           appearance: appearance,
                                            near: caretRect())
     }
 

@@ -7,6 +7,7 @@ final class PreviewPanelController {
     static let shared = PreviewPanelController()
 
     private let panel: NSPanel
+    private let modePill = NSView()
     private let modeLabel = NSTextField(labelWithString: "")
     private let statusLabel = NSTextField(labelWithString: "")
     private let textLabel = NSTextField(wrappingLabelWithString: "")
@@ -30,25 +31,42 @@ final class PreviewPanelController {
         panel.backgroundColor = .clear
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
 
-        let effect = NSVisualEffectView()
-        effect.material = .hudWindow
+        // `.popover` adapts to the system light/dark appearance (unlike the
+        // always-dark `.hudWindow`); the panel inherits NSApp's effective
+        // appearance, which follows the system setting and updates live.
+        let effect = PanelBackgroundView()
+        effect.material = .popover
         effect.state = .active
         effect.blendingMode = .behindWindow
         effect.wantsLayer = true
         effect.layer?.cornerRadius = 8
         effect.layer?.masksToBounds = true
 
+        // Mode badge as a system-accent pill, matching the selected-candidate
+        // pill in the built-in IMEs. White text reads on the accent in both
+        // light and dark.
         modeLabel.font = .systemFont(ofSize: 10, weight: .bold)
-        modeLabel.textColor = .secondaryLabelColor
+        modeLabel.textColor = .white
+        modeLabel.translatesAutoresizingMaskIntoConstraints = false
+        modePill.wantsLayer = true
+        modePill.layer?.cornerRadius = 4
+        modePill.addSubview(modeLabel)
+        NSLayoutConstraint.activate([
+            modeLabel.leadingAnchor.constraint(equalTo: modePill.leadingAnchor, constant: 6),
+            modeLabel.trailingAnchor.constraint(equalTo: modePill.trailingAnchor, constant: -6),
+            modeLabel.topAnchor.constraint(equalTo: modePill.topAnchor, constant: 2),
+            modeLabel.bottomAnchor.constraint(equalTo: modePill.bottomAnchor, constant: -2),
+        ])
         statusLabel.font = .systemFont(ofSize: 10)
         statusLabel.textColor = .secondaryLabelColor
         textLabel.font = .systemFont(ofSize: 13)
         textLabel.textColor = .labelColor
         textLabel.preferredMaxLayoutWidth = Self.maxTextWidth
 
-        let header = NSStackView(views: [modeLabel, NSView(), statusLabel])
+        let header = NSStackView(views: [modePill, NSView(), statusLabel])
         header.orientation = .horizontal
         header.distribution = .fill
+        header.alignment = .centerY
 
         let stack = NSStackView(views: [header, textLabel])
         stack.orientation = .vertical
@@ -68,10 +86,16 @@ final class PreviewPanelController {
         panel.contentView = effect
     }
 
-    func show(mode: Mode, text: String, status: String, near caretRect: NSRect) {
+    func show(mode: Mode, text: String, status: String, appearance: String, near caretRect: NSRect) {
+        applyAppearance(appearance)
         modeLabel.stringValue = mode.badge.uppercased()
         statusLabel.stringValue = status
         textLabel.stringValue = text.isEmpty ? "…" : text
+
+        // Accent pill, resolved against whatever appearance is now in effect.
+        panel.effectiveAppearance.performAsCurrentDrawingAppearance {
+            modePill.layer?.backgroundColor = NSColor.controlAccentColor.cgColor
+        }
 
         guard let contentView = panel.contentView else { return }
         let fitting = contentView.fittingSize
@@ -84,6 +108,20 @@ final class PreviewPanelController {
 
     func hide() {
         panel.orderOut(nil)
+    }
+
+    /// "light"/"dark" force that scheme; anything else follows the system
+    /// (nil appearance = inherit NSApp's effective, system-tracking appearance).
+    private func applyAppearance(_ preference: String) {
+        let desired: NSAppearance?
+        switch preference {
+        case "light": desired = NSAppearance(named: .aqua)
+        case "dark": desired = NSAppearance(named: .darkAqua)
+        default: desired = nil
+        }
+        if panel.appearance?.name != desired?.name {
+            panel.appearance = desired
+        }
     }
 
     /// Below the composed line by default; flipped above it near the bottom
@@ -110,5 +148,29 @@ final class PreviewPanelController {
 
     private func screenContaining(_ rect: NSRect) -> NSScreen? {
         NSScreen.screens.first { $0.frame.intersects(rect) || $0.frame.contains(rect.origin) }
+    }
+}
+
+/// Rounded translucent background with a hairline border. The border color is
+/// a `CGColor` snapshot, so it must be re-resolved whenever the effective
+/// (system) appearance flips between light and dark.
+private final class PanelBackgroundView: NSVisualEffectView {
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        layer?.borderWidth = 1
+        updateBorderColor()
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        updateBorderColor()
+    }
+
+    private func updateBorderColor() {
+        // Resolve the dynamic separator color against this view's current
+        // appearance so it matches whichever theme is active.
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            layer?.borderColor = NSColor.separatorColor.cgColor
+        }
     }
 }

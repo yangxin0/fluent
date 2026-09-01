@@ -5,23 +5,35 @@ public struct AppConfig: Codable, Equatable {
     public var apiKey: String
     public var model: String
     public var reasoningEffort: String?
+    /// Panel color scheme: "auto" (follow system), "light", or "dark".
+    public var appearance: String?
     public var debounceMs: Int
     public var timeoutSeconds: Double
 
     public static let placeholderKey = "sk-REPLACE_ME"
 
     public init(baseURL: String, apiKey: String, model: String, reasoningEffort: String? = nil,
-                debounceMs: Int = 350, timeoutSeconds: Double = 10) {
+                appearance: String? = nil, debounceMs: Int = 350, timeoutSeconds: Double = 10) {
         self.baseURL = baseURL
         self.apiKey = apiKey
         self.model = model
         self.reasoningEffort = reasoningEffort
+        self.appearance = appearance
         self.debounceMs = debounceMs
         self.timeoutSeconds = timeoutSeconds
     }
 
     enum CodingKeys: String, CodingKey {
-        case baseURL, apiKey, model, reasoningEffort, debounceMs, timeoutSeconds
+        case baseURL, apiKey, model, reasoningEffort, appearance, debounceMs, timeoutSeconds
+    }
+
+    /// Normalized appearance preference; unknown/missing values mean "auto".
+    public var appearancePreference: String {
+        switch appearance?.lowercased() {
+        case "light": return "light"
+        case "dark": return "dark"
+        default: return "auto"
+        }
     }
 
     public init(from decoder: Decoder) throws {
@@ -30,6 +42,7 @@ public struct AppConfig: Codable, Equatable {
         apiKey = try c.decode(String.self, forKey: .apiKey)
         model = try c.decode(String.self, forKey: .model)
         reasoningEffort = try c.decodeIfPresent(String.self, forKey: .reasoningEffort)
+        appearance = try c.decodeIfPresent(String.self, forKey: .appearance)
         debounceMs = try c.decodeIfPresent(Int.self, forKey: .debounceMs) ?? 350
         timeoutSeconds = try c.decodeIfPresent(Double.self, forKey: .timeoutSeconds) ?? 10
     }
@@ -79,6 +92,7 @@ public final class ConfigStore {
           "baseURL": "https://api.openai.com/v1",
           "apiKey": "\(AppConfig.placeholderKey)",
           "model": "gpt-4o-mini",
+          "appearance": "auto",
           "debounceMs": 350,
           "timeoutSeconds": 10
         }
