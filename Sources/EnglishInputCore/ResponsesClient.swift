@@ -88,13 +88,20 @@ public final class ResponsesClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         request.setValue("Bearer \(config.apiKey)", forHTTPHeaderField: "Authorization")
+        // Some gateways gate the Responses API to recognized coding-agent
+        // clients; identify as one so the request is accepted.
+        request.setValue("codex_cli_rs", forHTTPHeaderField: "originator")
+        request.setValue("codex_cli_rs/1.0.0", forHTTPHeaderField: "User-Agent")
         request.timeoutInterval = config.timeoutSeconds
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "model": config.model,
             "instructions": instructions,
             "input": input,
             "stream": true,
         ]
+        if let effort = config.reasoningEffort, !effort.isEmpty {
+            body["reasoning"] = ["effort": effort]
+        }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         return request
     }

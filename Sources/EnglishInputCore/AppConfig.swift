@@ -4,22 +4,24 @@ public struct AppConfig: Codable, Equatable {
     public var baseURL: String
     public var apiKey: String
     public var model: String
+    public var reasoningEffort: String?
     public var debounceMs: Int
     public var timeoutSeconds: Double
 
     public static let placeholderKey = "sk-REPLACE_ME"
 
-    public init(baseURL: String, apiKey: String, model: String,
+    public init(baseURL: String, apiKey: String, model: String, reasoningEffort: String? = nil,
                 debounceMs: Int = 350, timeoutSeconds: Double = 10) {
         self.baseURL = baseURL
         self.apiKey = apiKey
         self.model = model
+        self.reasoningEffort = reasoningEffort
         self.debounceMs = debounceMs
         self.timeoutSeconds = timeoutSeconds
     }
 
     enum CodingKeys: String, CodingKey {
-        case baseURL, apiKey, model, debounceMs, timeoutSeconds
+        case baseURL, apiKey, model, reasoningEffort, debounceMs, timeoutSeconds
     }
 
     public init(from decoder: Decoder) throws {
@@ -27,6 +29,7 @@ public struct AppConfig: Codable, Equatable {
         baseURL = try c.decode(String.self, forKey: .baseURL)
         apiKey = try c.decode(String.self, forKey: .apiKey)
         model = try c.decode(String.self, forKey: .model)
+        reasoningEffort = try c.decodeIfPresent(String.self, forKey: .reasoningEffort)
         debounceMs = try c.decodeIfPresent(Int.self, forKey: .debounceMs) ?? 350
         timeoutSeconds = try c.decodeIfPresent(Double.self, forKey: .timeoutSeconds) ?? 10
     }
