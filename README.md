@@ -65,10 +65,17 @@ Config changes are picked up automatically (or use IME menu ▸ *Reload Config*)
 | Ctrl+Tab | Cycle mode (Fix → Polish → Interpret) |
 | Space / punctuation | Just text — composition continues until Enter |
 | Cmd-shortcuts, Tab, ↑ ↓ | Commit raw text, then act normally |
+| Shift, Shift (double tap) | Toggle the IME **on/off** |
 
 Switching apps or clicking elsewhere commits the raw text — nothing you type
 is ever silently lost. If the API is unreachable, Enter simply inserts what
 you typed.
+
+**Double-tap Shift** turns the IME off: every key then passes straight
+through to the app — handy for terminal commands, code, or anything you
+don't want rewritten. A small notice flashes near the caret; double-tap
+Shift again (or use the IME menu ▸ *Enabled*) to turn it back on. The
+toggle resets to *on* at relaunch.
 
 ## Development
 

@@ -18,6 +18,10 @@ private enum Shared {
     }() {
         didSet { UserDefaults.standard.set(mode.rawValue, forKey: "mode") }
     }
+    /// Double-tap Shift toggles this; when off every key passes through
+    /// untouched (for terminals, passwords, code…). Not persisted — a fresh
+    /// launch always starts enabled.
+    static var enabled = true
 }
 
 private enum Key {
@@ -31,6 +35,8 @@ private enum Key {
     static let right: UInt16 = 124
     static let down: UInt16 = 125
     static let up: UInt16 = 126
+    static let leftShift: UInt16 = 56
+    static let rightShift: UInt16 = 60
 }
 
 private let maxCompositionLength = 500
@@ -41,6 +47,7 @@ class InputController: IMKInputController {
     /// Monotonic across compositions; guards against stale stream updates.
     private var generation = 0
     private let engine = RewriteEngine()
+    private var shiftTap = ShiftTapDetector()
 
     override init!(server: IMKServer!, delegate: Any!, client inputClient: Any!) {
         super.init(server: server, delegate: delegate, client: inputClient)
@@ -53,7 +60,8 @@ class InputController: IMKInputController {
     // MARK: - IMK lifecycle
 
     override func recognizedEvents(_ sender: Any!) -> Int {
-        Int(NSEvent.EventTypeMask.keyDown.rawValue)
+        // flagsChanged is needed to see bare Shift presses for the ⇧⇧ toggle.
+        Int(NSEvent.EventTypeMask.keyDown.union(.flagsChanged).rawValue)
     }
 
     override func activateServer(_ sender: Any!) {
@@ -72,6 +80,13 @@ class InputController: IMKInputController {
 
     override func menu() -> NSMenu! {
         let menu = NSMenu()
+        let enabledItem = NSMenuItem(title: "Enabled (⇧⇧ to toggle)",
+                                     action: #selector(toggleEnabledFromMenu(_:)),
+                                     keyEquivalent: "")
+        enabledItem.target = self
+        enabledItem.state = Shared.enabled ? .on : .off
+        menu.addItem(enabledItem)
+        menu.addItem(.separator())
         for mode in Mode.allCases {
             let item = NSMenuItem(title: mode.displayName,
                                   action: #selector(selectMode(_:)),
@@ -96,7 +111,17 @@ class InputController: IMKInputController {
     // MARK: - Key handling
 
     override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
-        guard let event, event.type == .keyDown else { return false }
+        guard let event else { return false }
+        if event.type == .flagsChanged {
+            handleFlagsChanged(event)
+            return false
+        }
+        guard event.type == .keyDown else { return false }
+        // A real keypress between two Shift taps means it wasn't a toggle.
+        shiftTap.interrupt()
+
+        guard Shared.enabled else { return false }
+
         let flags = event.modifierFlags.intersection([.command, .control, .option, .shift, .function])
 
         // Never intercept command shortcuts; end composition first so the
@@ -179,6 +204,36 @@ class InputController: IMKInputController {
         // safely and let the client handle the event.
         commitRaw()
         return false
+    }
+
+    /// Track bare Shift press/release pairs; a quick double tap toggles the
+    /// IME on/off. Never consumes the event — Shift still works normally.
+    private func handleFlagsChanged(_ event: NSEvent) {
+        let mods = event.modifierFlags.intersection([.command, .control, .option, .shift, .function])
+        let isShiftKey = event.keyCode == Key.leftShift || event.keyCode == Key.rightShift
+        if isShiftKey && mods == [.shift] {
+            shiftTap.shiftDown(at: event.timestamp)
+        } else if isShiftKey && mods.isEmpty {
+            if shiftTap.shiftUp(at: event.timestamp) {
+                toggleEnabled()
+            }
+        } else {
+            shiftTap.interrupt()
+        }
+    }
+
+    private func toggleEnabled() {
+        Shared.enabled.toggle()
+        if !Shared.enabled {
+            // Don't strand an in-progress composition as marked text.
+            commitRaw()
+        }
+        let appearance = Shared.configStore.current()?.appearancePreference ?? "auto"
+        PreviewPanelController.shared.flash(
+            message: Shared.enabled ? "English Input on" : "English Input off — typing passes through (⇧⇧ to re-enable)",
+            appearance: appearance,
+            near: caretRect()
+        )
     }
 
     // MARK: - Composition plumbing
@@ -312,6 +367,10 @@ class InputController: IMKInputController {
             requestRewrite()
             refreshPanel()
         }
+    }
+
+    @objc func toggleEnabledFromMenu(_ sender: Any?) {
+        toggleEnabled()
     }
 
     @objc func openConfig(_ sender: Any?) {

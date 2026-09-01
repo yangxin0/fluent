@@ -87,13 +87,32 @@ final class PreviewPanelController {
     }
 
     func show(mode: Mode, text: String, status: String, appearance: String, near caretRect: NSRect) {
+        flashToken += 1  // cancel any pending flash auto-hide
         applyAppearance(appearance)
+        modePill.isHidden = false
         modeLabel.stringValue = mode.badge.uppercased()
         statusLabel.stringValue = status
         textLabel.stringValue = text.isEmpty ? "…" : text
+        present(near: caretRect)
+    }
 
+    /// Show a transient notice (e.g. the ⇧⇧ on/off toggle) that hides itself.
+    func flash(message: String, appearance: String, near caretRect: NSRect) {
+        flashToken += 1
+        let token = flashToken
+        applyAppearance(appearance)
+        modePill.isHidden = true
+        statusLabel.stringValue = ""
+        textLabel.stringValue = message
+        present(near: caretRect)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+            guard let self, self.flashToken == token else { return }
+            self.hide()
+        }
+    }
+
+    private func present(near caretRect: NSRect) {
         refreshLayerColors()
-
         guard let contentView = panel.contentView else { return }
         let fitting = contentView.fittingSize
         let size = NSSize(width: min(max(fitting.width, 160), Self.maxTextWidth + 2 * Self.padding),
@@ -106,6 +125,8 @@ final class PreviewPanelController {
     func hide() {
         panel.orderOut(nil)
     }
+
+    private var flashToken = 0
 
     /// Semantic colors used as CGColors on layers are snapshots, so re-resolve
     /// them against the panel's current appearance (background + border are
