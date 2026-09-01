@@ -4,13 +4,18 @@ INSTALL_DIR = $(HOME)/Library/Input Methods
 INSTALLED   = $(INSTALL_DIR)/$(APP_NAME).app
 BIN         = .build/debug/$(APP_NAME)
 
-.PHONY: build bundle install register reload logs dev test clean icon
+.PHONY: build bundle install register reload logs dev test cli clean icon
 
 build:
 	swift build
 
 test:
 	swift test
+
+# API smoke test through the debug CLI, e.g.:
+#   make cli ARGS='--mode polish "helo wrld"'
+cli:
+	swift run english-input-cli $(ARGS)
 
 icon: Resources/icon.tiff
 
