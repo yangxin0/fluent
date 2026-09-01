@@ -7,6 +7,7 @@ final class PreviewPanelController {
     static let shared = PreviewPanelController()
 
     private let panel: NSPanel
+    private let background = PanelBackgroundView()
     private let modePill = NSView()
     private let modeLabel = NSTextField(labelWithString: "")
     private let statusLabel = NSTextField(labelWithString: "")
@@ -31,22 +32,21 @@ final class PreviewPanelController {
         panel.backgroundColor = .clear
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
 
-        // `.popover` adapts to the system light/dark appearance (unlike the
-        // always-dark `.hudWindow`); the panel inherits NSApp's effective
-        // appearance, which follows the system setting and updates live.
-        let effect = PanelBackgroundView()
-        effect.material = .popover
-        effect.state = .active
-        effect.blendingMode = .behindWindow
-        effect.wantsLayer = true
-        effect.layer?.cornerRadius = 8
-        effect.layer?.masksToBounds = true
+        // Squirrel's "native" style: semantic colors that adapt to light/dark.
+        // Background = windowBackgroundColor, highlight = selectedTextBackground,
+        // text = label/secondaryLabel. The panel's appearance is set to the
+        // system's (see applyAppearance), matching Squirrel's approach.
+        background.wantsLayer = true
+        background.layer?.cornerRadius = 8
+        background.layer?.borderWidth = 1
+        background.layer?.masksToBounds = true
+        background.onAppearanceChange = { [weak self] in self?.refreshLayerColors() }
 
-        // Mode badge as a system-accent pill, matching the selected-candidate
-        // pill in the built-in IMEs. White text reads on the accent in both
-        // light and dark.
+        // Mode badge as a highlighted pill, using the system selection color
+        // like Squirrel's highlighted candidate. labelColor reads on it in
+        // both light and dark.
         modeLabel.font = .systemFont(ofSize: 10, weight: .bold)
-        modeLabel.textColor = .white
+        modeLabel.textColor = .labelColor
         modeLabel.translatesAutoresizingMaskIntoConstraints = false
         modePill.wantsLayer = true
         modePill.layer?.cornerRadius = 4
@@ -76,14 +76,14 @@ final class PreviewPanelController {
                                         bottom: Self.padding, right: Self.padding)
         stack.translatesAutoresizingMaskIntoConstraints = false
 
-        effect.addSubview(stack)
+        background.addSubview(stack)
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: effect.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: effect.trailingAnchor),
-            stack.topAnchor.constraint(equalTo: effect.topAnchor),
-            stack.bottomAnchor.constraint(equalTo: effect.bottomAnchor),
+            stack.leadingAnchor.constraint(equalTo: background.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: background.trailingAnchor),
+            stack.topAnchor.constraint(equalTo: background.topAnchor),
+            stack.bottomAnchor.constraint(equalTo: background.bottomAnchor),
         ])
-        panel.contentView = effect
+        panel.contentView = background
     }
 
     func show(mode: Mode, text: String, status: String, appearance: String, near caretRect: NSRect) {
@@ -92,10 +92,7 @@ final class PreviewPanelController {
         statusLabel.stringValue = status
         textLabel.stringValue = text.isEmpty ? "…" : text
 
-        // Accent pill, resolved against whatever appearance is now in effect.
-        panel.effectiveAppearance.performAsCurrentDrawingAppearance {
-            modePill.layer?.backgroundColor = NSColor.controlAccentColor.cgColor
-        }
+        refreshLayerColors()
 
         guard let contentView = panel.contentView else { return }
         let fitting = contentView.fittingSize
@@ -108,6 +105,15 @@ final class PreviewPanelController {
 
     func hide() {
         panel.orderOut(nil)
+    }
+
+    /// Semantic colors used as CGColors on layers are snapshots, so re-resolve
+    /// them against the panel's current appearance (background + border are
+    /// handled by the background view; the pill is refreshed here too).
+    private func refreshLayerColors() {
+        panel.effectiveAppearance.performAsCurrentDrawingAppearance {
+            modePill.layer?.backgroundColor = NSColor.selectedTextBackgroundColor.cgColor
+        }
     }
 
     /// "light"/"dark" force that scheme; anything else follows the system
@@ -151,26 +157,29 @@ final class PreviewPanelController {
     }
 }
 
-/// Rounded translucent background with a hairline border. The border color is
-/// a `CGColor` snapshot, so it must be re-resolved whenever the effective
-/// (system) appearance flips between light and dark.
-private final class PanelBackgroundView: NSVisualEffectView {
+/// Solid rounded background using Squirrel's native semantic palette
+/// (windowBackgroundColor + a separatorColor hairline). These become CGColor
+/// snapshots on the layer, so they are re-resolved whenever the effective
+/// (system) appearance flips between light and dark. `onAppearanceChange` lets
+/// the controller refresh its own layer colors (the mode pill) at the same time.
+private final class PanelBackgroundView: NSView {
+    var onAppearanceChange: (() -> Void)?
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        layer?.borderWidth = 1
-        updateBorderColor()
+        refresh()
     }
 
     override func viewDidChangeEffectiveAppearance() {
         super.viewDidChangeEffectiveAppearance()
-        updateBorderColor()
+        refresh()
     }
 
-    private func updateBorderColor() {
-        // Resolve the dynamic separator color against this view's current
-        // appearance so it matches whichever theme is active.
+    private func refresh() {
         effectiveAppearance.performAsCurrentDrawingAppearance {
+            layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
             layer?.borderColor = NSColor.separatorColor.cgColor
         }
+        onAppearanceChange?()
     }
 }
