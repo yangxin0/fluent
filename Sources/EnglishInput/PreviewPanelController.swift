@@ -1,6 +1,13 @@
 import Cocoa
 import EnglishInputCore
 
+/// The in-progress composition, for clients that clip their marked text.
+struct TypedText {
+    let raw: String
+    /// Caret position in characters.
+    let cursor: Int
+}
+
 /// Floating, non-activating panel showing the streamed improvement near the
 /// caret. One shared instance — only one composition is active at a time.
 final class PreviewPanelController {
@@ -11,10 +18,16 @@ final class PreviewPanelController {
     private let modePill = NSView()
     private let modeLabel = NSTextField(labelWithString: "")
     private let statusLabel = NSTextField(labelWithString: "")
+    private let typedLabel = NSTextField(wrappingLabelWithString: "")
+    private let separator = NSBox()
     private let textLabel = NSTextField(wrappingLabelWithString: "")
 
     private static let maxTextWidth: CGFloat = 480
+    /// Wider when the typed text is shown too, so a full sentence fits in a
+    /// couple of rows rather than a tall column.
+    private static let maxTextWidthWithTyped: CGFloat = 640
     private static let padding: CGFloat = 10
+    private var maxTextWidth: CGFloat = PreviewPanelController.maxTextWidth
 
     private init() {
         panel = NSPanel(
@@ -62,13 +75,19 @@ final class PreviewPanelController {
         textLabel.font = .systemFont(ofSize: 13)
         textLabel.textColor = .labelColor
         textLabel.preferredMaxLayoutWidth = Self.maxTextWidth
+        typedLabel.font = .monospacedSystemFont(ofSize: 13, weight: .regular)
+        typedLabel.textColor = .labelColor
+        typedLabel.preferredMaxLayoutWidth = Self.maxTextWidth
+        typedLabel.isHidden = true
+        separator.boxType = .separator
+        separator.isHidden = true
 
         let header = NSStackView(views: [modePill, NSView(), statusLabel])
         header.orientation = .horizontal
         header.distribution = .fill
         header.alignment = .centerY
 
-        let stack = NSStackView(views: [header, textLabel])
+        let stack = NSStackView(views: [header, typedLabel, separator, textLabel])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 4
@@ -78,6 +97,7 @@ final class PreviewPanelController {
 
         background.addSubview(stack)
         NSLayoutConstraint.activate([
+            separator.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -2 * Self.padding),
             stack.leadingAnchor.constraint(equalTo: background.leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: background.trailingAnchor),
             stack.topAnchor.constraint(equalTo: background.topAnchor),
@@ -86,14 +106,49 @@ final class PreviewPanelController {
         panel.contentView = background
     }
 
-    func show(mode: Mode, text: String, status: String, appearance: String, near caretRect: NSRect) {
+    /// `typed` is shown (with a caret marker) for clients that clip marked
+    /// text, e.g. terminals; pass nil where the client renders it fully.
+    func show(mode: Mode, typed: TypedText?, text: String, status: String,
+              appearance: String, near caretRect: NSRect) {
         flashToken += 1  // cancel any pending flash auto-hide
         applyAppearance(appearance)
         modePill.isHidden = false
         modeLabel.stringValue = mode.badge.uppercased()
         statusLabel.stringValue = status
+        setMaxTextWidth(typed == nil ? Self.maxTextWidth : Self.maxTextWidthWithTyped)
         textLabel.stringValue = text.isEmpty ? "…" : text
+        if let typed {
+            typedLabel.attributedStringValue = Self.render(typed)
+        }
+        typedLabel.isHidden = typed == nil
+        separator.isHidden = typed == nil
         present(near: caretRect)
+    }
+
+    private func setMaxTextWidth(_ width: CGFloat) {
+        maxTextWidth = width
+        textLabel.preferredMaxLayoutWidth = width
+        typedLabel.preferredMaxLayoutWidth = width
+    }
+
+    /// Typed text with a caret bar at the cursor, in the accent color.
+    private static func render(_ typed: TypedText) -> NSAttributedString {
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineBreakMode = .byWordWrapping
+        let base: [NSAttributedString.Key: Any] = [
+            .font: NSFont.monospacedSystemFont(ofSize: 13, weight: .regular),
+            .foregroundColor: NSColor.labelColor,
+            .paragraphStyle: paragraph,
+        ]
+        let cursor = max(0, min(typed.cursor, typed.raw.count))
+        let idx = typed.raw.index(typed.raw.startIndex, offsetBy: cursor)
+        let result = NSMutableAttributedString(string: String(typed.raw[..<idx]), attributes: base)
+        var caretAttrs = base
+        caretAttrs[.foregroundColor] = NSColor.controlAccentColor
+        caretAttrs[.font] = NSFont.monospacedSystemFont(ofSize: 13, weight: .bold)
+        result.append(NSAttributedString(string: "|", attributes: caretAttrs))
+        result.append(NSAttributedString(string: String(typed.raw[idx...]), attributes: base))
+        return result
     }
 
     /// Show a transient notice (e.g. the ⇧⇧ on/off toggle) that hides itself.
@@ -103,6 +158,9 @@ final class PreviewPanelController {
         applyAppearance(appearance)
         modePill.isHidden = true
         statusLabel.stringValue = ""
+        typedLabel.isHidden = true
+        separator.isHidden = true
+        setMaxTextWidth(Self.maxTextWidth)
         textLabel.stringValue = message
         present(near: caretRect)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
@@ -115,7 +173,7 @@ final class PreviewPanelController {
         refreshLayerColors()
         guard let contentView = panel.contentView else { return }
         let fitting = contentView.fittingSize
-        let size = NSSize(width: min(max(fitting.width, 160), Self.maxTextWidth + 2 * Self.padding),
+        let size = NSSize(width: min(max(fitting.width, 160), maxTextWidth + 2 * Self.padding),
                           height: fitting.height)
         panel.setFrame(NSRect(origin: origin(for: size, caretRect: caretRect), size: size),
                        display: true)

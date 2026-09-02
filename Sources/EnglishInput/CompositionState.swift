@@ -1,4 +1,5 @@
 import Foundation
+import EnglishInputCore
 
 struct CompositionState {
     enum Status {
@@ -13,6 +14,11 @@ struct CompositionState {
     var cursor: Int = 0
     var improved: String = ""
     var status: Status = .idle
+    /// Once the marked text nears the window edge in a terminal, the panel
+    /// keeps showing the typed text for the rest of this composition.
+    var showTypedInPanel = false
+    /// Terminal edge detection state, fed once per keystroke.
+    var edgeTracker = EdgeTracker()
 
     var isComposing: Bool { !raw.isEmpty }
 

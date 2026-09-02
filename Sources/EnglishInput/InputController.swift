@@ -187,12 +187,14 @@ class InputController: IMKInputController {
             guard state.isComposing else { return false }
             state.moveLeft()
             updateMarkedText()
+            refreshPanel()  // the typed-text line tracks the caret
             return true
 
         case Key.right:
             guard state.isComposing else { return false }
             state.moveRight()
             updateMarkedText()
+            refreshPanel()
             return true
 
         case Key.up, Key.down, Key.tab, Key.forwardDelete:
@@ -328,19 +330,105 @@ class InputController: IMKInputController {
         case .failed(let message):
             status = "⚠ \(message) — ↵ inserts as typed"
         }
-        let appearance = Shared.configStore.current()?.appearancePreference ?? "auto"
-        PreviewPanelController.shared.show(mode: Shared.mode,
-                                           text: state.improved,
-                                           status: status,
-                                           appearance: appearance,
-                                           near: caretRect())
+        let config = Shared.configStore.current()
+        let appearance = config?.appearancePreference ?? "auto"
+        let (caret, attrs) = caretRectAndAttributes()
+        if isTerminalClient(preference: config?.terminalModePreference ?? "auto",
+                            extra: config?.terminalApps ?? []) {
+            updateTypedInPanel(caret: caret, attributes: attrs,
+                               configuredCellWidth: config?.terminalCellWidth)
+        }
+        PreviewPanelController.shared.show(
+            mode: Shared.mode,
+            typed: state.showTypedInPanel ? TypedText(raw: state.raw, cursor: state.cursor) : nil,
+            text: state.improved,
+            status: status,
+            appearance: appearance,
+            near: caret
+        )
+    }
+
+    // MARK: - Terminal edge detection
+
+    private func isTerminalClient(preference: String, extra: [String]) -> Bool {
+        switch preference {
+        case "always": return true
+        case "never": return false
+        default: return TerminalClients.isTerminal(bundleID: client()?.bundleIdentifier(), extra: extra)
+        }
+    }
+
+    /// Terminals clip marked text at the window edge. Predict when the
+    /// composition is about to reach it and, from then until the composition
+    /// ends, show the typed text in the panel too (like Rime's non-inline
+    /// preedit).
+    private func updateTypedInPanel(caret: NSRect, attributes: [NSAttributedString.Key: Any],
+                                    configuredCellWidth: Double?) {
+        guard !state.showTypedInPanel else { return }
+        if caret == .zero {
+            state.showTypedInPanel = state.raw.count >= EdgeTracker.fallbackCharacterLimit
+            return
+        }
+        // Re-measured on every keystroke: windows move and resize.
+        let window = clientWindowBounds(containing: caret)
+        let edgeX = window.map { Double($0.maxX) } ?? Double(NSScreen.main?.visibleFrame.maxX ?? 0)
+        // Exact cell width: the config override, else the client's font if
+        // it reports one (advance of "M" in a monospace font is the cell).
+        var known: Double? = configuredCellWidth.flatMap { $0 > 0 ? $0 : nil }
+        if known == nil, let font = attributes[.font] as? NSFont {
+            known = Double(("M" as NSString).size(withAttributes: [.font: font]).width)
+        }
+        let reached = state.edgeTracker.update(caretMinX: Double(caret.minX),
+                                               caretMaxX: Double(caret.maxX),
+                                               caretHeight: Double(caret.height),
+                                               characterCount: state.raw.count,
+                                               edgeX: edgeX,
+                                               knownCellWidth: known)
+        // Persisted (default level) so `log show` can read it when tuning.
+        let attrKeys = attributes.keys.map(\.rawValue).sorted().joined(separator: ",")
+        ctlLog.notice("edge check: caret=\(NSStringFromRect(caret), privacy: .public) window=\(window.map(NSStringFromRect) ?? "none", privacy: .public) cell=\(known.map { String(format: "%.2f", $0) } ?? "est", privacy: .public) attrs=[\(attrKeys, privacy: .public)] follows=\(String(describing: self.state.edgeTracker.caretFollowsText), privacy: .public) chars=\(self.state.raw.count, privacy: .public) reached=\(reached, privacy: .public)")
+        state.showTypedInPanel = reached
+    }
+
+    /// Bounds (AppKit screen coordinates) of the client's normal window
+    /// containing the caret, else its frontmost normal window. Window bounds
+    /// need no special permission.
+    private func clientWindowBounds(containing caret: NSRect) -> NSRect? {
+        guard let bundleID = client()?.bundleIdentifier() else { return nil }
+        let pids = Set(NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+            .map(\.processIdentifier))
+        guard !pids.isEmpty,
+              let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements],
+                                                    kCGNullWindowID) as? [[String: Any]]
+        else { return nil }
+        // CG window bounds are top-left based on the primary display.
+        let primaryHeight = NSScreen.screens.first?.frame.maxY ?? 0
+        let caretPoint = NSPoint(x: caret.midX, y: primaryHeight - caret.midY)
+        var first: NSRect?
+        for info in list {  // front-to-back
+            guard let pid = info[kCGWindowOwnerPID as String] as? pid_t, pids.contains(pid),
+                  (info[kCGWindowLayer as String] as? Int) == 0,
+                  let dict = info[kCGWindowBounds as String] as? NSDictionary,
+                  let bounds = CGRect(dictionaryRepresentation: dict),
+                  bounds.width > 100, bounds.height > 100
+            else { continue }
+            if bounds.contains(caretPoint) { return bounds }
+            if first == nil { first = bounds }
+        }
+        return first
     }
 
     private func caretRect() -> NSRect {
-        guard let client = client() else { return .zero }
+        caretRectAndAttributes().0
+    }
+
+    /// The caret rect plus whatever text attributes the client reports for
+    /// it (some include the font, which gives an exact cell width).
+    private func caretRectAndAttributes() -> (NSRect, [NSAttributedString.Key: Any]) {
+        guard let client = client() else { return (.zero, [:]) }
         var rect = NSRect.zero
-        _ = client.attributes(forCharacterIndex: 0, lineHeightRectangle: &rect)
-        return rect
+        let attrs = client.attributes(forCharacterIndex: 0, lineHeightRectangle: &rect)
+        return (rect, attrs as? [NSAttributedString.Key: Any] ?? [:])
     }
 
     private func commitRaw() {

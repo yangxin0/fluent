@@ -7,6 +7,16 @@ public struct AppConfig: Codable, Equatable {
     public var reasoningEffort: String?
     /// Panel color scheme: "auto" (follow system), "light", or "dark".
     public var appearance: String?
+    /// Terminal handling: "auto" (detect terminal apps), "always", or "never".
+    /// Terminals clip marked text at the window edge, so for them the panel
+    /// also shows the typed text once the composition nears the edge.
+    public var terminalMode: String?
+    /// Extra bundle identifiers to treat as terminals, on top of the
+    /// built-in whitelist in `TerminalClients`.
+    public var terminalApps: [String]?
+    /// Exact terminal cell width in points, for clients that report neither
+    /// a cell-sized caret rect nor a font. Omit/0 to estimate automatically.
+    public var terminalCellWidth: Double?
     public var debounceMs: Int
     public var timeoutSeconds: Double
 
@@ -29,19 +39,25 @@ public struct AppConfig: Codable, Equatable {
     }
 
     public init(baseURL: String, apiKey: String, model: String, reasoningEffort: String? = nil,
-                appearance: String? = nil, debounceMs: Int = AppConfig.defaultDebounceMs,
+                appearance: String? = nil, terminalMode: String? = nil,
+                terminalApps: [String]? = nil, terminalCellWidth: Double? = nil,
+                debounceMs: Int = AppConfig.defaultDebounceMs,
                 timeoutSeconds: Double = AppConfig.defaultTimeoutSeconds) {
         self.baseURL = baseURL
         self.apiKey = apiKey
         self.model = model
         self.reasoningEffort = reasoningEffort
         self.appearance = appearance
+        self.terminalMode = terminalMode
+        self.terminalApps = terminalApps
+        self.terminalCellWidth = terminalCellWidth
         self.debounceMs = AppConfig.clampDebounce(debounceMs)
         self.timeoutSeconds = AppConfig.clampTimeout(timeoutSeconds)
     }
 
     enum CodingKeys: String, CodingKey {
-        case baseURL, apiKey, model, reasoningEffort, appearance, debounceMs, timeoutSeconds
+        case baseURL, apiKey, model, reasoningEffort, appearance, terminalMode, terminalApps,
+             terminalCellWidth, debounceMs, timeoutSeconds
     }
 
     /// Normalized appearance preference; unknown/missing values mean "auto".
@@ -53,6 +69,15 @@ public struct AppConfig: Codable, Equatable {
         }
     }
 
+    /// Normalized terminal-mode preference; unknown/missing values mean "auto".
+    public var terminalModePreference: String {
+        switch terminalMode?.lowercased() {
+        case "always": return "always"
+        case "never": return "never"
+        default: return "auto"
+        }
+    }
+
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         baseURL = try c.decode(String.self, forKey: .baseURL)
@@ -60,6 +85,9 @@ public struct AppConfig: Codable, Equatable {
         model = try c.decode(String.self, forKey: .model)
         reasoningEffort = try c.decodeIfPresent(String.self, forKey: .reasoningEffort)
         appearance = try c.decodeIfPresent(String.self, forKey: .appearance)
+        terminalMode = try c.decodeIfPresent(String.self, forKey: .terminalMode)
+        terminalApps = try c.decodeIfPresent([String].self, forKey: .terminalApps)
+        terminalCellWidth = try c.decodeIfPresent(Double.self, forKey: .terminalCellWidth)
         debounceMs = AppConfig.clampDebounce(
             try c.decodeIfPresent(Int.self, forKey: .debounceMs) ?? AppConfig.defaultDebounceMs)
         timeoutSeconds = AppConfig.clampTimeout(
@@ -112,6 +140,7 @@ public final class ConfigStore {
           "apiKey": "\(AppConfig.placeholderKey)",
           "model": "gpt-4o-mini",
           "appearance": "auto",
+          "terminalMode": "auto",
           "debounceMs": 350,
           "timeoutSeconds": 10
         }

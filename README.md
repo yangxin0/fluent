@@ -42,6 +42,7 @@ also reachable via IME menu ▸ *Open Config File*):
   "apiKey": "sk-...",
   "model": "gpt-4o-mini",
   "appearance": "auto",
+  "terminalMode": "auto",
   "debounceMs": 350,
   "timeoutSeconds": 10
 }
@@ -51,6 +52,16 @@ Any Responses-compatible provider works — point `baseURL` at its `/v1` root.
 `appearance` controls the preview panel's color scheme: `"auto"` follows the
 system light/dark setting (and updates live when it changes), or force it with
 `"light"` / `"dark"`.
+`terminalMode` handles terminal emulators, which draw marked text as a single
+row and clip it at the window edge. In terminal mode the composition stays
+inline as usual, but once it is about to reach the edge the panel also shows
+your typed text with a caret (like Rime's non-inline preedit) until you commit.
+`"auto"` detects common terminals (Terminal.app, iTerm2, WezTerm, Ghostty,
+Alacritty, kitty, Warp, …); force it on or off with `"always"` / `"never"`.
+Add more apps to the whitelist with `"terminalApps": ["com.example.term"]`
+(bundle identifiers). Edge detection measures the terminal's cell width from
+what the app reports; if it triggers too early or late, set the exact width in
+points with `"terminalCellWidth": 9.7`.
 Config changes are picked up automatically (or use IME menu ▸ *Reload Config*).
 
 ## Keys while composing
@@ -97,3 +108,6 @@ If typing goes dead after a change, check for a crash report:
   queried (Enter still inserts your raw text).
 - Some Electron apps report no caret position; the panel then falls back to a
   fixed position near the bottom of the screen.
+- Terminals cannot wrap marked text, so a composition longer than the rest of
+  the row is clipped in the terminal itself; the panel shows the full typed
+  text once that is about to happen (see `terminalMode`).

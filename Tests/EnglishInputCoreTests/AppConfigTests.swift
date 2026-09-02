@@ -22,6 +22,17 @@ final class AppConfigTests: XCTestCase {
         XCTAssertEqual(try pref("{\(base),\"appearance\":\"nonsense\"}"), "auto")
     }
 
+    func testTerminalModeNormalization() throws {
+        func pref(_ json: String) throws -> String {
+            try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8)).terminalModePreference
+        }
+        let base = #""baseURL":"https://x/v1","apiKey":"sk-x","model":"m""#
+        XCTAssertEqual(try pref("{\(base)}"), "auto")
+        XCTAssertEqual(try pref("{\(base),\"terminalMode\":\"Always\"}"), "always")
+        XCTAssertEqual(try pref("{\(base),\"terminalMode\":\"never\"}"), "never")
+        XCTAssertEqual(try pref("{\(base),\"terminalMode\":\"nonsense\"}"), "auto")
+    }
+
     func testNumericFieldsAreClamped() throws {
         func decode(_ extra: String) throws -> AppConfig {
             let json = #"{"baseURL":"https://x/v1","apiKey":"sk-x","model":"m","# + extra + "}"
