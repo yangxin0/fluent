@@ -40,7 +40,7 @@ public final class RewriteEngine {
             self?.emit(.began(generation: generation))
             var accumulated = ""
             do {
-                for try await delta in client.stream(config: config, instructions: instructions, input: raw) {
+                for try await delta in client.stream(config: config, instructions: instructions, input: trimmed) {
                     if Task.isCancelled { return }
                     accumulated += delta
                     self?.emit(.delta(generation: generation, accumulated: accumulated))

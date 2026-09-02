@@ -24,9 +24,14 @@ struct CompositionState {
 
     var isComposing: Bool { !raw.isEmpty }
 
-    /// Improved text is only committable once the stream finished.
+    /// Improved text is only committable once the stream finished. The
+    /// whitespace typed at the edges (e.g. the space that separates this
+    /// sentence from the previous one) is kept even though the model
+    /// returns trimmed text.
     var committableImproved: String? {
-        if case .done = status, !improved.isEmpty { return improved }
+        if case .done = status, !improved.isEmpty {
+            return TextEdges.restoringEdges(of: raw, to: improved)
+        }
         return nil
     }
 
