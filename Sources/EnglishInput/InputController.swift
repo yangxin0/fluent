@@ -61,7 +61,7 @@ class InputController: IMKInputController {
 
     override func recognizedEvents(_ sender: Any!) -> Int {
         // flagsChanged is needed to see bare Shift presses for the ⇧⇧ toggle.
-        ctlLog.debug("recognizedEvents queried by \(self.client()?.bundleIdentifier() ?? "?", privacy: .public)")
+        ctlLog.notice("recognizedEvents queried by \(self.client()?.bundleIdentifier() ?? "?", privacy: .public)")
         return Int(NSEvent.EventTypeMask.keyDown.union(.flagsChanged).rawValue)
     }
 
@@ -234,7 +234,7 @@ class InputController: IMKInputController {
     private func handleFlagsChanged(_ event: NSEvent) {
         let mods = event.modifierFlags.intersection([.command, .control, .option, .shift, .function])
         let isShiftKey = event.keyCode == Key.leftShift || event.keyCode == Key.rightShift
-        ctlLog.debug("flagsChanged: keyCode=\(event.keyCode, privacy: .public) mods=\(mods.rawValue, privacy: .public) client=\(self.client()?.bundleIdentifier() ?? "?", privacy: .public)")
+        ctlLog.notice("flagsChanged: keyCode=\(event.keyCode, privacy: .public) mods=\(mods.rawValue, privacy: .public) client=\(self.client()?.bundleIdentifier() ?? "?", privacy: .public)")
         if isShiftKey && mods == [.shift] {
             shiftTap.shiftDown(at: event.timestamp)
         } else if isShiftKey && mods.isEmpty {
