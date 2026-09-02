@@ -73,12 +73,17 @@ final class SSEParserTests: XCTestCase {
         XCTAssertTrue(parse([": keepalive", "", ""]).isEmpty)
     }
 
-    func testOutputTextDoneEndsStream() {
+    func testOutputTextDoneCarriesFinalText() {
         let events = parse([
             "event: response.output_text.done",
             #"data: {"type":"response.output_text.done","text":"Hello there"}"#,
             "",
         ])
-        XCTAssertEqual(ResponsesEventInterpreter.interpret(events[0]), .done)
+        XCTAssertEqual(ResponsesEventInterpreter.interpret(events[0]), .completed("Hello there"))
+    }
+
+    func testOutputTextDoneWithoutTextIsEmptyCompletion() {
+        let events = parse([#"data: {"type":"response.output_text.done"}"#, ""])
+        XCTAssertEqual(ResponsesEventInterpreter.interpret(events[0]), .completed(""))
     }
 }

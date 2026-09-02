@@ -33,7 +33,8 @@ public final class RewriteEngine {
         let client = self.client
         task = Task { [weak self] in
             do {
-                try await Task.sleep(nanoseconds: UInt64(max(0, config.debounceMs)) * 1_000_000)
+                let debounceMs = AppConfig.clampDebounce(config.debounceMs)
+                try await Task.sleep(nanoseconds: UInt64(debounceMs) * 1_000_000)
             } catch { return }
             guard !Task.isCancelled else { return }
             self?.emit(.began(generation: generation))

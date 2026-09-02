@@ -22,6 +22,30 @@ final class AppConfigTests: XCTestCase {
         XCTAssertEqual(try pref("{\(base),\"appearance\":\"nonsense\"}"), "auto")
     }
 
+    func testNumericFieldsAreClamped() throws {
+        func decode(_ extra: String) throws -> AppConfig {
+            let json = #"{"baseURL":"https://x/v1","apiKey":"sk-x","model":"m","# + extra + "}"
+            return try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8))
+        }
+        // Would overflow the nanosecond multiply in RewriteEngine if passed through.
+        XCTAssertEqual(try decode(#""debounceMs":9223372036854775807"#).debounceMs,
+                       AppConfig.debounceMsRange.upperBound)
+        XCTAssertEqual(try decode(#""debounceMs":-5"#).debounceMs, 0)
+        XCTAssertEqual(try decode(#""debounceMs":200"#).debounceMs, 200)
+        XCTAssertEqual(try decode(#""timeoutSeconds":0"#).timeoutSeconds,
+                       AppConfig.timeoutSecondsRange.lowerBound)
+        XCTAssertEqual(try decode(#""timeoutSeconds":-3"#).timeoutSeconds,
+                       AppConfig.timeoutSecondsRange.lowerBound)
+        XCTAssertEqual(try decode(#""timeoutSeconds":1e300"#).timeoutSeconds,
+                       AppConfig.timeoutSecondsRange.upperBound)
+        XCTAssertEqual(try decode(#""timeoutSeconds":2.5"#).timeoutSeconds, 2.5)
+        // The memberwise initializer clamps too, including non-finite doubles.
+        XCTAssertEqual(AppConfig(baseURL: "u", apiKey: "k", model: "m", timeoutSeconds: .nan).timeoutSeconds,
+                       AppConfig.defaultTimeoutSeconds)
+        XCTAssertEqual(AppConfig(baseURL: "u", apiKey: "k", model: "m", debounceMs: .max).debounceMs,
+                       AppConfig.debounceMsRange.upperBound)
+    }
+
     func testPlaceholderKeyIsNotConfigured() throws {
         let json = #"{"baseURL":"https://api.openai.com/v1","apiKey":"sk-REPLACE_ME","model":"m"}"#
         let config = try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8))

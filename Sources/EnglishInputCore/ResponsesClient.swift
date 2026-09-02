@@ -46,6 +46,7 @@ public final class ResponsesClient {
                     }
                     var parser = SSEParser()
                     var lineBuffer: [UInt8] = []
+                    var yieldedAnyDelta = false
                     for try await byte in bytes {
                         guard byte == 0x0A else {
                             lineBuffer.append(byte)
@@ -58,7 +59,16 @@ public final class ResponsesClient {
                         guard let event = parser.feed(line: line) else { continue }
                         switch ResponsesEventInterpreter.interpret(event) {
                         case .delta(let text):
-                            if !text.isEmpty { continuation.yield(text) }
+                            if !text.isEmpty {
+                                yieldedAnyDelta = true
+                                continuation.yield(text)
+                            }
+                        case .completed(let text):
+                            // Only use the final text when no deltas arrived;
+                            // otherwise it would duplicate what we streamed.
+                            if !yieldedAnyDelta, !text.isEmpty { continuation.yield(text) }
+                            continuation.finish()
+                            return
                         case .done:
                             continuation.finish()
                             return

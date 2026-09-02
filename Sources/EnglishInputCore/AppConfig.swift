@@ -12,15 +12,32 @@ public struct AppConfig: Codable, Equatable {
 
     public static let placeholderKey = "sk-REPLACE_ME"
 
+    public static let defaultDebounceMs = 350
+    public static let defaultTimeoutSeconds = 10.0
+    /// Accepted ranges; out-of-range values are clamped rather than rejected
+    /// so one bad number does not turn the whole config into "not configured".
+    public static let debounceMsRange = 0...10_000
+    public static let timeoutSecondsRange = 1.0...300.0
+
+    static func clampDebounce(_ ms: Int) -> Int {
+        min(max(ms, debounceMsRange.lowerBound), debounceMsRange.upperBound)
+    }
+
+    static func clampTimeout(_ seconds: Double) -> Double {
+        guard seconds.isFinite else { return defaultTimeoutSeconds }
+        return min(max(seconds, timeoutSecondsRange.lowerBound), timeoutSecondsRange.upperBound)
+    }
+
     public init(baseURL: String, apiKey: String, model: String, reasoningEffort: String? = nil,
-                appearance: String? = nil, debounceMs: Int = 350, timeoutSeconds: Double = 10) {
+                appearance: String? = nil, debounceMs: Int = AppConfig.defaultDebounceMs,
+                timeoutSeconds: Double = AppConfig.defaultTimeoutSeconds) {
         self.baseURL = baseURL
         self.apiKey = apiKey
         self.model = model
         self.reasoningEffort = reasoningEffort
         self.appearance = appearance
-        self.debounceMs = debounceMs
-        self.timeoutSeconds = timeoutSeconds
+        self.debounceMs = AppConfig.clampDebounce(debounceMs)
+        self.timeoutSeconds = AppConfig.clampTimeout(timeoutSeconds)
     }
 
     enum CodingKeys: String, CodingKey {
@@ -43,8 +60,10 @@ public struct AppConfig: Codable, Equatable {
         model = try c.decode(String.self, forKey: .model)
         reasoningEffort = try c.decodeIfPresent(String.self, forKey: .reasoningEffort)
         appearance = try c.decodeIfPresent(String.self, forKey: .appearance)
-        debounceMs = try c.decodeIfPresent(Int.self, forKey: .debounceMs) ?? 350
-        timeoutSeconds = try c.decodeIfPresent(Double.self, forKey: .timeoutSeconds) ?? 10
+        debounceMs = AppConfig.clampDebounce(
+            try c.decodeIfPresent(Int.self, forKey: .debounceMs) ?? AppConfig.defaultDebounceMs)
+        timeoutSeconds = AppConfig.clampTimeout(
+            try c.decodeIfPresent(Double.self, forKey: .timeoutSeconds) ?? AppConfig.defaultTimeoutSeconds)
     }
 
     /// A config is usable once the user has filled in a real API key.

@@ -49,6 +49,9 @@ public struct SSEParser {
 /// What an SSE event from a Responses-compatible endpoint means for us.
 public enum ResponsesStreamItem: Equatable {
     case delta(String)
+    /// `response.output_text.done`: the stream is finished and this is the
+    /// complete text. Providers that skip deltas deliver everything here.
+    case completed(String)
     case done
     case error(String)
     case ignore
@@ -68,7 +71,9 @@ public enum ResponsesEventInterpreter {
         switch type {
         case "response.output_text.delta":
             return .delta(obj["delta"] as? String ?? "")
-        case "response.completed", "response.incomplete", "response.output_text.done":
+        case "response.output_text.done":
+            return .completed(obj["text"] as? String ?? "")
+        case "response.completed", "response.incomplete":
             return .done
         case "response.failed", "response.error", "error":
             return .error(Self.errorMessage(obj))

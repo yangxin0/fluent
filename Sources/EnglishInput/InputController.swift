@@ -140,6 +140,24 @@ class InputController: IMKInputController {
             return true
         }
 
+        // Editing keys only get their plain meaning here (plus Shift for
+        // Enter/Backspace, which has no distinct system meaning). Any other
+        // modifier combo — ⌥← word motion, ⌥⌫ word delete, ⇧← selection… —
+        // is committed and passed through so the app applies its own
+        // semantics instead of us collapsing it to a single-character action.
+        // Arrow keys always carry `.function`, so it is not a user modifier.
+        let mods = flags.subtracting(.function)
+        let editingKeys: Set<UInt16> = [Key.enter, Key.keypadEnter, Key.escape,
+                                        Key.backspace, Key.left, Key.right]
+        let shiftOK: Set<UInt16> = [Key.enter, Key.keypadEnter, Key.backspace]
+        if editingKeys.contains(event.keyCode),
+           !mods.isEmpty,
+           !(mods == [.shift] && shiftOK.contains(event.keyCode))
+        {
+            commitRaw()
+            return false
+        }
+
         switch event.keyCode {
         case Key.enter, Key.keypadEnter:
             guard state.isComposing else { return false }
@@ -249,7 +267,10 @@ class InputController: IMKInputController {
         state.improved = ""
         state.status = .idle
         if state.raw.count >= maxCompositionLength {
-            // Stop re-querying huge buffers; Enter still works with the raw text.
+            // Stop re-querying huge buffers; Enter still works with the raw
+            // text. Also drop the request for the previous buffer — its
+            // updates would be discarded by the generation guard anyway.
+            engine.cancel()
             return
         }
         engine.textChanged(raw: state.raw,
