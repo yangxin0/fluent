@@ -8,17 +8,31 @@ public struct ShiftTapDetector {
     public var maxTapDuration: TimeInterval
     /// Longest gap between the first release and the second press.
     public var maxTapInterval: TimeInterval
+    /// After a double tap fires, a tap that follows almost immediately is
+    /// ignored, so a stray third tap does not start a new pair. Kept short:
+    /// people legitimately double-tap again about half a second later to
+    /// toggle back, and that must still work.
+    public var cooldown: TimeInterval
 
     private var downTime: TimeInterval?
     private var lastTapEnd: TimeInterval?
+    private var lastFired: TimeInterval?
 
-    public init(maxTapDuration: TimeInterval = 0.3, maxTapInterval: TimeInterval = 0.4) {
+    public init(maxTapDuration: TimeInterval = 0.3, maxTapInterval: TimeInterval = 0.4,
+                cooldown: TimeInterval = 0.25) {
         self.maxTapDuration = maxTapDuration
         self.maxTapInterval = maxTapInterval
+        self.cooldown = cooldown
+    }
+
+    private func inCooldown(at time: TimeInterval) -> Bool {
+        if let fired = lastFired, time - fired < cooldown { return true }
+        return false
     }
 
     /// Shift went down with no other modifiers held.
     public mutating func shiftDown(at time: TimeInterval) {
+        guard !inCooldown(at: time) else { return }
         if let end = lastTapEnd, time - end > maxTapInterval {
             lastTapEnd = nil
         }
@@ -39,6 +53,7 @@ public struct ShiftTapDetector {
         if lastTapEnd != nil {
             // shiftDown already validated the gap since the previous tap.
             lastTapEnd = nil
+            lastFired = time
             return true
         }
         lastTapEnd = time

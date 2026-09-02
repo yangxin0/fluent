@@ -63,4 +63,32 @@ final class ShiftTapDetectorTests: XCTestCase {
         detector.shiftDown(at: 0.8)
         XCTAssertTrue(detector.shiftUp(at: 0.9))  // second tap fires
     }
+
+    func testBurstOfTapsTogglesOnce() {
+        // Timings from a real log: four taps in ~0.7s used to toggle twice.
+        var d = ShiftTapDetector()
+        var fired = 0
+        for (down, up) in [(16.312, 16.397), (16.484, 16.557), (16.637, 16.712), (17.014, 17.123)] {
+            d.shiftDown(at: down)
+            if d.shiftUp(at: up) { fired += 1 }
+        }
+        XCTAssertEqual(fired, 1)
+        // A fresh double tap after the cooldown toggles again.
+        d.shiftDown(at: 19.110); XCTAssertFalse(d.shiftUp(at: 19.188))
+        d.shiftDown(at: 19.258); XCTAssertTrue(d.shiftUp(at: 19.338))
+    }
+
+    func testDoubleTapsHalfASecondApartAllFire() {
+        // Timings from a real log: three deliberate double taps, the third
+        // ~0.5s after the second fired, were eaten by a 0.6s cooldown.
+        var d = ShiftTapDetector()
+        var fired = 0
+        for (down, up) in [(17.137, 17.216), (17.286, 17.369),
+                           (18.033, 18.115), (18.210, 18.296),
+                           (18.820, 18.930), (19.002, 19.085)] {
+            d.shiftDown(at: down)
+            if d.shiftUp(at: up) { fired += 1 }
+        }
+        XCTAssertEqual(fired, 3)
+    }
 }

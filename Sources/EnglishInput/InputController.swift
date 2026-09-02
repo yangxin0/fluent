@@ -61,15 +61,18 @@ class InputController: IMKInputController {
 
     override func recognizedEvents(_ sender: Any!) -> Int {
         // flagsChanged is needed to see bare Shift presses for the ⇧⇧ toggle.
-        Int(NSEvent.EventTypeMask.keyDown.union(.flagsChanged).rawValue)
+        ctlLog.debug("recognizedEvents queried by \(self.client()?.bundleIdentifier() ?? "?", privacy: .public)")
+        return Int(NSEvent.EventTypeMask.keyDown.union(.flagsChanged).rawValue)
     }
 
     override func activateServer(_ sender: Any!) {
+        ctlLog.notice("activateServer: \(self.client()?.bundleIdentifier() ?? "?", privacy: .public) enabled=\(Shared.enabled, privacy: .public)")
         state.reset()
         PreviewPanelController.shared.hide()
     }
 
     override func deactivateServer(_ sender: Any!) {
+        ctlLog.notice("deactivateServer: \(self.client()?.bundleIdentifier() ?? "?", privacy: .public)")
         // Focus is leaving — never silently drop what the user typed.
         commitRaw()
     }
@@ -231,10 +234,12 @@ class InputController: IMKInputController {
     private func handleFlagsChanged(_ event: NSEvent) {
         let mods = event.modifierFlags.intersection([.command, .control, .option, .shift, .function])
         let isShiftKey = event.keyCode == Key.leftShift || event.keyCode == Key.rightShift
+        ctlLog.debug("flagsChanged: keyCode=\(event.keyCode, privacy: .public) mods=\(mods.rawValue, privacy: .public) client=\(self.client()?.bundleIdentifier() ?? "?", privacy: .public)")
         if isShiftKey && mods == [.shift] {
             shiftTap.shiftDown(at: event.timestamp)
         } else if isShiftKey && mods.isEmpty {
             if shiftTap.shiftUp(at: event.timestamp) {
+                ctlLog.notice("double-tap Shift → toggling, enabled was \(Shared.enabled, privacy: .public)")
                 toggleEnabled()
             }
         } else {
@@ -244,6 +249,7 @@ class InputController: IMKInputController {
 
     private func toggleEnabled() {
         Shared.enabled.toggle()
+        ctlLog.notice("enabled is now \(Shared.enabled, privacy: .public)")
         if !Shared.enabled {
             // Don't strand an in-progress composition as marked text.
             commitRaw()
@@ -365,6 +371,10 @@ class InputController: IMKInputController {
     private func updateTypedInPanel(caret: NSRect, attributes: [NSAttributedString.Key: Any],
                                     configuredCellWidth: Double?) {
         guard !state.showTypedInPanel else { return }
+        // The panel also refreshes on every stream delta; only re-measure
+        // when the typed text actually changed.
+        guard state.raw.count != state.edgeCheckedCount else { return }
+        state.edgeCheckedCount = state.raw.count
         if caret == .zero {
             state.showTypedInPanel = state.raw.count >= EdgeTracker.fallbackCharacterLimit
             return

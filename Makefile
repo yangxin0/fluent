@@ -40,6 +40,7 @@ install: bundle
 # macOS relaunches the IME on the next keystroke in a client app.
 reload:
 	pkill -f "$(APP_NAME).app/Contents/MacOS/$(APP_NAME)" || true
+	swift Scripts/reactivate.swift
 
 # Re-register/enable the input source with TIS (also runs as part of install).
 register:

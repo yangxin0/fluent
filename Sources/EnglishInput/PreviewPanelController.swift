@@ -166,7 +166,7 @@ final class PreviewPanelController {
         setMaxTextWidth(Self.maxTextWidth)
         textLabel.stringValue = message
         present(near: caretRect)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in
             guard let self, self.flashToken == token else { return }
             self.hide()
         }

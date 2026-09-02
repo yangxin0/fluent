@@ -19,6 +19,8 @@ struct CompositionState {
     var showTypedInPanel = false
     /// Terminal edge detection state, fed once per keystroke.
     var edgeTracker = EdgeTracker()
+    /// Character count at the last edge check, to skip redundant checks.
+    var edgeCheckedCount = -1
 
     var isComposing: Bool { !raw.isEmpty }
 
