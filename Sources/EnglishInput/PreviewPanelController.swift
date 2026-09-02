@@ -47,11 +47,13 @@ final class PreviewPanelController {
 
         // Squirrel's "native" style: semantic colors that adapt to light/dark.
         // Background = windowBackgroundColor, highlight = selectedTextBackground,
-        // text = label/secondaryLabel. The panel's appearance is set to the
-        // system's (see applyAppearance), matching Squirrel's approach.
+        // preedit = secondaryLabel, candidate = label, comment = secondaryLabel.
+        // No border stroke (Squirrel's native scheme has none; the window
+        // shadow separates the panel) and its default corner_radius of 7.
+        // The panel's appearance is set to the system's (see applyAppearance),
+        // matching Squirrel's approach.
         background.wantsLayer = true
-        background.layer?.cornerRadius = 8
-        background.layer?.borderWidth = 1
+        background.layer?.cornerRadius = 7
         background.layer?.masksToBounds = true
         background.onAppearanceChange = { [weak self] in self?.refreshLayerColors() }
 
@@ -76,7 +78,7 @@ final class PreviewPanelController {
         textLabel.textColor = .labelColor
         textLabel.preferredMaxLayoutWidth = Self.maxTextWidth
         typedLabel.font = .monospacedSystemFont(ofSize: 13, weight: .regular)
-        typedLabel.textColor = .labelColor
+        typedLabel.textColor = .secondaryLabelColor  // Squirrel's preedit text color
         typedLabel.preferredMaxLayoutWidth = Self.maxTextWidth
         typedLabel.isHidden = true
         separator.boxType = .separator
@@ -131,20 +133,21 @@ final class PreviewPanelController {
         typedLabel.preferredMaxLayoutWidth = width
     }
 
-    /// Typed text with a caret bar at the cursor, in the accent color.
+    /// Typed text in Squirrel's preedit color with a caret bar at the cursor
+    /// in its highlighted-preedit color.
     private static func render(_ typed: TypedText) -> NSAttributedString {
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineBreakMode = .byWordWrapping
         let base: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedSystemFont(ofSize: 13, weight: .regular),
-            .foregroundColor: NSColor.labelColor,
+            .foregroundColor: NSColor.secondaryLabelColor,
             .paragraphStyle: paragraph,
         ]
         let cursor = max(0, min(typed.cursor, typed.raw.count))
         let idx = typed.raw.index(typed.raw.startIndex, offsetBy: cursor)
         let result = NSMutableAttributedString(string: String(typed.raw[..<idx]), attributes: base)
         var caretAttrs = base
-        caretAttrs[.foregroundColor] = NSColor.controlAccentColor
+        caretAttrs[.foregroundColor] = NSColor.labelColor
         caretAttrs[.font] = NSFont.monospacedSystemFont(ofSize: 13, weight: .bold)
         result.append(NSAttributedString(string: "|", attributes: caretAttrs))
         result.append(NSAttributedString(string: String(typed.raw[idx...]), attributes: base))
@@ -237,10 +240,10 @@ final class PreviewPanelController {
 }
 
 /// Solid rounded background using Squirrel's native semantic palette
-/// (windowBackgroundColor + a separatorColor hairline). These become CGColor
-/// snapshots on the layer, so they are re-resolved whenever the effective
-/// (system) appearance flips between light and dark. `onAppearanceChange` lets
-/// the controller refresh its own layer colors (the mode pill) at the same time.
+/// (windowBackgroundColor, no border). This becomes a CGColor snapshot on the
+/// layer, so it is re-resolved whenever the effective (system) appearance
+/// flips between light and dark. `onAppearanceChange` lets the controller
+/// refresh its own layer colors (the mode pill) at the same time.
 private final class PanelBackgroundView: NSView {
     var onAppearanceChange: (() -> Void)?
 
@@ -257,7 +260,6 @@ private final class PanelBackgroundView: NSView {
     private func refresh() {
         effectiveAppearance.performAsCurrentDrawingAppearance {
             layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
-            layer?.borderColor = NSColor.separatorColor.cgColor
         }
         onAppearanceChange?()
     }
