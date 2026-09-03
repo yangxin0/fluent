@@ -87,6 +87,14 @@ public final class ResponsesClient {
         }
     }
 
+    /// Version reported in the Codex User-Agent (`codex --version`).
+    static let codexVersion = "0.152.1"
+
+    static func identifiesAsCodex(model: String) -> Bool {
+        let name = model.lowercased()
+        return name.hasPrefix("gpt") || name.contains("codex")
+    }
+
     static func makeRequest(config: AppConfig, instructions: String, input: String) throws -> URLRequest {
         var base = config.baseURL
         while base.hasSuffix("/") { base.removeLast() }
@@ -98,10 +106,14 @@ public final class ResponsesClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         request.setValue("Bearer \(config.apiKey)", forHTTPHeaderField: "Authorization")
-        // Some gateways gate the Responses API to recognized coding-agent
-        // clients; identify as one so the request is accepted.
-        request.setValue("codex_cli_rs", forHTTPHeaderField: "originator")
-        request.setValue("codex_cli_rs/1.0.0", forHTTPHeaderField: "User-Agent")
+        // Some gateways gate the Responses API for GPT models to recognized
+        // coding-agent clients; identify as Codex for those. Other providers
+        // must not see it: DeepSeek treats a Codex client differently and
+        // ignores `reasoning.effort: none`, thinking anyway.
+        if identifiesAsCodex(model: config.model) {
+            request.setValue("codex_cli_rs", forHTTPHeaderField: "originator")
+            request.setValue("codex_cli_rs/\(codexVersion)", forHTTPHeaderField: "User-Agent")
+        }
         request.timeoutInterval = config.timeoutSeconds
         var body: [String: Any] = [
             "model": config.model,

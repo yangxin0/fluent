@@ -1,4 +1,7 @@
 import Foundation
+import os.log
+
+private let log = Logger(subsystem: "com.yangxin.inputmethod.EnglishInput", category: "rewrite")
 
 /// Debounces keystrokes into at most one in-flight LLM request, cancelling
 /// stale ones. Callbacks are delivered on the main queue; the generation
@@ -38,19 +41,37 @@ public final class RewriteEngine {
             } catch { return }
             guard !Task.isCancelled else { return }
             self?.emit(.began(generation: generation))
+            // Persisted at default level so `log show` can compare models:
+            // time to first token and total time per request.
+            let model = config.model
+            let started = Date()
+            var firstTokenMs: Int?
+            func ms(since date: Date) -> Int { Int(Date().timeIntervalSince(date) * 1000) }
+            log.notice("request gen=\(generation, privacy: .public) model=\(model, privacy: .public) chars=\(trimmed.count, privacy: .public)")
             var accumulated = ""
             do {
                 for try await delta in client.stream(config: config, instructions: instructions, input: trimmed) {
-                    if Task.isCancelled { return }
+                    if Task.isCancelled { break }
+                    if firstTokenMs == nil {
+                        firstTokenMs = ms(since: started)
+                        log.notice("first token gen=\(generation, privacy: .public) model=\(model, privacy: .public) ttft=\(firstTokenMs!, privacy: .public)ms")
+                    }
                     accumulated += delta
                     self?.emit(.delta(generation: generation, accumulated: accumulated))
                 }
-                guard !Task.isCancelled else { return }
+                if Task.isCancelled {
+                    log.notice("cancelled gen=\(generation, privacy: .public) model=\(model, privacy: .public) after=\(ms(since: started), privacy: .public)ms ttft=\(firstTokenMs.map(String.init) ?? "-", privacy: .public)ms")
+                    return
+                }
+                log.notice("done gen=\(generation, privacy: .public) model=\(model, privacy: .public) total=\(ms(since: started), privacy: .public)ms ttft=\(firstTokenMs.map(String.init) ?? "-", privacy: .public)ms out=\(accumulated.count, privacy: .public)")
                 self?.emit(.done(generation: generation, text: accumulated))
             } catch is CancellationError {
+                log.notice("cancelled gen=\(generation, privacy: .public) model=\(model, privacy: .public) after=\(ms(since: started), privacy: .public)ms")
             } catch let error as URLError where error.code == .cancelled {
+                log.notice("cancelled gen=\(generation, privacy: .public) model=\(model, privacy: .public) after=\(ms(since: started), privacy: .public)ms")
             } catch {
                 guard !Task.isCancelled else { return }
+                log.error("failed gen=\(generation, privacy: .public) model=\(model, privacy: .public) after=\(ms(since: started), privacy: .public)ms: \(Self.humanize(error), privacy: .public)")
                 self?.emit(.failed(generation: generation, message: Self.humanize(error)))
             }
         }

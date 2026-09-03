@@ -74,6 +74,23 @@ final class AppConfigTests: XCTestCase {
         XCTAssertEqual(obj["input"] as? String, "hi")
         XCTAssertEqual(obj["instructions"] as? String, "inst")
         XCTAssertEqual(obj["stream"] as? Bool, true)
+        XCTAssertNil(request.value(forHTTPHeaderField: "originator"))
+    }
+
+    func testCodexHeadersOnlyForGPTModels() throws {
+        let gpt = try ResponsesClient.makeRequest(
+            config: AppConfig(baseURL: "https://example.com/v1", apiKey: "k", model: "gpt-5.6-luna"),
+            instructions: "inst", input: "hi")
+        XCTAssertEqual(gpt.value(forHTTPHeaderField: "originator"), "codex_cli_rs")
+        XCTAssertEqual(gpt.value(forHTTPHeaderField: "User-Agent"), "codex_cli_rs/0.152.1")
+        let deepseek = try ResponsesClient.makeRequest(
+            config: AppConfig(baseURL: "https://example.com", apiKey: "k", model: "deepseek-v4-flash",
+                              reasoningEffort: "none"),
+            instructions: "inst", input: "hi")
+        XCTAssertNil(deepseek.value(forHTTPHeaderField: "originator"))
+        XCTAssertNil(deepseek.value(forHTTPHeaderField: "User-Agent"))
+        let obj = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(deepseek.httpBody)) as? [String: Any])
+        XCTAssertEqual((obj["reasoning"] as? [String: String])?["effort"], "none")
     }
 
     func testTemplateWriteAndLoad() throws {
