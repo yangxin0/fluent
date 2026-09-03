@@ -239,7 +239,7 @@ class InputController: IMKInputController {
         }
         let appearance = Shared.configStore.current()?.appearancePreference ?? "auto"
         PreviewPanelController.shared.flash(
-            message: Shared.enabled ? "English Input on" : "English Input off — typing passes through (⇧⇧ to re-enable)",
+            message: Shared.enabled ? "English Input ON" : "English Input OFF\n⇧⇧ to re-enable",
             appearance: appearance,
             near: caretRect()
         )

@@ -15,6 +15,7 @@ final class PreviewPanelController {
 
     private let panel: NSPanel
     private let background = PanelBackgroundView()
+    private let header = NSStackView()
     private let modePill = NSView()
     private let modeLabel = NSTextField(labelWithString: "")
     private let statusLabel = NSTextField(labelWithString: "")
@@ -84,7 +85,7 @@ final class PreviewPanelController {
         separator.boxType = .separator
         separator.isHidden = true
 
-        let header = NSStackView(views: [modePill, NSView(), statusLabel])
+        for view in [modePill, NSView(), statusLabel] { header.addArrangedSubview(view) }
         header.orientation = .horizontal
         header.distribution = .fill
         header.alignment = .centerY
@@ -114,7 +115,7 @@ final class PreviewPanelController {
               appearance: String, near caretRect: NSRect) {
         flashToken += 1  // cancel any pending flash auto-hide
         applyAppearance(appearance)
-        modePill.isHidden = false
+        header.isHidden = false
         modeLabel.stringValue = mode.badge.uppercased()
         statusLabel.stringValue = status
         setMaxTextWidth(typed == nil ? Self.maxTextWidth : Self.maxTextWidthWithTyped)
@@ -159,8 +160,9 @@ final class PreviewPanelController {
         flashToken += 1
         let token = flashToken
         applyAppearance(appearance)
-        modePill.isHidden = true
-        statusLabel.stringValue = ""
+        // The whole header row, not just the pill: an empty row still takes
+        // its height and leaves a blank band above the message.
+        header.isHidden = true
         typedLabel.isHidden = true
         separator.isHidden = true
         setMaxTextWidth(Self.maxTextWidth)
