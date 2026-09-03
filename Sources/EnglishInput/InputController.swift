@@ -35,8 +35,6 @@ private enum Key {
     static let right: UInt16 = 124
     static let down: UInt16 = 125
     static let up: UInt16 = 126
-    static let leftShift: UInt16 = 56
-    static let rightShift: UInt16 = 60
 }
 
 private let maxCompositionLength = 500
@@ -47,7 +45,6 @@ class InputController: IMKInputController {
     /// Monotonic across compositions; guards against stale stream updates.
     private var generation = 0
     private let engine = RewriteEngine()
-    private var shiftTap = ShiftTapDetector()
 
     override init!(server: IMKServer!, delegate: Any!, client inputClient: Any!) {
         super.init(server: server, delegate: delegate, client: inputClient)
@@ -60,19 +57,22 @@ class InputController: IMKInputController {
     // MARK: - IMK lifecycle
 
     override func recognizedEvents(_ sender: Any!) -> Int {
-        // flagsChanged is needed to see bare Shift presses for the ⇧⇧ toggle.
-        ctlLog.notice("recognizedEvents queried by \(self.client()?.bundleIdentifier() ?? "?", privacy: .public)")
+        // flagsChanged is only a fallback for the ⇧⇧ toggle (see
+        // ShiftTapMonitor); many clients never forward it.
+        ctlLog.debug("recognizedEvents queried by \(self.client()?.bundleIdentifier() ?? "?", privacy: .public)")
         return Int(NSEvent.EventTypeMask.keyDown.union(.flagsChanged).rawValue)
     }
 
     override func activateServer(_ sender: Any!) {
         ctlLog.notice("activateServer: \(self.client()?.bundleIdentifier() ?? "?", privacy: .public) enabled=\(Shared.enabled, privacy: .public)")
+        ShiftTapMonitor.shared.sessionActivated(self)
         state.reset()
         PreviewPanelController.shared.hide()
     }
 
     override func deactivateServer(_ sender: Any!) {
         ctlLog.notice("deactivateServer: \(self.client()?.bundleIdentifier() ?? "?", privacy: .public)")
+        ShiftTapMonitor.shared.sessionDeactivated(self)
         // Focus is leaving — never silently drop what the user typed.
         commitRaw()
     }
@@ -116,12 +116,12 @@ class InputController: IMKInputController {
     override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
         guard let event else { return false }
         if event.type == .flagsChanged {
-            handleFlagsChanged(event)
+            ShiftTapMonitor.shared.handleIMKEvent(event)
             return false
         }
         guard event.type == .keyDown else { return false }
         // A real keypress between two Shift taps means it wasn't a toggle.
-        shiftTap.interrupt()
+        ShiftTapMonitor.shared.interrupt()
 
         guard Shared.enabled else { return false }
 
@@ -229,25 +229,8 @@ class InputController: IMKInputController {
         return false
     }
 
-    /// Track bare Shift press/release pairs; a quick double tap toggles the
-    /// IME on/off. Never consumes the event — Shift still works normally.
-    private func handleFlagsChanged(_ event: NSEvent) {
-        let mods = event.modifierFlags.intersection([.command, .control, .option, .shift, .function])
-        let isShiftKey = event.keyCode == Key.leftShift || event.keyCode == Key.rightShift
-        ctlLog.notice("flagsChanged: keyCode=\(event.keyCode, privacy: .public) mods=\(mods.rawValue, privacy: .public) client=\(self.client()?.bundleIdentifier() ?? "?", privacy: .public)")
-        if isShiftKey && mods == [.shift] {
-            shiftTap.shiftDown(at: event.timestamp)
-        } else if isShiftKey && mods.isEmpty {
-            if shiftTap.shiftUp(at: event.timestamp) {
-                ctlLog.notice("double-tap Shift → toggling, enabled was \(Shared.enabled, privacy: .public)")
-                toggleEnabled()
-            }
-        } else {
-            shiftTap.interrupt()
-        }
-    }
-
-    private func toggleEnabled() {
+    /// Also called by ShiftTapMonitor when a double tap fires.
+    func toggleEnabled() {
         Shared.enabled.toggle()
         ctlLog.notice("enabled is now \(Shared.enabled, privacy: .public)")
         if !Shared.enabled {

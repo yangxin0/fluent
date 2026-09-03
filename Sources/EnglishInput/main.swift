@@ -19,5 +19,6 @@ autoreleasepool {
         exit(1)
     }
     log.info("EnglishInput IMKServer started (\(connectionName, privacy: .public))")
+    ShiftTapMonitor.shared.start()
     app.run()
 }
