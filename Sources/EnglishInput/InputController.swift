@@ -238,11 +238,16 @@ class InputController: IMKInputController {
             commitRaw()
         }
         let appearance = Shared.configStore.current()?.appearancePreference ?? "auto"
-        PreviewPanelController.shared.flash(
-            message: Shared.enabled ? "English Input ON" : "English Input OFF\n⇧⇧ to re-enable",
-            appearance: appearance,
-            near: caretRect()
-        )
+        // The state word carries the color so it reads at a glance: green
+        // for ON, red for OFF; the system colors adapt to light and dark.
+        let message = NSMutableAttributedString(string: "English Input ")
+        message.append(NSAttributedString(
+            string: Shared.enabled ? "ON" : "OFF",
+            attributes: [.foregroundColor: Shared.enabled ? NSColor.systemGreen : NSColor.systemRed]))
+        if !Shared.enabled {
+            message.append(NSAttributedString(string: "\n⇧⇧ to re-enable"))
+        }
+        PreviewPanelController.shared.flash(message: message, appearance: appearance, near: caretRect())
     }
 
     // MARK: - Composition plumbing

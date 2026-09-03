@@ -156,7 +156,9 @@ final class PreviewPanelController {
     }
 
     /// Show a transient notice (e.g. the ⇧⇧ on/off toggle) that hides itself.
-    func flash(message: String, appearance: String, near caretRect: NSRect) {
+    /// `message` is rendered as given, so callers can color a word; the body
+    /// font and label color are applied wherever it sets none.
+    func flash(message: NSAttributedString, appearance: String, near caretRect: NSRect) {
         flashToken += 1
         let token = flashToken
         applyAppearance(appearance)
@@ -166,19 +168,24 @@ final class PreviewPanelController {
         typedLabel.isHidden = true
         separator.isHidden = true
         setMaxTextWidth(Self.maxTextWidth)
-        textLabel.stringValue = message
-        present(near: caretRect)
+        let styled = NSMutableAttributedString(attributedString: message)
+        let all = NSRange(location: 0, length: styled.length)
+        styled.addAttributes([.font: textLabel.font!, .foregroundColor: textLabel.textColor!], range: all)
+        message.enumerateAttributes(in: all) { attrs, range, _ in styled.addAttributes(attrs, range: range) }
+        textLabel.attributedStringValue = styled
+        present(near: caretRect, minWidth: 0)  // hug the notice; no "…" placeholder to pad
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in
             guard let self, self.flashToken == token else { return }
             self.hide()
         }
     }
 
-    private func present(near caretRect: NSRect) {
+    /// `minWidth` keeps the preview from collapsing around its "…" placeholder.
+    private func present(near caretRect: NSRect, minWidth: CGFloat = 160) {
         refreshLayerColors()
         guard let contentView = panel.contentView else { return }
         let fitting = contentView.fittingSize
-        let size = NSSize(width: min(max(fitting.width, 160), maxTextWidth + 2 * Self.padding),
+        let size = NSSize(width: min(max(fitting.width, minWidth), maxTextWidth + 2 * Self.padding),
                           height: fitting.height)
         panel.setFrame(NSRect(origin: origin(for: size, caretRect: caretRect), size: size),
                        display: true)
