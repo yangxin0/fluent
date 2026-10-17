@@ -3,11 +3,16 @@ import FluentCore
 
 // Debug harness: exercises the streaming client outside the IME loop.
 //   swift run fluent-cli [--mode fix|polish|interpret] "helo wrold"
-// or the shuangpin engine against the compiled dictionary (`make dict`):
+// or the Chinese engine against the compiled dictionary (`make dict`), as
+// 小鹤双拼 or full pinyin:
 //   swift run fluent-cli --xiaohe [--dict .build/dict] veui nihc
+//   swift run fluent-cli --pinyin [--no-abbreviations] [--fuzzy zh=z,an=ang] nihao zg
 
 var mode = Mode.fix
 var xiaohe = false
+var pinyin = false
+var abbreviations = true
+var fuzzy: [String] = []
 var dictDirectory = ".build/dict"
 var words: [String] = []
 var args = Array(CommandLine.arguments.dropFirst())
@@ -21,6 +26,12 @@ while !args.isEmpty {
         mode = m
     } else if arg == "--xiaohe" {
         xiaohe = true
+    } else if arg == "--pinyin" {
+        pinyin = true
+    } else if arg == "--no-abbreviations" {
+        abbreviations = false
+    } else if arg == "--fuzzy", !args.isEmpty {
+        fuzzy = args.removeFirst().split(separator: ",").map(String.init)
     } else if arg == "--dict", !args.isEmpty {
         dictDirectory = args.removeFirst()
     } else {
@@ -28,15 +39,17 @@ while !args.isEmpty {
     }
 }
 
-if xiaohe {
+if xiaohe || pinyin {
     let directory = URL(fileURLWithPath: dictDirectory)
     do {
+        let layout: any KeyLayout = pinyin
+            ? FullPinyinLayout(abbreviations: abbreviations, fuzzy: fuzzy) : XiaoheLayout()
         let translator = ChineseTranslator(
-            lexicon: try Lexicon(contentsOf: directory.appendingPathComponent("xiaohe.lexicon")))
+            lexicon: try Lexicon(contentsOf: directory.appendingPathComponent("xiaohe.lexicon")), layout: layout)
         let english = try EnglishWords(contentsOf: directory.appendingPathComponent("english.txt"))
         for keys in words {
-            let rank = ChinesePolicy.rank(run: keys, context: .fresh, english: english)
-            print("\(Xiaohe.grouped(keys))  [\(rank)]")
+            let rank = ChinesePolicy.rank(run: keys, context: .fresh, english: english, layout: layout)
+            print("\(layout.grouped(keys))  [\(rank)]")
             for (index, candidate) in translator.candidates(for: keys).prefix(12).enumerated() {
                 let comment = candidate.comment.map { " \($0)" } ?? ""
                 let partial = candidate.keyCount < keys.count ? " (\(candidate.keyCount) keys)" : ""

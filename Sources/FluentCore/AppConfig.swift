@@ -17,6 +17,14 @@ public struct AppConfig: Codable, Equatable {
     /// Exact terminal cell width in points, for clients that report neither
     /// a cell-sized caret rect nor a font. Omit/0 to estimate automatically.
     public var terminalCellWidth: Double?
+    /// Chinese input: "xiaohe" (小鹤双拼, the default), "pinyin" (full
+    /// pinyin) or "off". One layout at a time.
+    public var chinese: String?
+    /// Full pinyin: an initial alone spells a syllable (`zg` → 中国).
+    /// Default on.
+    public var pinyinAbbreviations: Bool?
+    /// Full pinyin: pairs spelled alike, such as `"zh=z"` or `"an=ang"`.
+    public var fuzzyPinyin: [String]?
     public var debounceMs: Int
     public var timeoutSeconds: Double
 
@@ -41,6 +49,7 @@ public struct AppConfig: Codable, Equatable {
     public init(baseURL: String, apiKey: String, model: String, reasoningEffort: String? = nil,
                 appearance: String? = nil, terminalMode: String? = nil,
                 terminalApps: [String]? = nil, terminalCellWidth: Double? = nil,
+                chinese: String? = nil, pinyinAbbreviations: Bool? = nil, fuzzyPinyin: [String]? = nil,
                 debounceMs: Int = AppConfig.defaultDebounceMs,
                 timeoutSeconds: Double = AppConfig.defaultTimeoutSeconds) {
         self.baseURL = baseURL
@@ -51,13 +60,16 @@ public struct AppConfig: Codable, Equatable {
         self.terminalMode = terminalMode
         self.terminalApps = terminalApps
         self.terminalCellWidth = terminalCellWidth
+        self.chinese = chinese
+        self.pinyinAbbreviations = pinyinAbbreviations
+        self.fuzzyPinyin = fuzzyPinyin
         self.debounceMs = AppConfig.clampDebounce(debounceMs)
         self.timeoutSeconds = AppConfig.clampTimeout(timeoutSeconds)
     }
 
     enum CodingKeys: String, CodingKey {
         case baseURL, apiKey, model, reasoningEffort, appearance, terminalMode, terminalApps,
-             terminalCellWidth, debounceMs, timeoutSeconds
+             terminalCellWidth, chinese, pinyinAbbreviations, fuzzyPinyin, debounceMs, timeoutSeconds
     }
 
     /// Normalized appearance preference; unknown/missing values mean "auto".
@@ -78,6 +90,15 @@ public struct AppConfig: Codable, Equatable {
         }
     }
 
+    /// Normalized Chinese input; unknown/missing values mean "xiaohe".
+    public var chinesePreference: String {
+        switch chinese?.lowercased() {
+        case "pinyin", "quanpin": return "pinyin"
+        case "off": return "off"
+        default: return "xiaohe"
+        }
+    }
+
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         baseURL = try c.decode(String.self, forKey: .baseURL)
@@ -88,6 +109,9 @@ public struct AppConfig: Codable, Equatable {
         terminalMode = try c.decodeIfPresent(String.self, forKey: .terminalMode)
         terminalApps = try c.decodeIfPresent([String].self, forKey: .terminalApps)
         terminalCellWidth = try c.decodeIfPresent(Double.self, forKey: .terminalCellWidth)
+        chinese = try c.decodeIfPresent(String.self, forKey: .chinese)
+        pinyinAbbreviations = try c.decodeIfPresent(Bool.self, forKey: .pinyinAbbreviations)
+        fuzzyPinyin = try c.decodeIfPresent([String].self, forKey: .fuzzyPinyin)
         debounceMs = AppConfig.clampDebounce(
             try c.decodeIfPresent(Int.self, forKey: .debounceMs) ?? AppConfig.defaultDebounceMs)
         timeoutSeconds = AppConfig.clampTimeout(
@@ -142,6 +166,24 @@ public final class ConfigStore {
         cachedMtime = nil
     }
 
+    /// Sets one key in the config file and keeps the others (keys come out
+    /// sorted). Used by the IME menu's choices.
+    @discardableResult
+    public func set(_ key: String, to value: Any) -> Bool {
+        writeTemplateIfMissing()
+        guard let data = try? Data(contentsOf: configURL),
+              var object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              JSONSerialization.isValidJSONObject([key: value])
+        else { return false }
+        object[key] = value
+        guard let output = try? JSONSerialization.data(
+            withJSONObject: object, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
+        else { return false }
+        let written = (try? (output + Data("\n".utf8)).write(to: configURL, options: .atomic)) != nil
+        invalidate()
+        return written
+    }
+
     /// Writes a starter config the user can edit; no-op if the file exists.
     @discardableResult
     public func writeTemplateIfMissing() -> Bool {
@@ -155,6 +197,7 @@ public final class ConfigStore {
           "model": "gpt-4o-mini",
           "appearance": "auto",
           "terminalMode": "auto",
+          "chinese": "xiaohe",
           "debounceMs": 350,
           "timeoutSeconds": 10
         }

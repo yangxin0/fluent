@@ -2,11 +2,12 @@ import Foundation
 import os.log
 import FluentCore
 
-private let spLog = Logger(subsystem: "com.yangxin.inputmethod.Fluent", category: "shuangpin")
+private let spLog = Logger(subsystem: "com.yangxin.inputmethod.Fluent", category: "chinese")
 
-/// The 小鹤双拼 dictionary bundled by `make dict`, loaded off the main
+/// The Chinese dictionary bundled by `make dict`, loaded off the main
 /// thread at launch, plus the words learned from your picks. Until it is
-/// loaded (or if the bundle has none) typing stays English only.
+/// loaded (or if the bundle has none) typing stays English only. The layout
+/// (小鹤双拼 or full pinyin) follows the config.
 final class ChineseInput {
     private(set) static var shared: ChineseInput?
 
@@ -14,6 +15,13 @@ final class ChineseInput {
     let english: EnglishWords
     private let userDictionary: UserDictionary
     private var pendingSave: DispatchWorkItem?
+    private var layoutSettings: LayoutSettings?
+
+    private struct LayoutSettings: Equatable {
+        var layout: String
+        var abbreviations: Bool
+        var fuzzy: [String]
+    }
 
     static let userDictionaryURL = FileManager.default
         .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -24,6 +32,25 @@ final class ChineseInput {
         self.english = english
         self.userDictionary = userDictionary
     }
+
+    /// Points the translator at the configured layout, rebuilding it only when
+    /// the settings change. False when Chinese is off.
+    func apply(_ config: AppConfig?) -> Bool {
+        let settings = LayoutSettings(layout: config?.chinesePreference ?? "xiaohe",
+                                      abbreviations: config?.pinyinAbbreviations ?? true,
+                                      fuzzy: config?.fuzzyPinyin ?? [])
+        guard settings.layout != "off" else { return false }
+        if settings != layoutSettings {
+            translator.layout = settings.layout == "pinyin"
+                ? FullPinyinLayout(abbreviations: settings.abbreviations, fuzzy: settings.fuzzy)
+                : XiaoheLayout()
+            layoutSettings = settings
+        }
+        return true
+    }
+
+    /// `'` separates syllables in full pinyin (`xi'an`).
+    var separatesSyllables: Bool { translator.layout is FullPinyinLayout }
 
     /// Learns the words of a commit; saved a moment later, off the main thread.
     func learn(_ words: [(text: String, code: [SyllableID])]) {

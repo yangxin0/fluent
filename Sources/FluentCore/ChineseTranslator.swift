@@ -85,9 +85,11 @@ public final class ChineseTranslator {
         for end in Set(byEnd.keys).union(learnedByEnd.keys).sorted(by: >) {
             result += (learnedByEnd[end] ?? []).sorted { $0.weight > $1.weight }
             let words = (byEnd[end] ?? []).sorted { $0.weight > $1.weight }
-            // Plenty of single characters, fewer words of each length.
-            result += words.filter { $0.code.count > 1 }.prefix(Self.maxWordsPerLength)
-            result += words.filter { $0.code.count == 1 }.prefix(Self.maxCharacters)
+            // Plenty of single characters, fewer words of each length, still
+            // by weight (full pinyin mixes both: `xian` is 先 and 西安).
+            result += (words.filter { $0.code.count > 1 }.prefix(Self.maxWordsPerLength)
+                + words.filter { $0.code.count == 1 }.prefix(Self.maxCharacters))
+                .sorted { $0.weight > $1.weight }
         }
         var seen = Set<String>()
         return result.filter { seen.insert($0.text).inserted }

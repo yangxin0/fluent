@@ -33,6 +33,31 @@ final class AppConfigTests: XCTestCase {
         XCTAssertEqual(try pref("{\(base),\"terminalMode\":\"nonsense\"}"), "auto")
     }
 
+    func testChinesePreference() throws {
+        func decode(_ extra: String) throws -> AppConfig {
+            try JSONDecoder().decode(AppConfig.self, from: Data(#"{"baseURL":"https://x/v1","apiKey":"sk-x","model":"m"\#(extra)}"#.utf8))
+        }
+        XCTAssertEqual(try decode("").chinesePreference, "xiaohe")
+        XCTAssertEqual(try decode(#","chinese":"Pinyin""#).chinesePreference, "pinyin")
+        XCTAssertEqual(try decode(#","chinese":"off""#).chinesePreference, "off")
+        XCTAssertEqual(try decode(#","chinese":"nonsense""#).chinesePreference, "xiaohe")
+        let full = try decode(#","chinese":"pinyin","pinyinAbbreviations":false,"fuzzyPinyin":["zh=z"]"#)
+        XCTAssertEqual(full.pinyinAbbreviations, false)
+        XCTAssertEqual(full.fuzzyPinyin, ["zh=z"])
+    }
+
+    func testSetKeepsTheOtherKeys() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("cfg-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = ConfigStore(configURL: dir.appendingPathComponent("config.json"))
+        XCTAssertTrue(store.writeTemplateIfMissing())
+        XCTAssertTrue(store.set("chinese", to: "pinyin"))
+        let config = try XCTUnwrap(store.current())
+        XCTAssertEqual(config.chinesePreference, "pinyin")
+        XCTAssertEqual(config.model, "gpt-4o-mini")
+        XCTAssertEqual(config.apiKey, AppConfig.placeholderKey)
+    }
+
     func testNumericFieldsAreClamped() throws {
         func decode(_ extra: String) throws -> AppConfig {
             let json = #"{"baseURL":"https://x/v1","apiKey":"sk-x","model":"m","# + extra + "}"

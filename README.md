@@ -5,7 +5,7 @@ text appears inline as underlined composition text in any app; an LLM
 rewrites it, and a candidate bar next to the caret shows what Enter will
 insert (`P  We should figure out a way.  ↵`): **Enter inserts the improved
 text**, Shift+Enter inserts exactly what you typed, Esc cancels. The same bar
-is used for 小鹤双拼 Chinese (see below).
+is used for Chinese, 小鹤双拼 or 全拼 (see below).
 
 Powered by any **OpenAI Responses-API-compatible endpoint** (OpenAI, or any
 provider exposing `/v1/responses` with SSE streaming).
@@ -66,6 +66,13 @@ Add more apps to the whitelist with `"terminalApps": ["com.example.term"]`
 (bundle identifiers). Edge detection measures the terminal's cell width from
 what the app reports; if it triggers too early or late, set the exact width in
 points with `"terminalCellWidth": 9.7`.
+`chinese` picks the one Chinese input method (see below): `"xiaohe"`
+(小鹤双拼, the default), `"pinyin"` (full pinyin) or `"off"`; the IME menu
+offers the same choice and writes it here. For full pinyin,
+`"pinyinAbbreviations"` (default `true`) lets an initial alone spell a
+syllable (`zg` → 中国), and `"fuzzyPinyin"` lists pairs to treat as the same,
+e.g. `["zh=z", "ch=c", "sh=s", "n=l", "an=ang", "en=eng", "in=ing"]`
+(default none).
 Config changes are picked up automatically (or use IME menu ▸ *Reload Config*).
 
 ## Keys while composing
@@ -91,11 +98,14 @@ don't want rewritten. A small notice flashes near the caret; double-tap
 Shift again (or use the IME menu ▸ *Enabled*) to turn it back on. The
 toggle resets to *on* at relaunch.
 
-## 小鹤双拼 (Chinese)
+## Chinese (小鹤双拼 or 全拼)
 
-You can also type Chinese with the 小鹤双拼 (Xiaohe shuangpin) layout without
-switching input sources. English always comes first: Chinese conversion
-starts only when the letters you type can't be English.
+You can also type Chinese without switching input sources, with one Chinese
+input method at a time: the 小鹤双拼 (Xiaohe shuangpin) layout by default, or
+full pinyin (全拼) with `"chinese": "pinyin"` or IME menu ▸ *Chinese: 全拼*.
+English always comes first: Chinese conversion starts only when the letters
+you type can't be English. The examples below are 小鹤双拼; full pinyin works
+the same way with whole syllables (`nihao`, `zhongguo`).
 
 - At the start of a composition, letters that are valid shuangpin and don't
   begin any English word (`nihc`, `veuiyg`) open a **candidate bar** like the
@@ -111,6 +121,14 @@ starts only when the letters you type can't be English.
   typo like `rela` never turns into 热辣. English words inside Chinese text
   (`这个 bug 修好了`) don't count: the Chinese after them still converts.
 
+In full pinyin, keys can split more than one way (`xian` is 先 or 西安):
+every reading is offered, best first. Type `'` to split syllables yourself
+(`xi'an` → 西安), type only initials (`zg` → 中国, `bj` → 北京, `zhg` with
+`zh` as one initial), and an unfinished last syllable is completed
+(`zhongg` → 中国). Fuzzy pairs from the config add the other spelling
+(`zh=z`: `zi` also finds 只). The inline keys are split the same way
+(`zhong guo`).
+
 | Key (candidate bar) | Action |
 |---|---|
 | Space, 1–6 | Pick the highlighted / numbered candidate |
@@ -120,12 +138,12 @@ starts only when the letters you type can't be English.
 | Enter | Insert the keys as typed (when they lead, the bar marks them: `1 make ↵`) |
 | Backspace | Take back the last pick, else delete a key |
 | Esc | Cancel (collapse the grid first) |
-| Punctuation | Insert the highlighted candidate and Chinese punctuation (`，。？`) |
+| Punctuation | Insert the highlighted candidate and Chinese punctuation (`，。？`); in full pinyin `'` splits syllables instead |
 | A capital letter | Keep the picked words and continue in English |
 
 Picking a candidate that covers only part of the keys keeps converting the
 rest. Punctuation typed right after Chinese text is Chinese too. Turn the
-whole feature off with IME menu ▸ *小鹤双拼 Chinese*.
+whole feature off with IME menu ▸ *Chinese: Off* (or `"chinese": "off"`).
 
 Words you pick are learned the way Rime does it: they move ahead of other
 words of the same length, words picked one after another become a new
@@ -145,6 +163,7 @@ make logs       # tail the IME's os_log output
 swift run fluent-cli --mode polish "helo wrold how r u"   # test the API path without the IME
 make dict       # download the pinned rime-ice dictionaries and compile them (bundle/install run it)
 make cli ARGS='--xiaohe veui nihc'   # 小鹤双拼 candidates from the compiled dictionary
+make cli ARGS='--pinyin nihao zg'    # full pinyin (--no-abbreviations, --fuzzy zh=z,an=ang)
 ```
 
 If typing goes dead after a change, check for a crash report:
