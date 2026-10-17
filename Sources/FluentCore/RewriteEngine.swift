@@ -32,7 +32,7 @@ public final class RewriteEngine {
         guard trimmed.count >= 3 else { return }
         guard let config, config.isConfigured else {
             let reason = configProblem.map { "Config error: \($0)" } ?? "Not configured"
-            emit(.failed(generation: generation, message: "\(reason) — IME menu ▸ Open Config File"))
+            emit(.failed(generation: generation, message: "\(reason) — IME menu ▸ Open Fluent Settings…"))
             return
         }
         let client = self.client
@@ -90,7 +90,7 @@ public final class RewriteEngine {
         }
     }
 
-    static func humanize(_ error: Error) -> String {
+    public static func humanize(_ error: Error) -> String {
         if let urlError = error as? URLError {
             switch urlError.code {
             case .notConnectedToInternet, .networkConnectionLost, .cannotConnectToHost,

@@ -54,6 +54,16 @@ final class UserDictionaryTests: XCTestCase {
         XCTAssertEqual(loaded.words(for: ids("ni hao")).map(\.text), ["你好"])
     }
 
+    func testResetForgetsEverything() {
+        let user = UserDictionary()
+        user.learn([("这是", ids("zhe shi")), ("个", ids("ge"))])
+        user.reset()
+        XCTAssertEqual(user.count, 0)
+        XCTAssertEqual(user.tick, 0)
+        XCTAssertFalse(user.hasPrefix(ids("zhe")))
+        XCTAssertTrue(user.words(for: ids("zhe shi")).isEmpty)
+    }
+
     func testDeeDecaysByEEvery200Commits() {
         XCTAssertEqual(UserDictionary.decayed(1, from: 0, to: 200), exp(-1), accuracy: 1e-12)
     }

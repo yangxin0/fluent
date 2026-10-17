@@ -3,7 +3,7 @@
 import Carbon
 import Foundation
 
-let bundlePath = NSString(string: "~/Library/Input Methods/Fluent.app").expandingTildeInPath
+let bundlePath = NSString(string: "~/Library/Input Methods/Fluent-Input.app").expandingTildeInPath
 let bundleURL = URL(fileURLWithPath: bundlePath)
 
 guard FileManager.default.fileExists(atPath: bundlePath) else {

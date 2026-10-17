@@ -123,8 +123,8 @@ class InputController: IMKInputController {
             menu.addItem(item)
         }
         menu.addItem(.separator())
-        let open = NSMenuItem(title: "Open Config File",
-                              action: #selector(openConfig(_:)), keyEquivalent: "")
+        let open = NSMenuItem(title: "Open Fluent Settings…",
+                              action: #selector(openSettings(_:)), keyEquivalent: "")
         open.target = self
         menu.addItem(open)
         let reload = NSMenuItem(title: "Reload Config",
@@ -863,7 +863,13 @@ class InputController: IMKInputController {
         toggleEnabled()
     }
 
-    @objc func openConfig(_ sender: Any?) {
+    /// The Settings app (`make install` puts it in /Applications), else the
+    /// config file itself.
+    @objc func openSettings(_ sender: Any?) {
+        if let settings = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.yangxin.Fluent") {
+            NSWorkspace.shared.openApplication(at: settings, configuration: NSWorkspace.OpenConfiguration())
+            return
+        }
         Shared.configStore.writeTemplateIfMissing()
         NSWorkspace.shared.open(Shared.configStore.configURL)
     }

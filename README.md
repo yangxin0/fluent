@@ -27,8 +27,17 @@ The last mode is remembered.
 ## Install
 
 ```sh
-make install    # build, assemble Fluent.app, install to ~/Library/Input Methods, ad-hoc sign, register
+make install    # build both apps, ad-hoc sign, register the input method
 ```
+
+This installs two apps:
+
+- **`~/Library/Input Methods/Fluent-Input.app`**, the input method. It was
+  `Fluent.app` before; `make install` moves an old one to the new name in
+  place, so the input source stays enabled.
+- **`/Applications/Fluent.app`**, the Settings app. Its *Setup* page checks
+  each step below, and its other pages edit the config (also IME menu ▸
+  *Open Fluent Settings…*).
 
 Then (one-time, macOS requires manual consent for third-party input sources):
 
@@ -38,9 +47,12 @@ Then (one-time, macOS requires manual consent for third-party input sources):
 
 ## Configure
 
-Edit `~/.config/fluent/config.json` (a template is created on first run, or
-your config from before the rename to Fluent is copied over;
-also reachable via IME menu ▸ *Open Config File*):
+Use the Settings app (`/Applications/Fluent.app`, or IME menu ▸ *Open
+Fluent Settings…*), in English or 简体中文: it edits
+`~/.config/fluent/config.json`, one key at a time, leaving the rest of the
+file as you wrote it. You can also edit the file by hand (a template is
+created on first run, or your config from before the rename to Fluent is
+copied over):
 
 ```json
 {
@@ -166,8 +178,8 @@ whole feature off with IME menu ▸ *Chinese: Off* (or `"chinese": "off"`).
 Words you pick are learned the way Rime does it: they move ahead of other
 words of the same length, words picked one after another become a new
 phrase, and words you stop using fade over a few hundred picks. They are
-saved in `~/Library/Application Support/Fluent/xiaohe-user.tsv`;
-delete the file to forget them.
+saved in `~/Library/Application Support/Fluent/xiaohe-user.tsv`; to forget
+them, use Settings ▸ Chinese ▸ *Forget learned words*.
 
 The dictionaries come from [rime-ice](https://github.com/iDvel/rime-ice):
 `make install` downloads and compiles them (see `make dict` below).
@@ -176,6 +188,7 @@ The dictionaries come from [rime-ice](https://github.com/iDvel/rime-ice):
 
 ```sh
 make dev        # rebuild + reinstall + restart the IME and re-select it (macOS relaunches it on next keystroke)
+make settings   # build the Settings app and open it from dist/ (its pages are Resources/Settings)
 make test       # unit tests (SSE parser, config, prompts, Chinese engine)
 make logs       # tail the IME's os_log output
 swift run fluent-cli --mode polish "helo wrold how r u"   # test the API path without the IME (--help)

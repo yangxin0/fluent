@@ -25,9 +25,7 @@ final class ChineseInput {
         var fuzzy: [String]
     }
 
-    static let userDictionaryURL = FileManager.default
-        .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("Fluent/xiaohe-user.tsv")
+    static let userDictionaryURL = UserDictionary.fileURL
 
     private init(lexicon: Lexicon, english: EnglishWords, userDictionary: UserDictionary) {
         translator = ChineseTranslator(lexicon: lexicon, userDictionary: userDictionary)
@@ -79,6 +77,14 @@ final class ChineseInput {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: item)
     }
 
+    /// Fluent Settings ▸ Chinese ▸ Forget learned words.
+    func forgetLearned() {
+        pendingSave?.cancel()
+        userDictionary.reset()
+        ChineseInput.saveQueue.async { try? FileManager.default.removeItem(at: ChineseInput.userDictionaryURL) }
+        spLog.notice("forgot the learned words")
+    }
+
     /// A missing file just means nothing learned yet; an unreadable one is
     /// kept aside rather than overwritten by the next save.
     private static func loadLearned() -> UserDictionary {
@@ -97,6 +103,9 @@ final class ChineseInput {
     }
 
     static func preload() {
+        DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name(UserDictionary.forgetNotification), object: nil, queue: .main
+        ) { _ in shared?.forgetLearned() }
         DispatchQueue.global(qos: .userInitiated).async {
             guard let lexiconURL = Bundle.main.url(forResource: "xiaohe", withExtension: "lexicon"),
                   let englishURL = Bundle.main.url(forResource: "english", withExtension: "txt")

@@ -31,9 +31,26 @@ public final class UserDictionary {
     /// Words longer than this are not learned (librime's limit is similar).
     static let maxLearnedSyllables = 8
 
+    /// Where the IME keeps the learned words.
+    public static let fileURL = FileManager.default
+        .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("Fluent/xiaohe-user.tsv")
+
+    /// Posted (distributed) by the Settings app to make the running IME
+    /// forget every learned word.
+    public static let forgetNotification = "com.yangxin.inputmethod.Fluent.forgetLearnedWords"
+
     public init() {}
 
     public var count: Int { records.count }
+
+    /// Forgets every learned word.
+    public func reset() {
+        records = [:]
+        textsByCode = [:]
+        prefixes = []
+        tick = 0
+    }
 
     /// Learns the words of one commit: each picked part, and when the commit
     /// was built from several picks, the whole phrase as a new word. False

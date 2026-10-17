@@ -8,6 +8,7 @@ let package = Package(
         .executable(name: "Fluent", targets: ["Fluent"]),
         .executable(name: "fluent-cli", targets: ["FluentCLI"]),
         .executable(name: "fluent-dict", targets: ["FluentDict"]),
+        .executable(name: "FluentSettings", targets: ["FluentSettings"]),
     ],
     targets: [
         .target(name: "FluentCore"),
@@ -17,6 +18,15 @@ let package = Package(
             linkerSettings: [
                 .linkedFramework("Cocoa"),
                 .linkedFramework("InputMethodKit"),
+                .linkedFramework("Carbon"),
+            ]
+        ),
+        .executableTarget(
+            name: "FluentSettings",
+            dependencies: ["FluentCore"],
+            linkerSettings: [
+                .linkedFramework("Cocoa"),
+                .linkedFramework("WebKit"),
                 .linkedFramework("Carbon"),
             ]
         ),

@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fluent</title>
+<link rel="stylesheet" href="app.css">
+<script src="i18n.js"></script>
+</head>
+<body>
+<header class="top">
+  <div class="titlebar"><span class="brand"><span class="logo" aria-hidden="true">F</span>Fluent</span></div>
+  <nav class="seg" id="nav" aria-label="Pages">
+    <button data-view="setup" class="on" data-t>Setup</button>
+    <button data-view="rewrite" data-t>Rewrite</button>
+    <button data-view="chinese" data-t>Chinese</button>
+    <button data-view="appearance" data-t>Appearance</button>
+    <button data-view="about" data-t>About</button>
+  </nav>
+</header>
+
+<main>
+  <section class="view on" id="setup">
+    <h1 data-t>Get Fluent ready</h1>
+    <p class="lede" data-t>Fluent is an input method: it improves the English you type and types Chinese, right in the app you're using.</p>
+    <ul class="card checklist">
+      <li id="chk-installed">
+        <span class="mark"></span>
+        <div class="text"><b data-t>Input method installed</b><span class="sub" data-t>Run make install in the source folder.</span></div>
+      </li>
+      <li id="chk-enabled">
+        <span class="mark"></span>
+        <div class="text"><b data-t>Added in Input Sources</b><span class="sub" data-t>System Settings ▸ Keyboard ▸ Input Sources ▸ + ▸ English ▸ Fluent. macOS doesn't let apps add it for you.</span></div>
+        <button class="pill" data-open="inputSources" data-t>Open Input Sources</button>
+      </li>
+      <li id="chk-selected">
+        <span class="mark"></span>
+        <div class="text"><b data-t>Selected</b><span class="sub" data-t>Pick Fluent from the input menu in the menu bar, or press Ctrl+Space.</span></div>
+      </li>
+      <li id="chk-configured">
+        <span class="mark"></span>
+        <div class="text"><b data-t>API key set</b><span class="sub" id="configured-sub" data-t>Needed to improve English. Chinese works without it.</span></div>
+        <button class="pill" data-go="rewrite" data-t>Set up</button>
+      </li>
+      <li id="chk-dictionaries">
+        <span class="mark"></span>
+        <div class="text"><b data-t>Dictionaries present</b><span class="sub" data-t>make install downloads them from rime-ice.</span></div>
+      </li>
+    </ul>
+    <div class="card tips">
+      <p><b data-t>Double-tap Shift</b> <span data-t>turns Fluent on and off, for terminal commands or passwords.</span></p>
+      <p><b data-t>Enter</b> <span data-t>inserts the improved text; Shift+Enter inserts it as typed.</span></p>
+    </div>
+  </section>
+
+  <section class="view" id="rewrite">
+    <h1 data-t>Rewrite</h1>
+    <p class="lede" data-t>Fluent sends what you type to an OpenAI Responses-compatible API and shows the improved text in the bar.</p>
+    <div class="card form">
+      <label class="row"><span class="label" data-t>Provider URL</span>
+        <input data-key="baseURL" type="url" placeholder="https://api.openai.com/v1" spellcheck="false" autocomplete="off"></label>
+      <label class="row"><span class="label" data-t>API key</span>
+        <span class="field"><input data-key="apiKey" id="apiKey" type="password" spellcheck="false" autocomplete="off"><button type="button" class="pill" id="showKey" data-t>Show</button></span></label>
+      <label class="row"><span class="label" data-t>Model</span>
+        <input data-key="model" type="text" placeholder="gpt-4o-mini" spellcheck="false" autocomplete="off"></label>
+      <label class="row"><span class="label" data-t>Reasoning effort</span>
+        <select data-key="reasoningEffort">
+          <option value="" data-t>Model default</option>
+          <option value="none">none</option>
+          <option value="minimal">minimal</option>
+          <option value="low">low</option>
+          <option value="medium">medium</option>
+          <option value="high">high</option>
+        </select></label>
+    </div>
+    <div class="card form">
+      <label class="row"><span class="label" data-t>Wait after typing</span>
+        <span class="unit"><input data-key="debounceMs" type="number" min="0" max="10000" step="50" placeholder="350"><span>ms</span></span></label>
+      <label class="row top"><span class="label" data-t>Timeout</span>
+        <span class="stack"><span class="unit"><input data-key="timeoutSeconds" type="number" min="1" max="300" step="1" placeholder="10"><span>s</span></span>
+          <span class="hint" data-t>The timeout counts how long the reply may stay silent, not its whole length.</span></span></label>
+    </div>
+    <div class="test">
+      <button class="primary" id="test" data-t>Test</button>
+      <span class="result" id="testResult"></span>
+    </div>
+  </section>
+
+  <section class="view" id="chinese">
+    <h1 data-t>Chinese</h1>
+    <p class="lede" data-t>English always comes first: Chinese converts only when the letters you type can't be English.</p>
+    <div class="card form">
+      <div class="row"><span class="label" data-t>Input method</span>
+        <div class="choice" data-key="chinese" data-default="xiaohe">
+          <button data-value="xiaohe">小鹤双拼</button>
+          <button data-value="pinyin" data-t>全拼 (full pinyin)</button>
+          <button data-value="off" data-t>Off</button>
+        </div></div>
+    </div>
+    <div class="card form" id="pinyinOptions">
+      <label class="row"><span class="label" data-t>Initials only</span>
+        <span class="field"><input type="checkbox" class="switch" data-key="pinyinAbbreviations" data-default="true"><span class="hint" data-t>zg → 中国, bj → 北京</span></span></label>
+      <div class="row top"><span class="label" data-t>Fuzzy pinyin</span>
+        <div class="stack"><div class="checks" id="fuzzy">
+          <label><input type="checkbox" value="zh=z"> zh = z</label>
+          <label><input type="checkbox" value="ch=c"> ch = c</label>
+          <label><input type="checkbox" value="sh=s"> sh = s</label>
+          <label><input type="checkbox" value="n=l"> n = l</label>
+          <label><input type="checkbox" value="an=ang"> an = ang</label>
+          <label><input type="checkbox" value="en=eng"> en = eng</label>
+          <label><input type="checkbox" value="in=ing"> in = ing</label>
+          <label><input type="checkbox" value="f=h"> f = h</label>
+          <label><input type="checkbox" value="r=l"> r = l</label>
+        </div><span class="hint" data-t>These apply to 全拼 only.</span></div></div>
+    </div>
+    <div class="card form">
+      <div class="row top"><span class="label" data-t>Learned words</span>
+        <div class="stack"><span class="field"><span class="value" id="learned"></span><button class="pill danger" id="forget" data-t>Forget learned words</button></span>
+          <span class="hint" data-t>Words you pick move ahead of the others, the way Rime learns them.</span></div></div>
+    </div>
+  </section>
+
+  <section class="view" id="appearance">
+    <h1 data-t>Appearance</h1>
+    <p class="lede" data-t>How the candidate bar looks, and how Fluent treats terminal apps.</p>
+    <div class="card form">
+      <div class="row"><span class="label" data-t>Candidate bar</span>
+        <div class="choice" data-key="appearance" data-default="auto">
+          <button data-value="auto" data-t>System</button>
+          <button data-value="light" data-t>Light</button>
+          <button data-value="dark" data-t>Dark</button>
+        </div></div>
+      <div class="row"><span class="label" data-t>Settings language</span>
+        <div class="choice" id="language">
+          <button data-value="system" data-t>System</button>
+          <button data-value="en">English</button>
+          <button data-value="zh">简体中文</button>
+        </div></div>
+    </div>
+    <div class="card form">
+      <div class="row top"><span class="label" data-t>Terminal mode</span>
+        <div class="stack"><div class="choice" data-key="terminalMode" data-default="auto">
+          <button data-value="auto" data-t>Automatic</button>
+          <button data-value="always" data-t>Always</button>
+          <button data-value="never" data-t>Never</button>
+        </div><span class="hint" data-t>Terminals clip text at the window edge, so near it the bar also shows what you typed.</span></div></div>
+      <label class="row top"><span class="label" data-t>More terminal apps</span>
+        <span class="stack"><textarea data-key="terminalApps" rows="3" placeholder="com.example.terminal" spellcheck="false"></textarea>
+          <span class="hint" data-t>One bundle identifier per line, on top of the built-in list.</span></span></label>
+      <label class="row"><span class="label" data-t>Cell width</span>
+        <span class="unit"><input data-key="terminalCellWidth" type="number" min="0" step="0.1" data-t-placeholder="Automatic"><span>pt</span></span></label>
+    </div>
+  </section>
+
+  <section class="view" id="about">
+    <div class="card about">
+      <div class="logo big" aria-hidden="true">F</div>
+      <h1>Fluent <span class="version" id="version"></span></h1>
+      <p data-t>Improves the English you type, and types Chinese with 小鹤双拼 or 全拼.</p>
+      <p class="small" data-t>Free software under the GPL-3.0. The dictionaries come from rime-ice (GPL-3.0); the Chinese engine ports algorithms from librime (BSD-3-Clause).</p>
+      <p class="links">
+        <button class="link" data-open="repository">github.com/yangxin0/fluent</button>
+        <span>·</span>
+        <button class="link" data-open="config" data-t>Open the config file</button>
+      </p>
+      <p class="small mono" id="configPath"></p>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>
