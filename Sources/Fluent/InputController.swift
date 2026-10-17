@@ -476,13 +476,12 @@ class InputController: IMKInputController {
     }
 
     /// `prefix` is what the composition holds before the run. English words
-    /// in it make an English sentence, unless they follow Chinese text.
+    /// in it make an English sentence, unless one word follows Chinese text.
     private func chineseRank<P: StringProtocol>(for run: Substring, prefix: P) -> ChineseRank {
         guard let input = ChineseInput.shared, input.apply(Shared.configStore.current()) else {
             return .none
         }
-        let context: RunContext = lastCommitWasChinese ? .afterChinese
-            : prefix.contains { !$0.isWhitespace } ? .afterEnglish : .fresh
+        let context = ChinesePolicy.context(prefix: prefix, afterChineseCommit: lastCommitWasChinese)
         return ChinesePolicy.rank(run: run, context: context, english: input.english,
                                   layout: input.translator.layout)
     }

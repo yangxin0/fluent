@@ -52,6 +52,21 @@ final class ChinesePolicyTests: XCTestCase {
         XCTAssertEqual(ChinesePolicy.rank(run: "veui", context: .afterEnglish, english: english), .none)
     }
 
+    func testTwoEnglishWordsAreASentenceEvenAfterChinese() {
+        func context(_ prefix: String) -> RunContext {
+            ChinesePolicy.context(prefix: prefix, afterChineseCommit: true)
+        }
+        XCTAssertEqual(context(""), .afterChinese)
+        XCTAssertEqual(context("bug "), .afterChinese)  // 这个 bug 修好了
+        XCTAssertEqual(context("all relays are deployed in "), .afterEnglish)
+        XCTAssertEqual(context("2. bug "), .afterChinese)  // a list number is no word
+        XCTAssertEqual(ChinesePolicy.context(prefix: "  ", afterChineseCommit: false), .fresh)
+        XCTAssertEqual(ChinesePolicy.context(prefix: "I ", afterChineseCommit: false), .afterEnglish)
+        // So `china` at the end of an English sentence stays English.
+        XCTAssertEqual(ChinesePolicy.rank(run: "china", context: context("all relays are deployed in "),
+                                          english: english), .none)
+    }
+
     func testRunAtCursor() {
         XCTAssertEqual(ChinesePolicy.run(in: "I make", cursor: 6), "make")
         XCTAssertEqual(ChinesePolicy.run(in: "I make ", cursor: 7), "")

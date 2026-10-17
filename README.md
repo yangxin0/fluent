@@ -130,8 +130,9 @@ the same way with whole syllables (`nihao`, `zhongguo`).
   (`1 make  2 马克  3 马克思`). Press 2–6 to pick one, 1 or Enter to insert
   the word as typed, or just keep typing English.
 - Inside an English sentence there are no Chinese candidates at all, so a
-  typo like `rela` never turns into 热辣. English words inside Chinese text
-  (`这个 bug 修好了`) don't count: the Chinese after them still converts.
+  typo like `rela` never turns into 热辣. One English word inside Chinese text
+  (`这个 bug 修好了`) doesn't count: the Chinese after it still converts. Two
+  or more words are an English sentence, even right after Chinese.
 - A stray key that can't continue the pinyin (`woxianzaijiu` + `i`) doesn't
   turn the run into English: the keys before it convert and the rest stay as
   typed (`wo xian zai jiu i`). Backspace fixes the typo; picking 我现在就

@@ -63,10 +63,10 @@ public enum RunContext: Equatable {
     /// Chinese.
     case fresh
     /// Since a Chinese commit, with nothing typed before the letters or
-    /// only English words embedded in the Chinese text (`这个 bug 修好了`).
+    /// one English word embedded in the Chinese text (`这个 bug 修好了`).
     case afterChinese
-    /// English words typed earlier in this composition, not right after
-    /// Chinese text: an English sentence.
+    /// English typed earlier in this composition, not right after Chinese
+    /// text, or two or more words even after it: an English sentence.
     case afterEnglish
 }
 
@@ -98,6 +98,16 @@ public enum ChinesePolicy {
         case .fresh:
             return english.hasWord(withPrefix: run) ? .alternatives : .primary
         }
+    }
+
+    /// The context for a run typed after `prefix` (what the composition holds
+    /// before it). One English word inside Chinese text (`这个 bug 修好了`)
+    /// keeps the Chinese going; two or more are an English sentence, even
+    /// right after Chinese.
+    public static func context<S: StringProtocol>(prefix: S, afterChineseCommit: Bool) -> RunContext {
+        let words = prefix.split(whereSeparator: \.isWhitespace).filter { $0.contains(where: \.isLetter) }.count
+        if afterChineseCommit, words < 2 { return .afterChinese }
+        return prefix.contains { !$0.isWhitespace } ? .afterEnglish : .fresh
     }
 
     /// The letters right before `cursor` in `text`, if the cursor is not in
