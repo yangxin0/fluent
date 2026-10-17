@@ -30,10 +30,9 @@ struct CompositionState {
     /// The candidate bar is expanded into a grid (Tab or its chevron).
     var chineseExpanded = false
     /// Chinese readings of the letters at the caret when they are also (the
-    /// start of) English. Once typing pauses they show in the candidate bar
-    /// after the English word, picked with 2….
+    /// start of) English, shown in the candidate bar after the English word
+    /// and picked with 2….
     var alternatives: [ChineseCandidate] = []
-    var alternativesVisible = false
 
     var isComposing: Bool { !raw.isEmpty || chinese != nil }
 

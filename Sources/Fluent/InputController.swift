@@ -49,9 +49,6 @@ private let chineseGridRows = 5
 /// Chinese readings shown after an English word that is also shuangpin; the
 /// word itself is candidate 1 of the bar.
 private let maxAlternatives = 5
-/// The bar for such a word shows once typing pauses, so it doesn't flicker
-/// past while writing English.
-private let alternativesDelay = 0.4
 
 @objc(InputController)
 class InputController: IMKInputController {
@@ -63,7 +60,6 @@ class InputController: IMKInputController {
     /// punctuation is Chinese too, and shuangpin goes first more readily.
     private var lastCommitWasChinese = false
     private var punctuation = ChinesePunctuation()
-    private var alternativesTimer: DispatchWorkItem?
 
     override init!(server: IMKServer!, delegate: Any!, client inputClient: Any!) {
         super.init(server: server, delegate: delegate, client: inputClient)
@@ -196,7 +192,7 @@ class InputController: IMKInputController {
             guard state.isComposing else { return false }
             // The bar for a word that is also shuangpin shows it as typed,
             // so Enter inserts that rather than an unseen rewrite.
-            if flags.contains(.shift) || state.alternativesVisible {
+            if flags.contains(.shift) || !state.alternatives.isEmpty {
                 commitRaw()
             } else {
                 commit(state.committableImproved ?? state.raw)
@@ -252,7 +248,7 @@ class InputController: IMKInputController {
         {
             // Number keys pick from the bar shown for a word that is also
             // shuangpin: 1 is the English word as typed, 2… its readings.
-            if state.alternativesVisible, chars.count == 1, let key = chars.first, key.isASCII,
+            if !state.alternatives.isEmpty, chars.count == 1, let key = chars.first, key.isASCII,
                let digit = key.wholeNumberValue, digit >= 1, digit - 1 <= state.alternatives.count {
                 pickEnglishOrAlternative(digit - 1)
                 return true
@@ -477,7 +473,6 @@ class InputController: IMKInputController {
             return false
         case .alternatives:
             state.alternatives = Array(shuangpin.translator.candidates(for: run).prefix(maxAlternatives))
-            scheduleAlternatives()
             return false
         case .primary:
             engine.cancel()
@@ -493,22 +488,8 @@ class InputController: IMKInputController {
         }
     }
 
-    private func scheduleAlternatives() {
-        guard !state.alternatives.isEmpty else { return }
-        let item = DispatchWorkItem { [weak self] in
-            guard let self, !self.state.alternatives.isEmpty, self.state.chinese == nil else { return }
-            self.state.alternativesVisible = true
-            self.refreshPanel()
-        }
-        alternativesTimer = item
-        DispatchQueue.main.asyncAfter(deadline: .now() + alternativesDelay, execute: item)
-    }
-
     private func clearAlternatives() {
-        alternativesTimer?.cancel()
-        alternativesTimer = nil
         state.alternatives = []
-        state.alternativesVisible = false
     }
 
     /// Index 0 of the bar for an ambiguous word is the word itself.
@@ -626,7 +607,7 @@ class InputController: IMKInputController {
                      near: caretRect())
             return
         }
-        if state.alternativesVisible, !state.alternatives.isEmpty {
+        if !state.alternatives.isEmpty {
             // A word that is both English and shuangpin: the same bar, with
             // the word as typed first (`1 make  2 马克 …`).
             PreviewPanelController.shared.hide()
