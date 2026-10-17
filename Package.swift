@@ -7,6 +7,7 @@ let package = Package(
     products: [
         .executable(name: "EnglishInput", targets: ["EnglishInput"]),
         .executable(name: "english-input-cli", targets: ["EnglishInputCLI"]),
+        .executable(name: "english-input-dict", targets: ["EnglishInputDict"]),
     ],
     targets: [
         .target(name: "EnglishInputCore"),
@@ -21,6 +22,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "EnglishInputCLI",
+            dependencies: ["EnglishInputCore"]
+        ),
+        .executableTarget(
+            name: "EnglishInputDict",
             dependencies: ["EnglishInputCore"]
         ),
         .testTarget(

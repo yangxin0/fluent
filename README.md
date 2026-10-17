@@ -91,9 +91,11 @@ toggle resets to *on* at relaunch.
 
 ```sh
 make dev        # rebuild + reinstall + kill the running IME (macOS relaunches it on next keystroke)
-make test       # unit tests (SSE parser, config, prompts)
+make test       # unit tests (SSE parser, config, prompts, shuangpin engine)
 make logs       # tail the IME's os_log output
 swift run english-input-cli --mode polish "helo wrold how r u"   # test the API path without the IME
+make dict       # download the pinned rime-ice dictionaries and compile them (bundle/install run it)
+make cli ARGS='--xiaohe veui nihc'   # 小鹤双拼 candidates from the compiled dictionary
 ```
 
 If typing goes dead after a change, check for a crash report:
@@ -114,4 +116,7 @@ If typing goes dead after a change, check for a crash report:
 
 ## License
 
-GPL-3.0 — see [LICENSE](LICENSE).
+GPL-3.0 — see [LICENSE](LICENSE). The 小鹤双拼 dictionaries come from
+[rime-ice](https://github.com/iDvel/rime-ice) (GPL-3.0) and the shuangpin
+engine ports algorithms from [librime](https://github.com/rime/librime)
+(BSD-3-Clause); see [NOTICE](NOTICE).
