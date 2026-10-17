@@ -108,4 +108,31 @@ final class FullPinyinTests: XCTestCase {
         XCTAssertEqual(ChinesePolicy.rank(run: "iphone", context: .fresh, english: english, layout: layout),
                        .none)
     }
+
+    func testStrayKeyAfterPinyinStaysChinese() {
+        let english = EnglishWords(["hanging", "beautiful"])
+        func rank(_ run: String, _ context: RunContext = .fresh) -> ChineseRank {
+            ChinesePolicy.rank(run: run, context: context, english: english, layout: layout)
+        }
+        XCTAssertEqual(rank("woxianzaijiui"), .primary)  // no syllable starts with i
+        XCTAssertEqual(rank("woxianzaijiuiqu"), .primary)  // keys after it stay as typed too
+        XCTAssertEqual(rank("woxianzaijiui", .afterChinese), .primary)
+        XCTAssertEqual(rank("woxianzaijiui", .afterEnglish), .none)
+        XCTAssertEqual(rank("nginx"), .none)  // `ng` reads only as initials
+        XCTAssertEqual(rank("hanging"), .none)
+        XCTAssertEqual(rank("hanging", .afterChinese), .none)  // `hang` is pinyin, the run is English
+        XCTAssertEqual(rank("beautiful"), .none)
+    }
+
+    func testPickingBeforeAStrayKeyLeavesItToFix() {
+        let translator = ChineseTranslator(lexicon: makeLexicon([
+            ("我", "wo", 9000), ("现在", "xian zai", 5000), ("就", "jiu", 8000),
+        ]), layout: layout)
+        var composer = ChineseComposer(keys: "woxianzaijiui", translator: translator)
+        XCTAssertEqual(composer.preedit.raw, "wo xian zai jiu i")
+        XCTAssertEqual(composer.candidates.first?.text, "我现在就")
+        XCTAssertNil(composer.select(0))
+        XCTAssertEqual(composer.remainingKeys, "i")
+        XCTAssertEqual(composer.select(0), "我现在就i")  // the stray key as typed
+    }
 }

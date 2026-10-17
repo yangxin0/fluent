@@ -120,6 +120,10 @@ the same way with whole syllables (`nihao`, `zhongguo`).
 - Inside an English sentence there are no Chinese candidates at all, so a
   typo like `rela` never turns into 热辣. English words inside Chinese text
   (`这个 bug 修好了`) don't count: the Chinese after them still converts.
+- A stray key that can't continue the pinyin (`woxianzaijiu` + `i`) doesn't
+  turn the run into English: the keys before it convert and the rest stay as
+  typed (`wo xian zai jiu i`). Backspace fixes the typo; picking 我现在就
+  leaves `i` in the composition to fix, or to insert as typed.
 
 In full pinyin, keys can split more than one way (`xian` is 先 or 西安):
 every reading is offered, best first. Type `'` to split syllables yourself

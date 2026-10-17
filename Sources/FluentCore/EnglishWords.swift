@@ -49,7 +49,7 @@ public struct EnglishWords {
 /// is the main language, so Chinese only goes first when the keys cannot be
 /// (the start of) an English word.
 public enum ChineseRank: Equatable {
-    /// Not shuangpin (or typed with capitals): English only.
+    /// Not pinyin (or typed with capitals): English only.
     case none
     /// English first; the Chinese readings are alternatives.
     case alternatives
@@ -73,7 +73,19 @@ public enum RunContext: Equatable {
 public enum ChinesePolicy {
     public static func rank<S: StringProtocol>(run: S, context: RunContext, english: EnglishWords,
                                                layout: any KeyLayout = XiaoheLayout()) -> ChineseRank {
-        guard layout.isValid(run) else { return .none }
+        let graph = layout.graph(for: run)
+        guard graph.end > 0 else { return .none }
+        if !graph.isComplete {
+            // A stray key after pinyin (`woxianzaijiu` + `i`): like librime,
+            // the keys that read convert and the rest stay as typed. Only for
+            // whole spellings that can't be English, so `nginx` (`ng` as
+            // initials) and `hanging` stay English.
+            let plain = graph.edges.values.allSatisfy { $0.allSatisfy { $0.kind == .normal } }
+            guard plain, !english.hasWord(withPrefix: run),
+                  rank(run: run.prefix(graph.end), context: context, english: english, layout: layout) == .primary
+            else { return .none }
+            return .primary
+        }
         switch context {
         case .afterEnglish:
             // Inside an English sentence Chinese is never offered: a run that
