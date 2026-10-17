@@ -102,9 +102,10 @@ starts only when the letters you type can't be English.
   converts, so you can keep typing Chinese.
 - Letters that are also English (`make`, `like`, `here`) stay English. Pause
   for a moment and their Chinese readings appear in the preview as a small
-  extra row (`2 马克  3 马克思`); press that number to pick one. Inside an
-  English sentence this is the only way Chinese comes up, so a typo like
-  `rela` never turns into 热辣.
+  extra row (`2 马克  3 马克思`); press that number to pick one.
+- Inside an English sentence there are no Chinese candidates at all, so a
+  typo like `rela` never turns into 热辣. English words inside Chinese text
+  (`这个 bug 修好了`) don't count: the Chinese after them still converts.
 
 | Key (candidate bar) | Action |
 |---|---|

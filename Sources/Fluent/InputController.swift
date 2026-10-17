@@ -450,11 +450,12 @@ class InputController: IMKInputController {
         afterEdit()
     }
 
-    /// `prefix` is what the composition holds before the run.
+    /// `prefix` is what the composition holds before the run. English words
+    /// in it make an English sentence, unless they follow Chinese text.
     private func chineseRank<P: StringProtocol>(for run: Substring, prefix: P) -> ChineseRank {
         guard Shared.shuangpinEnabled, let shuangpin = Shuangpin.shared else { return .none }
-        let context: RunContext = prefix.contains { !$0.isWhitespace }
-            ? .afterEnglish : lastCommitWasChinese ? .afterChinese : .fresh
+        let context: RunContext = lastCommitWasChinese ? .afterChinese
+            : prefix.contains { !$0.isWhitespace } ? .afterEnglish : .fresh
         return ShuangpinPolicy.rank(run: run, context: context, english: shuangpin.english)
     }
 

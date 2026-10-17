@@ -62,9 +62,11 @@ public enum RunContext: Equatable {
     /// Nothing (or only whitespace), and the last text committed was not
     /// Chinese.
     case fresh
-    /// Nothing (or only whitespace) since a Chinese commit.
+    /// Since a Chinese commit, with nothing typed before the letters or
+    /// only English words embedded in the Chinese text (`这个 bug 修好了`).
     case afterChinese
-    /// English words typed earlier in this composition.
+    /// English words typed earlier in this composition, not right after
+    /// Chinese text: an English sentence.
     case afterEnglish
 }
 
@@ -74,9 +76,9 @@ public enum ShuangpinPolicy {
         guard Xiaohe.isValid(run) else { return .none }
         switch context {
         case .afterEnglish:
-            // Inside an English sentence, a run that is no English word is
-            // more likely a typo (`rela` → 热辣) than Chinese.
-            return .alternatives
+            // Inside an English sentence Chinese is never offered: a run that
+            // is no English word is a typo (`rela`), not 热辣.
+            return .none
         case .afterChinese:
             return english.contains(run) ? .alternatives : .primary
         case .fresh:

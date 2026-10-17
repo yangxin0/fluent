@@ -34,9 +34,10 @@ final class ShuangpinPolicyTests: XCTestCase {
         XCTAssertEqual(ShuangpinPolicy.rank(run: "make", context: .afterChinese, english: english), .alternatives)
     }
 
-    func testInsideEnglishTextChineseIsOnlyAnAlternative() {
-        XCTAssertEqual(ShuangpinPolicy.rank(run: "rela", context: .afterEnglish, english: english), .alternatives)
-        XCTAssertEqual(ShuangpinPolicy.rank(run: "veui", context: .afterEnglish, english: english), .alternatives)
+    func testEnglishSentencesGetNoChinese() {
+        XCTAssertEqual(ShuangpinPolicy.rank(run: "rela", context: .afterEnglish, english: english), .none)
+        XCTAssertEqual(ShuangpinPolicy.rank(run: "make", context: .afterEnglish, english: english), .none)
+        XCTAssertEqual(ShuangpinPolicy.rank(run: "veui", context: .afterEnglish, english: english), .none)
     }
 
     func testRunAtCursor() {
