@@ -44,6 +44,8 @@ private enum Key {
 private let maxCompositionLength = 500
 private let maxChineseKeys = 60
 private let chinesePageSize = 6
+/// Rows of `chinesePageSize` candidates in the expanded bar.
+private let chineseGridRows = 5
 private let maxAlternatives = 6
 /// The Chinese readings of an English word show once typing pauses, so they
 /// don't flicker past while writing English.
@@ -299,9 +301,11 @@ class InputController: IMKInputController {
     // MARK: - 小鹤双拼
 
     /// Keys while composing Chinese, like the system shuangpin input method:
-    /// Space or 1–6 picks, ←/→ move the highlight, ↑/↓ and -/= turn pages,
-    /// Enter inserts the keys as typed, Esc cancels, punctuation commits the
-    /// highlighted candidate followed by Chinese punctuation.
+    /// Space or 1–6 picks, ←/→ move the highlight, ↑/↓ and -/= turn pages
+    /// (↑/↓ move by row in the grid), Tab expands the bar into a grid, Enter
+    /// inserts the keys as typed, Esc cancels (or collapses the grid),
+    /// punctuation commits the highlighted candidate followed by Chinese
+    /// punctuation.
     private func handleChinese(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
         guard var composer = state.chinese else { return false }
         // Only plain and shifted keys compose; any other combo ends the
@@ -315,9 +319,14 @@ class InputController: IMKInputController {
             commit(state.chinesePrefix + composer.keys)
             return true
         case Key.escape:
-            cancelCurrentComposition()
+            if state.chineseExpanded {
+                toggleChineseGrid()
+            } else {
+                cancelCurrentComposition()
+            }
             return true
         case Key.backspace:
+            state.chineseExpanded = false
             if composer.backspace() {
                 state.chinese = composer
                 updateMarkedText()
@@ -335,9 +344,19 @@ class InputController: IMKInputController {
             refreshPanel()
             return true
         case Key.up, Key.down:
-            turnChinesePage(by: event.keyCode == Key.up ? -1 : 1)
+            let delta = event.keyCode == Key.up ? -1 : 1
+            if state.chineseExpanded {
+                composer.moveHighlight(by: delta * composer.pageSize)
+                state.chinese = composer
+                refreshPanel()
+            } else {
+                turnChinesePage(by: delta)
+            }
             return true
-        case Key.tab, Key.forwardDelete:
+        case Key.tab:
+            toggleChineseGrid()
+            return true
+        case Key.forwardDelete:
             commitRaw()
             return false
         default:
@@ -363,6 +382,7 @@ class InputController: IMKInputController {
             guard composer.keys.count < maxChineseKeys else { break }
             composer.append(key)
             state.chinese = composer
+            state.chineseExpanded = false
             // Until a word is picked, the keys can still turn out to be
             // English: a whole word after Chinese text, or no longer shuangpin.
             if composer.segments.isEmpty,
@@ -387,16 +407,25 @@ class InputController: IMKInputController {
         return true
     }
 
-    /// Picks `candidates[index]`, committing once every key is converted.
+    /// Picks `candidates[index]`, committing (and learning the picks) once
+    /// every key is converted.
     private func pickChinese(_ index: Int) {
         guard var composer = state.chinese else { return }
         if let text = composer.select(index) {
+            Shuangpin.shared?.learn(composer.pickedWords)
             commitChinese(state.chinesePrefix + text)
         } else {
             state.chinese = composer
+            state.chineseExpanded = false
             updateMarkedText()
             refreshPanel()
         }
+    }
+
+    private func toggleChineseGrid() {
+        guard state.chinese != nil else { return }
+        state.chineseExpanded.toggle()
+        refreshPanel()
     }
 
     private func pickChinese(onPage index: Int) {
@@ -483,6 +512,7 @@ class InputController: IMKInputController {
         let run = ShuangpinPolicy.run(in: state.raw, cursor: state.cursor)
         let prefix = String(state.raw.dropLast(run.count))
         let rest = String(run.dropFirst(candidate.keyCount))
+        Shuangpin.shared?.learn([(candidate.text, candidate.code)])
         commitChinese(prefix + candidate.text)
         if !rest.isEmpty {
             state.insert(rest)
@@ -571,10 +601,13 @@ class InputController: IMKInputController {
         if let composer = state.chinese {
             PreviewPanelController.shared.hide()
             let bar = CandidateBarController.shared
-            bar.onSelect = { [weak self] index in self?.pickChinese(onPage: index) }
+            bar.onSelect = { [weak self] index in self?.pickChinese(index) }
             bar.onPage = { [weak self] delta in self?.turnChinesePage(by: delta) }
-            bar.show(candidates: composer.pageCandidates, highlighted: composer.highlightedOnPage,
-                     page: composer.page, pageCount: composer.pageCount,
+            bar.onToggleExpanded = { [weak self] in self?.toggleChineseGrid() }
+            let shown = composer.gridRange(rows: state.chineseExpanded ? chineseGridRows : 1)
+            bar.show(candidates: composer.candidates[shown], highlighted: composer.highlighted,
+                     columns: composer.pageSize, expanded: state.chineseExpanded,
+                     canPageBack: shown.lowerBound > 0, canPageForward: shown.upperBound < composer.candidates.count,
                      appearance: Shared.configStore.current()?.appearancePreference ?? "auto",
                      near: caretRect())
             return

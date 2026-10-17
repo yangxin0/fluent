@@ -71,6 +71,23 @@ final class ShuangpinComposerTests: XCTestCase {
         XCTAssertEqual(composer.selectOnPage(0), "这是")
     }
 
+    func testGridStaysPutWhileTheHighlightMoves() {
+        var composer = ShuangpinComposer(keys: "veu", translator: translator, pageSize: 1)
+        XCTAssertEqual(composer.gridRange(rows: 2), 0..<2)
+        composer.moveHighlight(by: 1)
+        XCTAssertEqual(composer.gridRange(rows: 2), 0..<2)
+        composer.moveHighlight(by: 1)
+        XCTAssertEqual(composer.gridRange(rows: 2), 2..<3)
+    }
+
+    func testPickedWords() {
+        var composer = ShuangpinComposer(keys: "veuige", translator: translator)
+        _ = composer.select(composer.candidates.firstIndex { $0.text == "这是" }!)
+        _ = composer.select(0)
+        XCTAssertEqual(composer.pickedWords.map(\.text), ["这是", "个"])
+        XCTAssertEqual(composer.pickedWords.map(\.code), [ids("zhe shi"), ids("ge")])
+    }
+
     func testCommitTextsWhenCutShort() {
         var composer = ShuangpinComposer(keys: "veuige", translator: translator)
         XCTAssertEqual(composer.interruptedText, "veuige")

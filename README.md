@@ -109,16 +109,23 @@ starts only when the letters you type can't be English.
 |---|---|
 | Space, 1–6 | Pick the highlighted / numbered candidate |
 | ← → | Move the highlight |
-| ↑ ↓, - = | Previous / next page (also scrolling, or the chevron) |
+| ↑ ↓, - = | Previous / next page (also scrolling); ↑ ↓ move by row in the grid |
+| Tab | Expand the bar into a grid of more candidates (also the chevron), or collapse it |
 | Enter | Insert the keys as typed |
 | Backspace | Take back the last pick, else delete a key |
-| Esc | Cancel |
+| Esc | Cancel (collapse the grid first) |
 | Punctuation | Insert the highlighted candidate and Chinese punctuation (`，。？`) |
 | A capital letter | Keep the picked words and continue in English |
 
 Picking a candidate that covers only part of the keys keeps converting the
 rest. Punctuation typed right after Chinese text is Chinese too. Turn the
 whole feature off with IME menu ▸ *小鹤双拼 Chinese*.
+
+Words you pick are learned the way Rime does it: they move ahead of other
+words of the same length, words picked one after another become a new
+phrase, and words you stop using fade over a few hundred picks. They are
+saved in `~/Library/Application Support/EnglishInput/xiaohe-user.tsv`;
+delete the file to forget them.
 
 The dictionaries come from [rime-ice](https://github.com/iDvel/rime-ice):
 `make install` downloads and compiles them (see `make dict` below).

@@ -27,6 +27,8 @@ struct CompositionState {
     /// before the keys, which is committed with the Chinese text.
     var chinese: ShuangpinComposer?
     var chinesePrefix = ""
+    /// The candidate bar is expanded into a grid (Tab or its chevron).
+    var chineseExpanded = false
     /// Chinese readings of the letters at the caret when they are also (the
     /// start of) English: number keys 2… pick them once they are visible.
     var alternatives: [ChineseCandidate] = []

@@ -51,6 +51,34 @@ final class XiaoheTranslatorTests: XCTestCase {
         XCTAssertEqual(texts("lo"), ["罗", "咯"])
     }
 
+    func testLearnedWordsComeFirstAmongTheirLength() {
+        let user = UserDictionary()
+        user.learn([("这时", ids("zhe shi"))])
+        user.learn([("着", ids("zhe"))])
+        translator.userDictionary = user
+        defer { translator.userDictionary = nil }
+        XCTAssertEqual(texts("veui"), ["这时", "这是", "这时候", "着", "这"])
+    }
+
+    func testLearnedPhraseReplacesTheSentence() {
+        let user = UserDictionary()
+        user.learn([("这是", ids("zhe shi")), ("书", ids("shu"))])
+        translator.userDictionary = user
+        defer { translator.userDictionary = nil }
+        let first = translator.candidates(for: "veuiuu").first
+        XCTAssertEqual(first?.text, "这是书")
+        XCTAssertEqual(first?.code, ids("zhe shi shu"))
+        XCTAssertEqual(texts("veuiuu").filter { $0 == "这是书" }.count, 1)
+    }
+
+    func testLearnedWordsJoinSentences() {
+        let user = UserDictionary()
+        user.learn([("著", ids("zhe"))])
+        translator.userDictionary = user
+        defer { translator.userDictionary = nil }
+        XCTAssertEqual(texts("veuu").first, "著书")
+    }
+
     func testNotShuangpinGivesNothing() {
         XCTAssertEqual(texts("fk"), [])
         XCTAssertEqual(texts(""), [])

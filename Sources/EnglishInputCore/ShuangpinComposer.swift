@@ -41,6 +41,21 @@ public struct ShuangpinComposer {
     }
     public var highlightedOnPage: Int { highlighted - page * pageSize }
 
+    /// The candidates shown when the bar is expanded into a grid of `rows`
+    /// pages, one per row. It starts at a multiple of `rows` pages so the
+    /// grid stays put while the highlight moves inside it.
+    public func gridRange(rows: Int) -> Range<Int> {
+        let span = pageSize * max(rows, 1)
+        let start = highlighted / span * span
+        return start..<min(start + span, candidates.count)
+    }
+
+    /// What to learn once `select` returns the committed text: the picked
+    /// words (keys offered as typed are skipped by the dictionary).
+    public var pickedWords: [(text: String, code: [SyllableID])] {
+        segments.map { ($0.text, $0.code) }
+    }
+
     /// Inline text: the converted words, then the remaining keys grouped per
     /// syllable (`这是 ge`).
     public var preedit: (converted: String, raw: String) {

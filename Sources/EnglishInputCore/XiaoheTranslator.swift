@@ -28,9 +28,11 @@ public struct ChineseCandidate: Equatable {
 /// the input, then words covering more of the input before shorter ones, and
 /// within the same length by weight. Like the system shuangpin input method
 /// it also offers a few longer words that start with the input (`ve ui` →
-/// 这时候).
+/// 这时候). Words learned in `userDictionary` come first among words of the
+/// same length, as in librime.
 public final class XiaoheTranslator {
     public let lexicon: Lexicon
+    public var userDictionary: UserDictionary?
 
     /// librime's per-word cost when making a sentence (ln 1e-6): sentences
     /// prefer fewer, longer words.
@@ -46,8 +48,9 @@ public final class XiaoheTranslator {
     /// Single characters rarer than this get their pinyin as a comment.
     static let rareCharacterWeight = Lexicon.normalizedWeight(300)
 
-    public init(lexicon: Lexicon) {
+    public init(lexicon: Lexicon, userDictionary: UserDictionary? = nil) {
         self.lexicon = lexicon
+        self.userDictionary = userDictionary
     }
 
     public func candidates<S: StringProtocol>(for keys: S) -> [ChineseCandidate] {
@@ -57,6 +60,7 @@ public final class XiaoheTranslator {
 
         // Words by the number of slots they cover, from the start.
         var bySlots = [[ChineseCandidate]](repeating: [], count: slots.count + 1)
+        var learnedBySlots = bySlots
         var predictions: [ChineseCandidate] = []
         walk(slots: slots, from: 0, decoding: decoding) { end, range, code, penalty in
             for index in lexicon.exactMatches(in: range) {
@@ -67,22 +71,48 @@ public final class XiaoheTranslator {
                 predictions += predicted(in: range, typed: code, keyCount: decoding.keyCount)
             }
         }
+        walkLearned(slots: slots, from: 0, decoding: decoding) { end, code, penalty in
+            for word in userDictionary!.words(for: code) {
+                learnedBySlots[end].append(ChineseCandidate(text: word.text, keyCount: decoding.keyCount(ofSlots: end),
+                                                            code: code, weight: word.weight + penalty))
+            }
+        }
 
         var result: [ChineseCandidate] = []
-        if slots.count >= 2, bySlots[slots.count].isEmpty,
+        if slots.count >= 2, bySlots[slots.count].isEmpty, learnedBySlots[slots.count].isEmpty,
            let sentence = sentence(slots: slots, decoding: decoding) {
             result.append(sentence)
         }
         predictions.sort { $0.weight > $1.weight }
         var full = bySlots[slots.count] + predictions.prefix(Self.maxPredictions)
         full.sort { $0.weight > $1.weight }
+        result += learnedBySlots[slots.count].sorted { $0.weight > $1.weight }
         result += full.prefix(Self.maxWordsPerLength)
         for end in stride(from: slots.count - 1, through: 1, by: -1) {
+            result += learnedBySlots[end].sorted { $0.weight > $1.weight }
             let words = bySlots[end].sorted { $0.weight > $1.weight }
             result += words.prefix(end == 1 ? Self.maxCharacters : Self.maxWordsPerLength)
         }
         var seen = Set<String>()
         return result.filter { seen.insert($0.text).inserted }
+    }
+
+    /// Like `walk`, over the learned words: visits every code spelled by
+    /// slots `start...` that is a learned word or the start of one.
+    private func walkLearned(slots: [[SyllableID]], from start: Int, decoding: Xiaohe.Decoding,
+                             visit: (_ end: Int, _ code: [SyllableID], _ penalty: Float) -> Void) {
+        guard let user = userDictionary, user.count > 0 else { return }
+        func step(_ end: Int, _ code: [SyllableID]) {
+            guard end < slots.count else { return }
+            let partial = decoding.lastSlotIsPartial && end == slots.count - 1
+            for syllable in slots[end] {
+                let code = code + [syllable]
+                guard user.hasPrefix(code) else { continue }
+                visit(end + 1, code, partial ? Self.completionPenalty : 0)
+                step(end + 1, code)
+            }
+        }
+        step(start, [])
     }
 
     /// Visits every lexicon range reachable by spelling slots `start...` with
@@ -139,13 +169,20 @@ public final class XiaoheTranslator {
         let count = slots.count
         // Best word for each (start, end) slot span.
         var edges = [[Int: ChineseCandidate]](repeating: [:], count: count)
+        func offer(_ word: ChineseCandidate, from start: Int, to end: Int) {
+            guard !(start == 0 && end == count) else { return }
+            if let existing = edges[start][end], existing.weight >= word.weight { return }
+            edges[start][end] = word
+        }
         for start in 0..<count {
             walk(slots: slots, from: start, decoding: decoding) { end, range, code, penalty in
-                guard let index = lexicon.exactMatches(in: range).first,
-                      !(start == 0 && end == count) else { return }
-                let word = candidate(at: index, code: code, keyCount: 0, penalty: penalty)
-                if let existing = edges[start][end], existing.weight >= word.weight { return }
-                edges[start][end] = word
+                guard let index = lexicon.exactMatches(in: range).first else { return }
+                offer(candidate(at: index, code: code, keyCount: 0, penalty: penalty), from: start, to: end)
+            }
+            walkLearned(slots: slots, from: start, decoding: decoding) { end, code, penalty in
+                guard let word = userDictionary!.words(for: code).first else { return }
+                offer(ChineseCandidate(text: word.text, keyCount: 0, code: code, weight: word.weight + penalty),
+                      from: start, to: end)
             }
         }
         struct Line { var weight: Float; var words: [ChineseCandidate] }
