@@ -31,11 +31,11 @@ while !args.isEmpty {
 if xiaohe {
     let directory = URL(fileURLWithPath: dictDirectory)
     do {
-        let translator = XiaoheTranslator(
+        let translator = ChineseTranslator(
             lexicon: try Lexicon(contentsOf: directory.appendingPathComponent("xiaohe.lexicon")))
         let english = try EnglishWords(contentsOf: directory.appendingPathComponent("english.txt"))
         for keys in words {
-            let rank = ShuangpinPolicy.rank(run: keys, context: .fresh, english: english)
+            let rank = ChinesePolicy.rank(run: keys, context: .fresh, english: english)
             print("\(Xiaohe.grouped(keys))  [\(rank)]")
             for (index, candidate) in translator.candidates(for: keys).prefix(12).enumerated() {
                 let comment = candidate.comment.map { " \($0)" } ?? ""

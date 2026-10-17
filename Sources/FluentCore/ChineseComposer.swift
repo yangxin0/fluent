@@ -6,7 +6,7 @@ import Foundation
 /// Picking a candidate that converts only some of the remaining keys keeps
 /// composing with what is left (librime's partial selection); Backspace right
 /// after such a pick takes it back.
-public struct ShuangpinComposer {
+public struct ChineseComposer {
     public struct Segment: Equatable {
         public var text: String
         public var keyCount: Int
@@ -19,10 +19,10 @@ public struct ShuangpinComposer {
     /// Index into `candidates`.
     public private(set) var highlighted = 0
     public let pageSize: Int
-    private let translator: XiaoheTranslator
+    private let translator: ChineseTranslator
     private var lastEditWasSelection = false
 
-    public init(keys: String, translator: XiaoheTranslator, pageSize: Int = 6) {
+    public init(keys: String, translator: ChineseTranslator, pageSize: Int = 6) {
         self.keys = keys
         self.translator = translator
         self.pageSize = pageSize
@@ -59,7 +59,7 @@ public struct ShuangpinComposer {
     /// Inline text: the converted words, then the remaining keys grouped per
     /// syllable (`这是 ge`).
     public var preedit: (converted: String, raw: String) {
-        (confirmedText, Xiaohe.grouped(remainingKeys))
+        (confirmedText, translator.layout.grouped(remainingKeys))
     }
 
     /// What to insert if the composition is cut short (focus loss, a

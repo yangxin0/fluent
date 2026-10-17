@@ -1,21 +1,21 @@
 import XCTest
 @testable import FluentCore
 
-final class ShuangpinComposerTests: XCTestCase {
-    private let translator = XiaoheTranslator(lexicon: makeLexicon([
+final class ChineseComposerTests: XCTestCase {
+    private let translator = ChineseTranslator(lexicon: makeLexicon([
         ("这", "zhe", 9000), ("着", "zhe", 3000), ("是", "shi", 8000), ("个", "ge", 7000),
         ("这是", "zhe shi", 900), ("这个", "zhe ge", 800), ("你", "ni", 7000), ("好", "hao", 6000),
         ("你好", "ni hao", 1000),
     ]))
 
     func testSelectingAWholeWordCommits() {
-        var composer = ShuangpinComposer(keys: "nihc", translator: translator)
+        var composer = ChineseComposer(keys: "nihc", translator: translator)
         XCTAssertEqual(composer.candidates.first?.text, "你好")
         XCTAssertEqual(composer.select(0), "你好")
     }
 
     func testPartialSelectionContinuesWithTheRest() {
-        var composer = ShuangpinComposer(keys: "veuige", translator: translator)
+        var composer = ChineseComposer(keys: "veuige", translator: translator)
         let index = composer.candidates.firstIndex { $0.text == "这是" }!
         XCTAssertNil(composer.select(index))
         XCTAssertEqual(composer.confirmedText, "这是")
@@ -27,7 +27,7 @@ final class ShuangpinComposerTests: XCTestCase {
     }
 
     func testBackspaceTakesBackAPickThenDeletesKeys() {
-        var composer = ShuangpinComposer(keys: "veuige", translator: translator)
+        var composer = ChineseComposer(keys: "veuige", translator: translator)
         _ = composer.select(composer.candidates.firstIndex { $0.text == "这是" }!)
         XCTAssertTrue(composer.backspace())
         XCTAssertEqual(composer.confirmedText, "")
@@ -37,7 +37,7 @@ final class ShuangpinComposerTests: XCTestCase {
     }
 
     func testBackspaceAfterTypingDeletesAKeyFirst() {
-        var composer = ShuangpinComposer(keys: "ve", translator: translator)
+        var composer = ChineseComposer(keys: "ve", translator: translator)
         composer.append("u")
         composer.append("i")
         _ = composer.select(composer.candidates.firstIndex { $0.text == "这" }!)
@@ -54,10 +54,10 @@ final class ShuangpinComposerTests: XCTestCase {
     }
 
     func testPagingAndHighlight() {
-        var composer = ShuangpinComposer(keys: "v", translator: translator, pageSize: 2)
+        var composer = ChineseComposer(keys: "v", translator: translator, pageSize: 2)
         XCTAssertEqual(composer.candidates.map(\.text), ["这", "着"])
         XCTAssertEqual(composer.pageCount, 1)
-        composer = ShuangpinComposer(keys: "veu", translator: translator, pageSize: 1)
+        composer = ChineseComposer(keys: "veu", translator: translator, pageSize: 1)
         XCTAssertEqual(composer.candidates.map(\.text), ["这是", "这", "着"])
         XCTAssertEqual(composer.page, 0)
         composer.turnPage(by: 1)
@@ -72,7 +72,7 @@ final class ShuangpinComposerTests: XCTestCase {
     }
 
     func testGridStaysPutWhileTheHighlightMoves() {
-        var composer = ShuangpinComposer(keys: "veu", translator: translator, pageSize: 1)
+        var composer = ChineseComposer(keys: "veu", translator: translator, pageSize: 1)
         XCTAssertEqual(composer.gridRange(rows: 2), 0..<2)
         composer.moveHighlight(by: 1)
         XCTAssertEqual(composer.gridRange(rows: 2), 0..<2)
@@ -81,7 +81,7 @@ final class ShuangpinComposerTests: XCTestCase {
     }
 
     func testPickedWords() {
-        var composer = ShuangpinComposer(keys: "veuige", translator: translator)
+        var composer = ChineseComposer(keys: "veuige", translator: translator)
         _ = composer.select(composer.candidates.firstIndex { $0.text == "这是" }!)
         _ = composer.select(0)
         XCTAssertEqual(composer.pickedWords.map(\.text), ["这是", "个"])
@@ -89,7 +89,7 @@ final class ShuangpinComposerTests: XCTestCase {
     }
 
     func testCommitTextsWhenCutShort() {
-        var composer = ShuangpinComposer(keys: "veuige", translator: translator)
+        var composer = ChineseComposer(keys: "veuige", translator: translator)
         XCTAssertEqual(composer.interruptedText, "veuige")
         _ = composer.select(composer.candidates.firstIndex { $0.text == "这是" }!)
         XCTAssertEqual(composer.interruptedText, "这是ge")
@@ -97,7 +97,7 @@ final class ShuangpinComposerTests: XCTestCase {
     }
 
     func testKeysThatAreNoShuangpinAreOfferedAsTyped() {
-        let composer = ShuangpinComposer(keys: "fk", translator: translator)
+        let composer = ChineseComposer(keys: "fk", translator: translator)
         XCTAssertEqual(composer.candidates.map(\.text), ["fk"])
         XCTAssertEqual(composer.candidates.first?.keyCount, 2)
     }

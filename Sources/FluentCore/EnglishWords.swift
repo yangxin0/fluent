@@ -70,10 +70,10 @@ public enum RunContext: Equatable {
     case afterEnglish
 }
 
-public enum ShuangpinPolicy {
-    public static func rank<S: StringProtocol>(run: S, context: RunContext,
-                                               english: EnglishWords) -> ChineseRank {
-        guard Xiaohe.isValid(run) else { return .none }
+public enum ChinesePolicy {
+    public static func rank<S: StringProtocol>(run: S, context: RunContext, english: EnglishWords,
+                                               layout: any KeyLayout = XiaoheLayout()) -> ChineseRank {
+        guard layout.isValid(run) else { return .none }
         switch context {
         case .afterEnglish:
             // Inside an English sentence Chinese is never offered: a run that

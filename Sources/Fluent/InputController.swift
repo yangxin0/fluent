@@ -411,7 +411,7 @@ class InputController: IMKInputController {
     private func pickChinese(_ index: Int) {
         guard var composer = state.chinese else { return }
         if let text = composer.select(index) {
-            Shuangpin.shared?.learn(composer.pickedWords)
+            ChineseInput.shared?.learn(composer.pickedWords)
             commitChinese(state.chinesePrefix + text)
         } else {
             state.chinese = composer
@@ -452,10 +452,11 @@ class InputController: IMKInputController {
     /// `prefix` is what the composition holds before the run. English words
     /// in it make an English sentence, unless they follow Chinese text.
     private func chineseRank<P: StringProtocol>(for run: Substring, prefix: P) -> ChineseRank {
-        guard Shared.shuangpinEnabled, let shuangpin = Shuangpin.shared else { return .none }
+        guard Shared.shuangpinEnabled, let shuangpin = ChineseInput.shared else { return .none }
         let context: RunContext = lastCommitWasChinese ? .afterChinese
             : prefix.contains { !$0.isWhitespace } ? .afterEnglish : .fresh
-        return ShuangpinPolicy.rank(run: run, context: context, english: shuangpin.english)
+        return ChinesePolicy.rank(run: run, context: context, english: shuangpin.english,
+                                  layout: shuangpin.translator.layout)
     }
 
     /// After an English edit, looks at the letters at the caret: switches to
@@ -463,8 +464,8 @@ class InputController: IMKInputController {
     /// else prepares their Chinese readings as alternatives.
     private func updateShuangpin() -> Bool {
         clearAlternatives()
-        guard let shuangpin = Shuangpin.shared, state.cursor == state.raw.count else { return false }
-        let run = ShuangpinPolicy.run(in: state.raw, cursor: state.cursor)
+        guard let shuangpin = ChineseInput.shared, state.cursor == state.raw.count else { return false }
+        let run = ChinesePolicy.run(in: state.raw, cursor: state.cursor)
         guard !run.isEmpty else { return false }
         let prefix = state.raw.dropLast(run.count)
         switch chineseRank(for: run, prefix: prefix) {
@@ -477,7 +478,7 @@ class InputController: IMKInputController {
             engine.cancel()
             generation += 1  // drop any rewrite still streaming for the English text
             state.chinesePrefix = String(prefix)
-            state.chinese = ShuangpinComposer(keys: String(run), translator: shuangpin.translator,
+            state.chinese = ChineseComposer(keys: String(run), translator: shuangpin.translator,
                                               pageSize: chinesePageSize)
             state.raw = ""
             state.cursor = 0
@@ -503,10 +504,10 @@ class InputController: IMKInputController {
     /// Commits the English typed before the letters at the caret as is, then
     /// the picked Chinese; keys it leaves unconverted start a new composition.
     private func pickAlternative(_ candidate: ChineseCandidate) {
-        let run = ShuangpinPolicy.run(in: state.raw, cursor: state.cursor)
+        let run = ChinesePolicy.run(in: state.raw, cursor: state.cursor)
         let prefix = String(state.raw.dropLast(run.count))
         let rest = String(run.dropFirst(candidate.keyCount))
-        Shuangpin.shared?.learn([(candidate.text, candidate.code)])
+        ChineseInput.shared?.learn([(candidate.text, candidate.code)])
         commitChinese(prefix + candidate.text)
         if !rest.isEmpty {
             state.insert(rest)
@@ -568,7 +569,7 @@ class InputController: IMKInputController {
             // (`这是 ge`), caret at the end.
             let text = NSMutableAttributedString(string: state.chinesePrefix + composer.confirmedText,
                                                  attributes: markAttributes(kTSMHiliteConvertedText))
-            text.append(NSAttributedString(string: Xiaohe.grouped(composer.remainingKeys),
+            text.append(NSAttributedString(string: composer.preedit.raw,
                                            attributes: markAttributes(kTSMHiliteSelectedRawText)))
             client.setMarkedText(text, selectionRange: NSRange(location: text.length, length: 0),
                                  replacementRange: NSRange(location: NSNotFound, length: 0))
@@ -633,7 +634,7 @@ class InputController: IMKInputController {
         if !state.alternatives.isEmpty {
             // A word that is both English and shuangpin: the word as typed
             // first, marked ↵ since Enter inserts it, then its Chinese readings.
-            let run = ShuangpinPolicy.run(in: state.raw, cursor: state.cursor)
+            let run = ChinesePolicy.run(in: state.raw, cursor: state.cursor)
             content.cells = [BarContent.Cell(text: String(run), comment: "↵", number: 1, index: 0)]
                 + state.alternatives.enumerated().map { offset, candidate in
                     BarContent.Cell(text: candidate.text, comment: candidate.comment, number: offset + 2,

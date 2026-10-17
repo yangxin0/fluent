@@ -1,8 +1,8 @@
 import XCTest
 @testable import FluentCore
 
-final class XiaoheTranslatorTests: XCTestCase {
-    private let translator = XiaoheTranslator(lexicon: makeLexicon([
+final class ChineseTranslatorTests: XCTestCase {
+    private let translator = ChineseTranslator(lexicon: makeLexicon([
         ("这", "zhe", 9000), ("着", "zhe", 3000), ("是", "shi", 8000), ("时", "shi", 4000),
         ("书", "shu", 3000), ("你", "ni", 7000), ("好", "hao", 6000), ("餮", "tie", 10),
         ("这是", "zhe shi", 900), ("这时", "zhe shi", 500), ("这时候", "zhe shi hou", 200),

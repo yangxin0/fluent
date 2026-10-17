@@ -25,7 +25,7 @@ struct CompositionState {
     /// Set while composing Chinese (小鹤双拼 keys that cannot be English);
     /// `raw` is then empty and `chinesePrefix` holds the whitespace typed
     /// before the keys, which is committed with the Chinese text.
-    var chinese: ShuangpinComposer?
+    var chinese: ChineseComposer?
     var chinesePrefix = ""
     /// The candidate bar is expanded into a grid (Tab or its chevron).
     var chineseExpanded = false
