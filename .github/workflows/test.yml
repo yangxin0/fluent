@@ -1,0 +1,38 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A run on main finishes even when the next push lands, so every commit
+# there gets a result; a PR's run is cancelled by its next push.
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    # InputMethodKit and AppKit exist only on macOS.
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: swift --version
+
+      - name: Build
+        run: make build
+
+      - name: Test
+        run: make test
+
+      # Assembles the .app (Info.plist, icon) without installing it: install
+      # registers with TIS, which needs a logged-in user session.
+      - name: Bundle
+        run: make bundle
