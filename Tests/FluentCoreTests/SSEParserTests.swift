@@ -86,4 +86,44 @@ final class SSEParserTests: XCTestCase {
         let events = parse([#"data: {"type":"response.output_text.done"}"#, ""])
         XCTAssertEqual(ResponsesEventInterpreter.interpret(events[0]), .completed(""))
     }
+
+    private func decode(_ stream: String) throws -> (text: String, finished: Bool) {
+        var decoder = ResponsesStreamDecoder()
+        var text = ""
+        for byte in stream.utf8 {
+            text += try decoder.feed(byte) ?? ""
+        }
+        return (text, decoder.isFinished)
+    }
+
+    func testStreamLinesMayEndInCRLFOrABareCR() throws {
+        let delta = #"data: {"type":"response.output_text.delta","delta":"Hi"}"#
+        let done = #"data: {"type":"response.completed"}"#
+        for end in ["\n", "\r\n", "\r"] {
+            let result = try decode([delta, "", done, "", ""].joined(separator: end))
+            XCTAssertEqual(result.text, "Hi", "line end \(end.debugDescription)")
+            XCTAssertTrue(result.finished)
+        }
+    }
+
+    func testAStreamWithoutATerminalEventIsUnfinished() throws {
+        let cut = try decode(#"data: {"type":"response.output_text.delta","delta":"Hello wor"}"# + "\n\n")
+        XCTAssertEqual(cut.text, "Hello wor")
+        XCTAssertFalse(cut.finished)  // the client then reports "reply cut off"
+        XCTAssertTrue(try decode("data: [DONE]\n\n").finished)
+    }
+
+    func testIncompleteReplyIsAnError() {
+        let events = parse([
+            #"data: {"type":"response.incomplete","response":{"incomplete_details":{"reason":"max_output_tokens"}}}"#,
+            "",
+        ])
+        XCTAssertEqual(ResponsesEventInterpreter.interpret(events[0]), .error("reply incomplete: max_output_tokens"))
+    }
+
+    func testErrorBodiesShowTheirMessage() {
+        XCTAssertEqual(ResponsesClient.errorMessage(fromBody: #"{  "error": {    "message": "Invalid API key",    "type": "auth"  }}"#),
+                       "Invalid API key")
+        XCTAssertEqual(ResponsesClient.errorMessage(fromBody: "Bad Gateway"), "Bad Gateway")
+    }
 }

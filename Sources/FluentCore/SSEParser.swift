@@ -73,8 +73,12 @@ public enum ResponsesEventInterpreter {
             return .delta(obj["delta"] as? String ?? "")
         case "response.output_text.done":
             return .completed(obj["text"] as? String ?? "")
-        case "response.completed", "response.incomplete":
+        case "response.completed":
             return .done
+        case "response.incomplete":
+            // Cut short (max_output_tokens, a content filter): not a rewrite.
+            let details = (obj["response"] as? [String: Any])?["incomplete_details"] as? [String: Any]
+            return .error((details?["reason"] as? String).map { "reply incomplete: \($0)" } ?? "reply incomplete")
         case "response.failed", "response.error", "error":
             return .error(Self.errorMessage(obj))
         default:

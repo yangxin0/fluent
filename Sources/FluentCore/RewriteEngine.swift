@@ -23,14 +23,16 @@ public final class RewriteEngine {
         self.client = client
     }
 
-    public func textChanged(raw: String, instructions: String, generation: Int, config: AppConfig?) {
+    /// `configProblem` says why the config file couldn't be used, if so.
+    public func textChanged(raw: String, instructions: String, generation: Int, config: AppConfig?,
+                            configProblem: String? = nil) {
         task?.cancel()
         task = nil
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count >= 3 else { return }
         guard let config, config.isConfigured else {
-            emit(.failed(generation: generation,
-                         message: "Not configured — IME menu ▸ Open Config File"))
+            let reason = configProblem.map { "Config error: \($0)" } ?? "Not configured"
+            emit(.failed(generation: generation, message: "\(reason) — IME menu ▸ Open Config File"))
             return
         }
         let client = self.client

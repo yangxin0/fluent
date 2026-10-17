@@ -16,6 +16,49 @@ public enum ResponsesClientError: LocalizedError {
     }
 }
 
+/// The bytes of a Responses stream as output text. Lines end in LF, CRLF or
+/// a bare CR, as SSE allows; `isFinished` turns true at the terminal event.
+struct ResponsesStreamDecoder {
+    private var parser = SSEParser()
+    private var line: [UInt8] = []
+    private var afterCR = false
+    private var yieldedAnyDelta = false
+    private(set) var isFinished = false
+
+    /// Feeds one byte; returns text to yield, if any. Throws API errors.
+    mutating func feed(_ byte: UInt8) throws -> String? {
+        if byte == 0x0A, afterCR {  // the LF of a CRLF
+            afterCR = false
+            return nil
+        }
+        afterCR = byte == 0x0D
+        guard byte == 0x0A || byte == 0x0D else {
+            line.append(byte)
+            return nil
+        }
+        let text = String(decoding: line, as: UTF8.self)
+        line.removeAll(keepingCapacity: true)
+        guard let event = parser.feed(line: text) else { return nil }
+        switch ResponsesEventInterpreter.interpret(event) {
+        case .delta(let delta):
+            guard !delta.isEmpty else { return nil }
+            yieldedAnyDelta = true
+            return delta
+        case .completed(let full):
+            isFinished = true
+            // Only when no deltas arrived; otherwise it repeats them.
+            return !yieldedAnyDelta && !full.isEmpty ? full : nil
+        case .done:
+            isFinished = true
+            return nil
+        case .error(let message):
+            throw ResponsesClientError.api(message)
+        case .ignore:
+            return nil
+        }
+    }
+}
+
 /// Streams output text from an OpenAI Responses-API-compatible endpoint.
 public final class ResponsesClient {
     private let session: URLSession
@@ -42,49 +85,36 @@ public final class ResponsesClient {
                             body += line
                             if body.count > 2000 { break }
                         }
-                        throw ResponsesClientError.http(http.statusCode, body)
+                        throw ResponsesClientError.http(http.statusCode, Self.errorMessage(fromBody: body))
                     }
-                    var parser = SSEParser()
-                    var lineBuffer: [UInt8] = []
-                    var yieldedAnyDelta = false
+                    var decoder = ResponsesStreamDecoder()
                     for try await byte in bytes {
-                        guard byte == 0x0A else {
-                            lineBuffer.append(byte)
-                            continue
-                        }
-                        try Task.checkCancellation()
-                        var line = String(decoding: lineBuffer, as: UTF8.self)
-                        lineBuffer.removeAll(keepingCapacity: true)
-                        if line.hasSuffix("\r") { line.removeLast() }
-                        guard let event = parser.feed(line: line) else { continue }
-                        switch ResponsesEventInterpreter.interpret(event) {
-                        case .delta(let text):
-                            if !text.isEmpty {
-                                yieldedAnyDelta = true
-                                continuation.yield(text)
-                            }
-                        case .completed(let text):
-                            // Only use the final text when no deltas arrived;
-                            // otherwise it would duplicate what we streamed.
-                            if !yieldedAnyDelta, !text.isEmpty { continuation.yield(text) }
+                        if byte == 0x0A || byte == 0x0D { try Task.checkCancellation() }
+                        if let text = try decoder.feed(byte) { continuation.yield(text) }
+                        if decoder.isFinished {
                             continuation.finish()
                             return
-                        case .done:
-                            continuation.finish()
-                            return
-                        case .error(let message):
-                            throw ResponsesClientError.api(message)
-                        case .ignore:
-                            break
                         }
                     }
-                    continuation.finish()
+                    // Closed before the reply said it was finished (a proxy
+                    // timeout, a dropped connection): never commit half of it.
+                    throw ResponsesClientError.api("reply cut off")
                 } catch {
                     continuation.finish(throwing: error)
                 }
             }
             continuation.onTermination = { _ in task.cancel() }
         }
+    }
+
+    /// The `error.message` of a JSON error body, else the body as is.
+    static func errorMessage(fromBody body: String) -> String {
+        guard let object = (try? JSONSerialization.jsonObject(with: Data(body.utf8))) as? [String: Any]
+        else { return body }
+        if let error = object["error"] as? [String: Any], let message = error["message"] as? String {
+            return message
+        }
+        return object["error"] as? String ?? object["message"] as? String ?? body
     }
 
     /// Version reported in the Codex User-Agent (`codex --version`).

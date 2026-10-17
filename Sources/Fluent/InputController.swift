@@ -566,7 +566,8 @@ class InputController: IMKInputController {
         engine.textChanged(raw: state.raw,
                            instructions: Shared.mode.instructions,
                            generation: generation,
-                           config: Shared.configStore.current())
+                           config: Shared.configStore.current(),
+                           configProblem: Shared.configStore.problem)
     }
 
     private func handleEngineUpdate(_ update: RewriteEngine.Update) {

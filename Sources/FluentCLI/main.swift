@@ -8,6 +8,17 @@ import FluentCore
 //   swift run fluent-cli --xiaohe [--dict .build/dict] veui nihc
 //   swift run fluent-cli --pinyin [--no-abbreviations] [--fuzzy zh=z,an=ang] nihao zg
 
+let usage = """
+usage: fluent-cli [--mode fix|polish|interpret] TEXT…
+       fluent-cli --xiaohe|--pinyin [--no-abbreviations] [--fuzzy zh=z,an=ang] [--dict DIR] KEYS…
+
+"""
+
+func fail(_ message: String) -> Never {
+    FileHandle.standardError.write(Data((message + "\n" + usage).utf8))
+    exit(2)
+}
+
 var mode = Mode.fix
 var xiaohe = false
 var pinyin = false
@@ -19,10 +30,7 @@ var args = Array(CommandLine.arguments.dropFirst())
 while !args.isEmpty {
     let arg = args.removeFirst()
     if arg == "--mode" {
-        guard !args.isEmpty, let m = Mode(rawValue: args.removeFirst()) else {
-            FileHandle.standardError.write(Data("invalid --mode (fix|polish|interpret)\n".utf8))
-            exit(2)
-        }
+        guard !args.isEmpty, let m = Mode(rawValue: args.removeFirst()) else { fail("invalid --mode") }
         mode = m
     } else if arg == "--xiaohe" {
         xiaohe = true
@@ -30,10 +38,21 @@ while !args.isEmpty {
         pinyin = true
     } else if arg == "--no-abbreviations" {
         abbreviations = false
-    } else if arg == "--fuzzy", !args.isEmpty {
+    } else if arg == "--fuzzy" {
+        guard !args.isEmpty else { fail("--fuzzy needs pairs like zh=z,an=ang") }
         fuzzy = args.removeFirst().split(separator: ",").map(String.init)
-    } else if arg == "--dict", !args.isEmpty {
+    } else if arg == "--dict" {
+        guard !args.isEmpty else { fail("--dict needs a directory") }
         dictDirectory = args.removeFirst()
+    } else if arg == "--help" || arg == "-h" {
+        print(usage, terminator: "")
+        exit(0)
+    } else if arg == "--" {
+        words += args
+        args = []
+    } else if arg.hasPrefix("--") {
+        // Never send a mistyped flag to the API as text.
+        fail("unknown option \(arg)")
     } else {
         words.append(arg)
     }
@@ -65,15 +84,13 @@ if xiaohe || pinyin {
 }
 
 let input = words.joined(separator: " ")
-guard !input.isEmpty else {
-    FileHandle.standardError.write(Data("usage: fluent-cli [--mode fix|polish|interpret] <text>\n".utf8))
-    exit(2)
-}
+guard !input.isEmpty else { fail("nothing to rewrite") }
 
 let store = ConfigStore()
 store.writeTemplateIfMissing()
 guard let config = store.current(), config.isConfigured else {
-    FileHandle.standardError.write(Data("Config missing or incomplete: \(store.configURL.path)\n".utf8))
+    let problem = store.problem.map { " (\($0))" } ?? ""
+    FileHandle.standardError.write(Data("Config missing or incomplete\(problem): \(store.configURL.path)\n".utf8))
     exit(1)
 }
 

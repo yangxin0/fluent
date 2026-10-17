@@ -144,4 +144,73 @@ final class AppConfigTests: XCTestCase {
         XCTAssertFalse(config.isConfigured)
         try? FileManager.default.removeItem(at: dir)
     }
+
+    private func temporaryStore() -> (ConfigStore, URL) {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("cfg-\(UUID().uuidString)")
+        return (ConfigStore(configURL: dir.appendingPathComponent("config.json")), dir)
+    }
+
+    func testAWrongTypeOnlyUnsetsThatKey() throws {
+        let config = try JSONDecoder().decode(AppConfig.self, from: Data("""
+        {"baseURL":"https://x","apiKey":"sk-1","model":"m","debounceMs":350.4,
+         "terminalApps":"com.x","pinyinAbbreviations":"false","chinese":"off"}
+        """.utf8))
+        XCTAssertEqual(config.debounceMs, 350)
+        XCTAssertNil(config.terminalApps)
+        XCTAssertNil(config.pinyinAbbreviations)
+        XCTAssertEqual(config.chinesePreference, "off")  // the rest still applies
+    }
+
+    func testPastedWhitespaceIsTrimmed() throws {
+        let config = try JSONDecoder().decode(AppConfig.self, from: Data(#"""
+        {"baseURL":" https://x/v1 ","apiKey":"sk-1\n","model":"m "}
+        """#.utf8))
+        XCTAssertEqual(config.baseURL, "https://x/v1")
+        XCTAssertEqual(config.apiKey, "sk-1")
+        XCTAssertEqual(config.model, "m")
+    }
+
+    func testProblemSaysWhyTheConfigIsUnusable() throws {
+        let (store, dir) = temporaryStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try #"{"baseURL":"https://x","model":"m"}"#.write(to: store.configURL, atomically: false, encoding: .utf8)
+        XCTAssertNil(store.current())
+        XCTAssertEqual(store.problem, #""apiKey" is missing"#)
+        try #"{"baseURL":"#.write(to: store.configURL, atomically: false, encoding: .utf8)
+        store.invalidate()
+        XCTAssertNil(store.current())
+        XCTAssertEqual(store.problem, "not valid JSON")
+    }
+
+    func testTheKeyFileIsPrivate() throws {
+        let (store, dir) = temporaryStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        func mode(_ path: String) throws -> Int {
+            try XCTUnwrap(FileManager.default.attributesOfItem(atPath: path)[.posixPermissions] as? Int)
+        }
+        XCTAssertTrue(store.writeTemplateIfMissing())
+        XCTAssertEqual(try mode(store.configURL.path), 0o600)
+        XCTAssertEqual(try mode(dir.path), 0o700)
+        try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: store.configURL.path)
+        store.invalidate()
+        _ = store.current()
+        XCTAssertEqual(try mode(store.configURL.path), 0o600)  // tightened on load
+    }
+
+    func testSetWritesThroughASymlink() throws {
+        let (store, dir) = temporaryStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let target = dir.appendingPathComponent("dotfiles/fluent.json")
+        try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try #"{"baseURL":"https://x","apiKey":"sk-1","model":"m"}"#.write(to: target, atomically: false, encoding: .utf8)
+        try FileManager.default.createSymbolicLink(at: store.configURL, withDestinationURL: target)
+        XCTAssertTrue(store.set("chinese", to: "pinyin"))
+        XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: store.configURL.path), target.path)
+        XCTAssertEqual(store.current()?.chinesePreference, "pinyin")
+        // An edit to the target is noticed through the link.
+        try #"{"baseURL":"https://x","apiKey":"sk-1","model":"m2"}"#.write(to: target, atomically: false, encoding: .utf8)
+        try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(5)], ofItemAtPath: target.path)
+        XCTAssertEqual(store.current()?.model, "m2")
+    }
 }
