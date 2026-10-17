@@ -22,7 +22,17 @@ struct CompositionState {
     /// Character count at the last edge check, to skip redundant checks.
     var edgeCheckedCount = -1
 
-    var isComposing: Bool { !raw.isEmpty }
+    /// Set while composing Chinese (小鹤双拼 keys that cannot be English);
+    /// `raw` is then empty and `chinesePrefix` holds the whitespace typed
+    /// before the keys, which is committed with the Chinese text.
+    var chinese: ShuangpinComposer?
+    var chinesePrefix = ""
+    /// Chinese readings of the letters at the caret when they are also (the
+    /// start of) English: number keys 2… pick them once they are visible.
+    var alternatives: [ChineseCandidate] = []
+    var alternativesVisible = false
+
+    var isComposing: Bool { !raw.isEmpty || chinese != nil }
 
     /// Improved text is only committable once the stream finished. The
     /// whitespace typed at the edges (e.g. the space that separates this

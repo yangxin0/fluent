@@ -87,6 +87,42 @@ don't want rewritten. A small notice flashes near the caret; double-tap
 Shift again (or use the IME menu ▸ *Enabled*) to turn it back on. The
 toggle resets to *on* at relaunch.
 
+## 小鹤双拼 (Chinese)
+
+You can also type Chinese with the 小鹤双拼 (Xiaohe shuangpin) layout without
+switching input sources. English always comes first: Chinese conversion
+starts only when the letters you type can't be English.
+
+- At the start of a composition, letters that are valid shuangpin and don't
+  begin any English word (`nihc`, `veuiyg`) open a **candidate bar** like the
+  system shuangpin input method. The keys show inline grouped per syllable
+  (`ve ui`).
+- Right after Chinese text, any shuangpin that isn't a whole English word
+  converts, so you can keep typing Chinese.
+- Letters that are also English (`make`, `like`, `here`) stay English. Pause
+  for a moment and their Chinese readings appear in the preview as a small
+  extra row (`2 马克  3 马克思`); press that number to pick one. Inside an
+  English sentence this is the only way Chinese comes up, so a typo like
+  `rela` never turns into 热辣.
+
+| Key (candidate bar) | Action |
+|---|---|
+| Space, 1–6 | Pick the highlighted / numbered candidate |
+| ← → | Move the highlight |
+| ↑ ↓, - = | Previous / next page (also scrolling, or the chevron) |
+| Enter | Insert the keys as typed |
+| Backspace | Take back the last pick, else delete a key |
+| Esc | Cancel |
+| Punctuation | Insert the highlighted candidate and Chinese punctuation (`，。？`) |
+| A capital letter | Keep the picked words and continue in English |
+
+Picking a candidate that covers only part of the keys keeps converting the
+rest. Punctuation typed right after Chinese text is Chinese too. Turn the
+whole feature off with IME menu ▸ *小鹤双拼 Chinese*.
+
+The dictionaries come from [rime-ice](https://github.com/iDvel/rime-ice):
+`make install` downloads and compiles them (see `make dict` below).
+
 ## Development
 
 ```sh

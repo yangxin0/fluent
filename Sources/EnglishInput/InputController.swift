@@ -22,6 +22,10 @@ private enum Shared {
     /// untouched (for terminals, passwords, code…). Not persisted — a fresh
     /// launch always starts enabled.
     static var enabled = true
+    /// 小鹤双拼 Chinese mixed into English typing (IME menu toggle).
+    static var shuangpinEnabled = UserDefaults.standard.object(forKey: "shuangpin") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(shuangpinEnabled, forKey: "shuangpin") }
+    }
 }
 
 private enum Key {
@@ -38,6 +42,12 @@ private enum Key {
 }
 
 private let maxCompositionLength = 500
+private let maxChineseKeys = 60
+private let chinesePageSize = 6
+private let maxAlternatives = 6
+/// The Chinese readings of an English word show once typing pauses, so they
+/// don't flicker past while writing English.
+private let alternativesDelay = 0.4
 
 @objc(InputController)
 class InputController: IMKInputController {
@@ -45,6 +55,11 @@ class InputController: IMKInputController {
     /// Monotonic across compositions; guards against stale stream updates.
     private var generation = 0
     private let engine = RewriteEngine()
+    /// The last text this IME committed in this client was Chinese: then
+    /// punctuation is Chinese too, and shuangpin goes first more readily.
+    private var lastCommitWasChinese = false
+    private var punctuation = ChinesePunctuation()
+    private var alternativesTimer: DispatchWorkItem?
 
     override init!(server: IMKServer!, delegate: Any!, client inputClient: Any!) {
         super.init(server: server, delegate: delegate, client: inputClient)
@@ -67,7 +82,9 @@ class InputController: IMKInputController {
         ctlLog.notice("activateServer: \(self.client()?.bundleIdentifier() ?? "?", privacy: .public) enabled=\(Shared.enabled, privacy: .public)")
         ShiftTapMonitor.shared.sessionActivated(self)
         state.reset()
+        lastCommitWasChinese = false
         PreviewPanelController.shared.hide()
+        CandidateBarController.shared.hide()
     }
 
     override func deactivateServer(_ sender: Any!) {
@@ -89,6 +106,11 @@ class InputController: IMKInputController {
         enabledItem.target = self
         enabledItem.state = Shared.enabled ? .on : .off
         menu.addItem(enabledItem)
+        let shuangpinItem = NSMenuItem(title: "小鹤双拼 Chinese",
+                                       action: #selector(toggleShuangpin(_:)), keyEquivalent: "")
+        shuangpinItem.target = self
+        shuangpinItem.state = Shared.shuangpinEnabled ? .on : .off
+        menu.addItem(shuangpinItem)
         menu.addItem(.separator())
         for mode in Mode.allCases {
             let item = NSMenuItem(title: mode.displayName,
@@ -136,11 +158,15 @@ class InputController: IMKInputController {
 
         // Ctrl+Tab cycles the mode, but only while composing (outside
         // composition it belongs to the app, e.g. browser tab switching).
-        if event.keyCode == Key.tab && flags == [.control] && state.isComposing {
+        if event.keyCode == Key.tab && flags == [.control] && state.isComposing && state.chinese == nil {
             Shared.mode = Shared.mode.next
             requestRewrite()
             refreshPanel()
             return true
+        }
+
+        if state.chinese != nil {
+            return handleChinese(event, flags: flags)
         }
 
         // Editing keys only get their plain meaning here (plus Shift for
@@ -188,6 +214,7 @@ class InputController: IMKInputController {
 
         case Key.left:
             guard state.isComposing else { return false }
+            clearAlternatives()
             state.moveLeft()
             updateMarkedText()
             refreshPanel()  // the typed-text line tracks the caret
@@ -195,6 +222,7 @@ class InputController: IMKInputController {
 
         case Key.right:
             guard state.isComposing else { return false }
+            clearAlternatives()
             state.moveRight()
             updateMarkedText()
             refreshPanel()
@@ -216,6 +244,19 @@ class InputController: IMKInputController {
            !(0xF700...0xF8FF).contains(scalar.value),
            scalar.value >= 0x20, scalar.value != 0x7F
         {
+            // Number keys pick a visible Chinese reading (1 is the English
+            // word itself, so they start at 2).
+            if state.alternativesVisible, chars.count == 1, let key = chars.first, key.isASCII,
+               let digit = key.wholeNumberValue, digit >= 2, digit - 2 < state.alternatives.count {
+                pickAlternative(state.alternatives[digit - 2])
+                return true
+            }
+            // Punctuation right after Chinese text is Chinese too.
+            if !state.isComposing, lastCommitWasChinese, Shared.shuangpinEnabled, chars.count == 1,
+               let key = chars.first, let converted = punctuation.convert(key) {
+                client()?.insertText(converted, replacementRange: NSRange(location: NSNotFound, length: 0))
+                return true
+            }
             if state.raw.count + chars.count <= maxCompositionLength {
                 state.insert(chars)
             }
@@ -255,9 +296,204 @@ class InputController: IMKInputController {
         PreviewPanelController.shared.flash(message: message, appearance: appearance, near: caretRect())
     }
 
+    // MARK: - 小鹤双拼
+
+    /// Keys while composing Chinese, like the system shuangpin input method:
+    /// Space or 1–6 picks, ←/→ move the highlight, ↑/↓ and -/= turn pages,
+    /// Enter inserts the keys as typed, Esc cancels, punctuation commits the
+    /// highlighted candidate followed by Chinese punctuation.
+    private func handleChinese(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
+        guard var composer = state.chinese else { return false }
+        // Only plain and shifted keys compose; any other combo ends the
+        // composition safely and goes to the app.
+        guard flags.subtracting(.function).isSubset(of: [.shift]) else {
+            commitRaw()
+            return false
+        }
+        switch event.keyCode {
+        case Key.enter, Key.keypadEnter:
+            commit(state.chinesePrefix + composer.keys)
+            return true
+        case Key.escape:
+            cancelCurrentComposition()
+            return true
+        case Key.backspace:
+            if composer.backspace() {
+                state.chinese = composer
+                updateMarkedText()
+                refreshPanel()
+            } else if state.chinesePrefix.isEmpty {
+                cancelCurrentComposition()
+            } else {
+                // Every key is gone: back to what was typed before them.
+                switchToEnglish(state.chinesePrefix)
+            }
+            return true
+        case Key.left, Key.right:
+            composer.moveHighlight(by: event.keyCode == Key.left ? -1 : 1)
+            state.chinese = composer
+            refreshPanel()
+            return true
+        case Key.up, Key.down:
+            turnChinesePage(by: event.keyCode == Key.up ? -1 : 1)
+            return true
+        case Key.tab, Key.forwardDelete:
+            commitRaw()
+            return false
+        default:
+            break
+        }
+        guard let chars = event.characters, chars.count == 1, let key = chars.first,
+              let scalar = key.unicodeScalars.first,
+              !(0xF700...0xF8FF).contains(scalar.value), scalar.value >= 0x20, scalar.value != 0x7F
+        else {
+            commitRaw()
+            return false
+        }
+        switch key {
+        case " ":
+            pickChinese(composer.highlighted)
+        case "1"..."9" where key.isASCII:
+            pickChinese(onPage: key.wholeNumberValue! - 1)  // past the page: ignored
+        case "0":
+            break
+        case "-", "=":
+            turnChinesePage(by: key == "-" ? -1 : 1)
+        case "a"..."z" where key.isASCII:
+            guard composer.keys.count < maxChineseKeys else { break }
+            composer.append(key)
+            state.chinese = composer
+            // Until a word is picked, the keys can still turn out to be
+            // English: a whole word after Chinese text, or no longer shuangpin.
+            if composer.segments.isEmpty,
+               chineseRank(for: Substring(composer.keys), prefix: state.chinesePrefix) != .primary {
+                switchToEnglish(state.chinesePrefix + composer.keys)
+            } else {
+                updateMarkedText()
+                refreshPanel()
+            }
+        case "A"..."Z" where key.isASCII:
+            // A capital starts English: picked words stay, the rest is English.
+            var english = state.chinesePrefix + composer.keys
+            if !composer.segments.isEmpty {
+                commitChinese(state.chinesePrefix + composer.confirmedText)
+                english = String(composer.remainingKeys)
+            }
+            switchToEnglish(english + String(key))
+        default:
+            let symbol = punctuation.convert(key) ?? String(key)
+            commitChinese(state.chinesePrefix + composer.highlightedText + symbol)
+        }
+        return true
+    }
+
+    /// Picks `candidates[index]`, committing once every key is converted.
+    private func pickChinese(_ index: Int) {
+        guard var composer = state.chinese else { return }
+        if let text = composer.select(index) {
+            commitChinese(state.chinesePrefix + text)
+        } else {
+            state.chinese = composer
+            updateMarkedText()
+            refreshPanel()
+        }
+    }
+
+    private func pickChinese(onPage index: Int) {
+        guard let composer = state.chinese, index >= 0, index < composer.pageCandidates.count else { return }
+        pickChinese(composer.page * composer.pageSize + index)
+    }
+
+    private func turnChinesePage(by delta: Int) {
+        guard var composer = state.chinese else { return }
+        composer.turnPage(by: delta)
+        state.chinese = composer
+        refreshPanel()
+    }
+
+    /// Leaves Chinese composing with `text` as the English composition.
+    private func switchToEnglish(_ text: String) {
+        state.chinese = nil
+        state.chinesePrefix = ""
+        state.raw = ""
+        state.cursor = 0
+        state.insert(text)
+        afterEdit()
+    }
+
+    /// `prefix` is what the composition holds before the run.
+    private func chineseRank<P: StringProtocol>(for run: Substring, prefix: P) -> ChineseRank {
+        guard Shared.shuangpinEnabled, let shuangpin = Shuangpin.shared else { return .none }
+        let context: RunContext = prefix.contains { !$0.isWhitespace }
+            ? .afterEnglish : lastCommitWasChinese ? .afterChinese : .fresh
+        return ShuangpinPolicy.rank(run: run, context: context, english: shuangpin.english)
+    }
+
+    /// After an English edit, looks at the letters at the caret: switches to
+    /// Chinese when they are shuangpin that cannot be English (returns true),
+    /// else prepares their Chinese readings as alternatives.
+    private func updateShuangpin() -> Bool {
+        clearAlternatives()
+        guard let shuangpin = Shuangpin.shared, state.cursor == state.raw.count else { return false }
+        let run = ShuangpinPolicy.run(in: state.raw, cursor: state.cursor)
+        guard !run.isEmpty else { return false }
+        let prefix = state.raw.dropLast(run.count)
+        switch chineseRank(for: run, prefix: prefix) {
+        case .none:
+            return false
+        case .alternatives:
+            state.alternatives = Array(shuangpin.translator.candidates(for: run).prefix(maxAlternatives))
+            scheduleAlternatives()
+            return false
+        case .primary:
+            engine.cancel()
+            generation += 1  // drop any rewrite still streaming for the English text
+            state.chinesePrefix = String(prefix)
+            state.chinese = ShuangpinComposer(keys: String(run), translator: shuangpin.translator,
+                                              pageSize: chinesePageSize)
+            state.raw = ""
+            state.cursor = 0
+            updateMarkedText()
+            refreshPanel()
+            return true
+        }
+    }
+
+    private func scheduleAlternatives() {
+        guard !state.alternatives.isEmpty else { return }
+        let item = DispatchWorkItem { [weak self] in
+            guard let self, !self.state.alternatives.isEmpty, self.state.chinese == nil else { return }
+            self.state.alternativesVisible = true
+            self.refreshPanel()
+        }
+        alternativesTimer = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + alternativesDelay, execute: item)
+    }
+
+    private func clearAlternatives() {
+        alternativesTimer?.cancel()
+        alternativesTimer = nil
+        state.alternatives = []
+        state.alternativesVisible = false
+    }
+
+    /// Commits the English typed before the letters at the caret as is, then
+    /// the picked Chinese; keys it leaves unconverted start a new composition.
+    private func pickAlternative(_ candidate: ChineseCandidate) {
+        let run = ShuangpinPolicy.run(in: state.raw, cursor: state.cursor)
+        let prefix = String(state.raw.dropLast(run.count))
+        let rest = String(run.dropFirst(candidate.keyCount))
+        commitChinese(prefix + candidate.text)
+        if !rest.isEmpty {
+            state.insert(rest)
+            afterEdit()
+        }
+    }
+
     // MARK: - Composition plumbing
 
     private func afterEdit() {
+        if updateShuangpin() { return }
         updateMarkedText()
         requestRewrite()
         refreshPanel()
@@ -303,20 +539,47 @@ class InputController: IMKInputController {
 
     private func updateMarkedText() {
         guard let client = client() else { return }
-        let attrs = mark(forStyle: kTSMHiliteConvertedText,
-                         at: NSRange(location: NSNotFound, length: 0)) as? [NSAttributedString.Key: Any]
+        if let composer = state.chinese {
+            // Converted words, then the remaining keys grouped per syllable
+            // (`这是 ge`), caret at the end.
+            let text = NSMutableAttributedString(string: state.chinesePrefix + composer.confirmedText,
+                                                 attributes: markAttributes(kTSMHiliteConvertedText))
+            text.append(NSAttributedString(string: Xiaohe.grouped(composer.remainingKeys),
+                                           attributes: markAttributes(kTSMHiliteSelectedRawText)))
+            client.setMarkedText(text, selectionRange: NSRange(location: text.length, length: 0),
+                                 replacementRange: NSRange(location: NSNotFound, length: 0))
+            return
+        }
         client.setMarkedText(
-            NSAttributedString(string: state.raw, attributes: attrs ?? [:]),
+            NSAttributedString(string: state.raw, attributes: markAttributes(kTSMHiliteConvertedText)),
             selectionRange: NSRange(location: state.cursorUTF16Offset, length: 0),
             replacementRange: NSRange(location: NSNotFound, length: 0)
         )
     }
 
+    private func markAttributes(_ style: Int) -> [NSAttributedString.Key: Any] {
+        mark(forStyle: style, at: NSRange(location: NSNotFound, length: 0))
+            as? [NSAttributedString.Key: Any] ?? [:]
+    }
+
     private func refreshPanel() {
         guard state.isComposing else {
             PreviewPanelController.shared.hide()
+            CandidateBarController.shared.hide()
             return
         }
+        if let composer = state.chinese {
+            PreviewPanelController.shared.hide()
+            let bar = CandidateBarController.shared
+            bar.onSelect = { [weak self] index in self?.pickChinese(onPage: index) }
+            bar.onPage = { [weak self] delta in self?.turnChinesePage(by: delta) }
+            bar.show(candidates: composer.pageCandidates, highlighted: composer.highlightedOnPage,
+                     page: composer.page, pageCount: composer.pageCount,
+                     appearance: Shared.configStore.current()?.appearancePreference ?? "auto",
+                     near: caretRect())
+            return
+        }
+        CandidateBarController.shared.hide()
         let status: String
         switch state.status {
         case .idle:
@@ -342,6 +605,7 @@ class InputController: IMKInputController {
             typed: state.showTypedInPanel ? TypedText(raw: state.raw, cursor: state.cursor) : nil,
             text: state.improved,
             status: status,
+            alternatives: state.alternativesVisible ? state.alternatives : [],
             appearance: appearance,
             near: caret
         )
@@ -434,22 +698,37 @@ class InputController: IMKInputController {
         return (rect, attrs as? [NSAttributedString.Key: Any] ?? [:])
     }
 
+    /// Commits what is shown, as typed (Chinese words already picked stay).
     private func commitRaw() {
         guard state.isComposing else { return }
-        commit(state.raw)
+        if let composer = state.chinese {
+            commit(state.chinesePrefix + composer.interruptedText)
+        } else {
+            commit(state.raw)
+        }
     }
 
     private func commit(_ text: String) {
         engine.cancel()
+        clearAlternatives()
         if let client = client(), !text.isEmpty {
             client.insertText(text, replacementRange: NSRange(location: NSNotFound, length: 0))
         }
         state.reset()
+        lastCommitWasChinese = false
         PreviewPanelController.shared.hide()
+        CandidateBarController.shared.hide()
+    }
+
+    private func commitChinese(_ text: String) {
+        commit(text)
+        lastCommitWasChinese = true
     }
 
     private func cancelCurrentComposition() {
         engine.cancel()
+        clearAlternatives()
+        CandidateBarController.shared.hide()
         if let client = client() {
             client.setMarkedText(
                 NSAttributedString(string: ""),
@@ -475,7 +754,7 @@ class InputController: IMKInputController {
         guard let raw = menuItem(from: sender)?.representedObject as? String,
               let mode = Mode(rawValue: raw) else { return }
         Shared.mode = mode
-        if state.isComposing {
+        if state.isComposing && state.chinese == nil {
             requestRewrite()
             refreshPanel()
         }
@@ -490,9 +769,18 @@ class InputController: IMKInputController {
         NSWorkspace.shared.open(Shared.configStore.configURL)
     }
 
+    @objc func toggleShuangpin(_ sender: Any?) {
+        Shared.shuangpinEnabled.toggle()
+        if state.chinese != nil {
+            commitRaw()
+        } else if state.isComposing {
+            afterEdit()
+        }
+    }
+
     @objc func reloadConfig(_ sender: Any?) {
         Shared.configStore.invalidate()
-        if state.isComposing {
+        if state.isComposing && state.chinese == nil {
             requestRewrite()
             refreshPanel()
         }

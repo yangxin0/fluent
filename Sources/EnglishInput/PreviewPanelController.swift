@@ -22,6 +22,9 @@ final class PreviewPanelController {
     private let typedLabel = NSTextField(wrappingLabelWithString: "")
     private let separator = NSBox()
     private let textLabel = NSTextField(wrappingLabelWithString: "")
+    /// Chinese readings of an English word that is also shuangpin, picked
+    /// with the number keys (`2 马克  3 马克思`); 1 is the English word.
+    private let alternativesLabel = NSTextField(labelWithString: "")
 
     private static let maxTextWidth: CGFloat = 480
     /// Wider when the typed text is shown too, so a full sentence fits in a
@@ -31,20 +34,7 @@ final class PreviewPanelController {
     private var maxTextWidth: CGFloat = PreviewPanelController.maxTextWidth
 
     private init() {
-        panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 200, height: 60),
-            styleMask: [.nonactivatingPanel, .borderless],
-            backing: .buffered,
-            defer: true
-        )
-        panel.isFloatingPanel = true
-        panel.level = .popUpMenu
-        panel.hidesOnDeactivate = false
-        panel.becomesKeyOnlyIfNeeded = true
-        panel.hasShadow = true
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel = PanelPlacement.makePanel()
 
         // Squirrel's "native" style: semantic colors that adapt to light/dark.
         // Background = windowBackgroundColor, highlight = selectedTextBackground,
@@ -84,13 +74,15 @@ final class PreviewPanelController {
         typedLabel.isHidden = true
         separator.boxType = .separator
         separator.isHidden = true
+        alternativesLabel.isHidden = true
+        alternativesLabel.lineBreakMode = .byTruncatingTail
 
         for view in [modePill, NSView(), statusLabel] { header.addArrangedSubview(view) }
         header.orientation = .horizontal
         header.distribution = .fill
         header.alignment = .centerY
 
-        let stack = NSStackView(views: [header, typedLabel, separator, textLabel])
+        let stack = NSStackView(views: [header, typedLabel, separator, textLabel, alternativesLabel])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 4
@@ -112,7 +104,7 @@ final class PreviewPanelController {
     /// `typed` is shown (with a caret marker) for clients that clip marked
     /// text, e.g. terminals; pass nil where the client renders it fully.
     func show(mode: Mode, typed: TypedText?, text: String, status: String,
-              appearance: String, near caretRect: NSRect) {
+              alternatives: [ChineseCandidate] = [], appearance: String, near caretRect: NSRect) {
         flashToken += 1  // cancel any pending flash auto-hide
         applyAppearance(appearance)
         header.isHidden = false
@@ -125,7 +117,27 @@ final class PreviewPanelController {
         }
         typedLabel.isHidden = typed == nil
         separator.isHidden = typed == nil
+        alternativesLabel.attributedStringValue = Self.render(alternatives)
+        alternativesLabel.isHidden = alternatives.isEmpty
         present(near: caretRect)
+    }
+
+    /// `2 马克  3 马克思 …` in secondary colors, so the card looks unchanged
+    /// apart from one quiet row.
+    private static func render(_ alternatives: [ChineseCandidate]) -> NSAttributedString {
+        let result = NSMutableAttributedString()
+        for (offset, candidate) in alternatives.enumerated() {
+            if offset > 0 { result.append(NSAttributedString(string: "   ")) }
+            result.append(NSAttributedString(string: "\(offset + 2) ", attributes: [
+                .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular),
+                .foregroundColor: NSColor.tertiaryLabelColor,
+            ]))
+            result.append(NSAttributedString(string: candidate.text, attributes: [
+                .font: NSFont.systemFont(ofSize: 14),
+                .foregroundColor: NSColor.secondaryLabelColor,
+            ]))
+        }
+        return result
     }
 
     private func setMaxTextWidth(_ width: CGFloat) {
@@ -167,6 +179,7 @@ final class PreviewPanelController {
         header.isHidden = true
         typedLabel.isHidden = true
         separator.isHidden = true
+        alternativesLabel.isHidden = true
         setMaxTextWidth(Self.maxTextWidth)
         let styled = NSMutableAttributedString(attributedString: message)
         let all = NSRange(location: 0, length: styled.length)
@@ -187,7 +200,7 @@ final class PreviewPanelController {
         let fitting = contentView.fittingSize
         let size = NSSize(width: min(max(fitting.width, minWidth), maxTextWidth + 2 * Self.padding),
                           height: fitting.height)
-        panel.setFrame(NSRect(origin: origin(for: size, caretRect: caretRect), size: size),
+        panel.setFrame(NSRect(origin: PanelPlacement.origin(for: size, caretRect: caretRect), size: size),
                        display: true)
         panel.orderFrontRegardless()
     }
@@ -207,44 +220,8 @@ final class PreviewPanelController {
         }
     }
 
-    /// "light"/"dark" force that scheme; anything else follows the system
-    /// (nil appearance = inherit NSApp's effective, system-tracking appearance).
     private func applyAppearance(_ preference: String) {
-        let desired: NSAppearance?
-        switch preference {
-        case "light": desired = NSAppearance(named: .aqua)
-        case "dark": desired = NSAppearance(named: .darkAqua)
-        default: desired = nil
-        }
-        if panel.appearance?.name != desired?.name {
-            panel.appearance = desired
-        }
-    }
-
-    /// Below the composed line by default; flipped above it near the bottom
-    /// edge; clamped horizontally; fallback position for clients that report
-    /// a zero caret rect (some Electron apps).
-    private func origin(for size: NSSize, caretRect: NSRect) -> NSPoint {
-        let screen = screenContaining(caretRect) ?? NSScreen.main
-        guard let visible = screen?.visibleFrame else {
-            return NSPoint(x: 100, y: 100)
-        }
-        if caretRect == .zero {
-            return NSPoint(x: visible.midX - size.width / 2,
-                           y: visible.minY + visible.height * 0.2)
-        }
-        var x = caretRect.minX
-        var y = caretRect.minY - size.height - 6
-        if y < visible.minY {
-            y = caretRect.maxY + 6
-        }
-        x = min(max(x, visible.minX), visible.maxX - size.width)
-        y = min(max(y, visible.minY), visible.maxY - size.height)
-        return NSPoint(x: x, y: y)
-    }
-
-    private func screenContaining(_ rect: NSRect) -> NSScreen? {
-        NSScreen.screens.first { $0.frame.intersects(rect) || $0.frame.contains(rect.origin) }
+        PanelPlacement.applyAppearance(preference, to: panel)
     }
 }
 

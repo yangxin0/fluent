@@ -20,5 +20,6 @@ autoreleasepool {
     }
     log.info("EnglishInput IMKServer started (\(connectionName, privacy: .public))")
     ShiftTapMonitor.shared.start()
+    Shuangpin.preload()
     app.run()
 }
