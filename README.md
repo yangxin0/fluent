@@ -18,7 +18,8 @@ provider exposing `/v1/responses` with SSE streaming).
 | **P** | **Polish** | Rewrites into natural, native-speaker English |
 | **T** | **Translate** | Turns rough / fragmentary / Chinese-mixed input into the intended English (`"interpret"` in the CLI) |
 
-The bar starts with the mode's badge (`双` while typing Chinese). Switch modes
+The bar starts with the mode's badge (`双` while typing 小鹤双拼, `拼` for
+全拼). Switch modes
 from the input-method menu in the menu bar, or **Ctrl+Tab** while composing.
 The last mode is remembered.
 

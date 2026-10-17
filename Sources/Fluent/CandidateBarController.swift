@@ -23,7 +23,8 @@ struct BarContent {
 
     enum Chevron { case none, more(enabled: Bool), less }
 
-    /// Mode letter (`F`/`P`/`T`) or `双` for shuangpin, before the cells.
+    /// Mode letter (`F`/`P`/`T`), or `双` / `拼` for shuangpin / full pinyin,
+    /// before the cells.
     var badge: String?
     /// For terminals: the typed text with a caret, on its own line.
     var typed: TypedText?

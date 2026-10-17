@@ -601,7 +601,7 @@ class InputController: IMKInputController {
     }
 
     /// Everything shows in the one candidate bar: Chinese candidates behind
-    /// a `双` badge, English behind the mode letter, as one line that reads
+    /// a `双` (or `拼`) badge, English behind the mode letter, as one line that reads
     /// what Enter inserts (`P We should figure out a way.`), and a word that
     /// is both as `P [1 make] 2 马克 …`.
     private func refreshPanel() {
@@ -615,7 +615,7 @@ class InputController: IMKInputController {
         var content = BarContent()
         if let composer = state.chinese {
             let shown = composer.gridRange(rows: state.chineseExpanded ? chineseGridRows : 1)
-            content.badge = "双"
+            content.badge = ChineseInput.shared?.badge ?? "双"
             content.cells = shown.map { index in
                 let candidate = composer.candidates[index]
                 return BarContent.Cell(text: candidate.text, comment: candidate.comment,

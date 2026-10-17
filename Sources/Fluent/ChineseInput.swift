@@ -52,6 +52,9 @@ final class ChineseInput {
     /// `'` separates syllables in full pinyin (`xi'an`).
     var separatesSyllables: Bool { translator.layout is FullPinyinLayout }
 
+    /// The candidate bar's badge: `拼` for full pinyin, `双` for shuangpin.
+    var badge: String { translator.layout is FullPinyinLayout ? "拼" : "双" }
+
     /// Learns the words of a commit; saved a moment later, off the main thread.
     func learn(_ words: [(text: String, code: [SyllableID])]) {
         userDictionary.learn(words)
