@@ -9,12 +9,13 @@ struct TypedText {
 }
 
 /// Floating, non-activating panel showing the streamed improvement near the
-/// caret. One shared instance — only one composition is active at a time.
+/// caret, on the same backdrop as the candidate bar so the two read as one
+/// UI. One shared instance — only one composition is active at a time.
 final class PreviewPanelController {
     static let shared = PreviewPanelController()
 
     private let panel: NSPanel
-    private let background = PanelBackgroundView()
+    private let background = PanelChromeView()
     private let header = NSStackView()
     private let modePill = NSView()
     private let modeLabel = NSTextField(labelWithString: "")
@@ -22,40 +23,30 @@ final class PreviewPanelController {
     private let typedLabel = NSTextField(wrappingLabelWithString: "")
     private let separator = NSBox()
     private let textLabel = NSTextField(wrappingLabelWithString: "")
-    /// Chinese readings of an English word that is also shuangpin, picked
-    /// with the number keys (`2 马克  3 马克思`); 1 is the English word.
-    private let alternativesLabel = NSTextField(labelWithString: "")
 
     private static let maxTextWidth: CGFloat = 480
     /// Wider when the typed text is shown too, so a full sentence fits in a
     /// couple of rows rather than a tall column.
     private static let maxTextWidthWithTyped: CGFloat = 640
-    private static let padding: CGFloat = 10
+    private static let padding: CGFloat = 12
     private var maxTextWidth: CGFloat = PreviewPanelController.maxTextWidth
 
     private init() {
         panel = PanelPlacement.makePanel()
 
-        // Squirrel's "native" style: semantic colors that adapt to light/dark.
-        // Background = windowBackgroundColor, highlight = selectedTextBackground,
-        // preedit = secondaryLabel, candidate = label, comment = secondaryLabel.
-        // No border stroke (Squirrel's native scheme has none; the window
-        // shadow separates the panel) and its default corner_radius of 7.
-        // The panel's appearance is set to the system's (see applyAppearance),
-        // matching Squirrel's approach.
-        background.wantsLayer = true
-        background.layer?.cornerRadius = 7
-        background.layer?.masksToBounds = true
+        // Semantic colors that adapt to light/dark, as in the candidate bar:
+        // text = label, preedit and hints = secondaryLabel. The panel's
+        // appearance follows the system unless forced (see applyAppearance).
+        background.cornerRadius = 12
         background.onAppearanceChange = { [weak self] in self?.refreshLayerColors() }
 
-        // Mode badge as a highlighted pill, using the system selection color
-        // like Squirrel's highlighted candidate. labelColor reads on it in
-        // both light and dark.
+        // Mode badge as a quiet pill, like a candidate under the pointer in
+        // the bar; labelColor reads on it in both light and dark.
         modeLabel.font = .systemFont(ofSize: 10, weight: .bold)
         modeLabel.textColor = .labelColor
         modeLabel.translatesAutoresizingMaskIntoConstraints = false
         modePill.wantsLayer = true
-        modePill.layer?.cornerRadius = 4
+        modePill.layer?.cornerRadius = 8
         modePill.addSubview(modeLabel)
         NSLayoutConstraint.activate([
             modeLabel.leadingAnchor.constraint(equalTo: modePill.leadingAnchor, constant: 6),
@@ -65,7 +56,7 @@ final class PreviewPanelController {
         ])
         statusLabel.font = .systemFont(ofSize: 10)
         statusLabel.textColor = .secondaryLabelColor
-        textLabel.font = .systemFont(ofSize: 13)
+        textLabel.font = .systemFont(ofSize: 15)
         textLabel.textColor = .labelColor
         textLabel.preferredMaxLayoutWidth = Self.maxTextWidth
         typedLabel.font = .monospacedSystemFont(ofSize: 13, weight: .regular)
@@ -74,15 +65,13 @@ final class PreviewPanelController {
         typedLabel.isHidden = true
         separator.boxType = .separator
         separator.isHidden = true
-        alternativesLabel.isHidden = true
-        alternativesLabel.lineBreakMode = .byTruncatingTail
 
         for view in [modePill, NSView(), statusLabel] { header.addArrangedSubview(view) }
         header.orientation = .horizontal
         header.distribution = .fill
         header.alignment = .centerY
 
-        let stack = NSStackView(views: [header, typedLabel, separator, textLabel, alternativesLabel])
+        let stack = NSStackView(views: [header, typedLabel, separator, textLabel])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 4
@@ -104,7 +93,7 @@ final class PreviewPanelController {
     /// `typed` is shown (with a caret marker) for clients that clip marked
     /// text, e.g. terminals; pass nil where the client renders it fully.
     func show(mode: Mode, typed: TypedText?, text: String, status: String,
-              alternatives: [ChineseCandidate] = [], appearance: String, near caretRect: NSRect) {
+              appearance: String, near caretRect: NSRect) {
         flashToken += 1  // cancel any pending flash auto-hide
         applyAppearance(appearance)
         header.isHidden = false
@@ -117,27 +106,7 @@ final class PreviewPanelController {
         }
         typedLabel.isHidden = typed == nil
         separator.isHidden = typed == nil
-        alternativesLabel.attributedStringValue = Self.render(alternatives)
-        alternativesLabel.isHidden = alternatives.isEmpty
         present(near: caretRect)
-    }
-
-    /// `2 马克  3 马克思 …` in secondary colors, so the card looks unchanged
-    /// apart from one quiet row.
-    private static func render(_ alternatives: [ChineseCandidate]) -> NSAttributedString {
-        let result = NSMutableAttributedString()
-        for (offset, candidate) in alternatives.enumerated() {
-            if offset > 0 { result.append(NSAttributedString(string: "   ")) }
-            result.append(NSAttributedString(string: "\(offset + 2) ", attributes: [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular),
-                .foregroundColor: NSColor.tertiaryLabelColor,
-            ]))
-            result.append(NSAttributedString(string: candidate.text, attributes: [
-                .font: NSFont.systemFont(ofSize: 14),
-                .foregroundColor: NSColor.secondaryLabelColor,
-            ]))
-        }
-        return result
     }
 
     private func setMaxTextWidth(_ width: CGFloat) {
@@ -179,7 +148,6 @@ final class PreviewPanelController {
         header.isHidden = true
         typedLabel.isHidden = true
         separator.isHidden = true
-        alternativesLabel.isHidden = true
         setMaxTextWidth(Self.maxTextWidth)
         let styled = NSMutableAttributedString(attributedString: message)
         let all = NSRange(location: 0, length: styled.length)
@@ -212,41 +180,14 @@ final class PreviewPanelController {
     private var flashToken = 0
 
     /// Semantic colors used as CGColors on layers are snapshots, so re-resolve
-    /// them against the panel's current appearance (background + border are
-    /// handled by the background view; the pill is refreshed here too).
+    /// the pill's against the panel's current appearance.
     private func refreshLayerColors() {
         panel.effectiveAppearance.performAsCurrentDrawingAppearance {
-            modePill.layer?.backgroundColor = NSColor.selectedTextBackgroundColor.cgColor
+            modePill.layer?.backgroundColor = NSColor.quaternaryLabelColor.cgColor
         }
     }
 
     private func applyAppearance(_ preference: String) {
         PanelPlacement.applyAppearance(preference, to: panel)
-    }
-}
-
-/// Solid rounded background using Squirrel's native semantic palette
-/// (windowBackgroundColor, no border). This becomes a CGColor snapshot on the
-/// layer, so it is re-resolved whenever the effective (system) appearance
-/// flips between light and dark. `onAppearanceChange` lets the controller
-/// refresh its own layer colors (the mode pill) at the same time.
-private final class PanelBackgroundView: NSView {
-    var onAppearanceChange: (() -> Void)?
-
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        refresh()
-    }
-
-    override func viewDidChangeEffectiveAppearance() {
-        super.viewDidChangeEffectiveAppearance()
-        refresh()
-    }
-
-    private func refresh() {
-        effectiveAppearance.performAsCurrentDrawingAppearance {
-            layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
-        }
-        onAppearanceChange?()
     }
 }

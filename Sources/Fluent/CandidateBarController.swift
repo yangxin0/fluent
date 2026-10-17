@@ -11,7 +11,7 @@ final class CandidateBarController {
     static let shared = CandidateBarController()
 
     private let panel: NSPanel
-    private let background = NSVisualEffectView()
+    private let background = PanelChromeView()
     private let bar = CandidateBarView()
 
     /// Called with the index (into all candidates) of a clicked candidate.
@@ -23,9 +23,6 @@ final class CandidateBarController {
 
     private init() {
         panel = PanelPlacement.makePanel()
-        background.material = .popover
-        background.blendingMode = .behindWindow
-        background.state = .active  // stay vibrant: the IME is never the active app
         bar.frame = background.bounds
         bar.autoresizingMask = [.width, .height]
         background.addSubview(bar)
@@ -43,7 +40,7 @@ final class CandidateBarController {
         PanelPlacement.applyAppearance(appearance, to: panel)
         bar.update(candidates: Array(candidates), firstIndex: candidates.startIndex, highlighted: highlighted,
                    columns: columns, expanded: expanded, canPageBack: canPageBack, canPageForward: canPageForward)
-        background.maskImage = expanded ? CandidateBarView.cardMask : CandidateBarView.capsuleMask
+        background.cornerRadius = expanded ? CandidateBarView.cardRadius : CandidateBarView.rowHeight / 2
         let size = bar.fittingSize
         panel.setFrame(NSRect(origin: PanelPlacement.origin(for: size, caretRect: caretRect), size: size),
                        display: true)
@@ -72,23 +69,6 @@ private final class CandidateBarView: NSView {
     private static let numberFont = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
     private static let textFont = NSFont.systemFont(ofSize: 18)
     private static let commentFont = NSFont.systemFont(ofSize: 12)
-
-    /// Masks the background to a capsule (one row) or a rounded card (the
-    /// grid); both stretch to any size.
-    static let capsuleMask = mask(radius: rowHeight / 2)
-    static let cardMask = mask(radius: cardRadius)
-
-    private static func mask(radius: CGFloat) -> NSImage {
-        let side = radius * 2 + 1
-        let image = NSImage(size: NSSize(width: side, height: side), flipped: false) { rect in
-            NSColor.black.setFill()
-            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
-            return true
-        }
-        image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
-        image.resizingMode = .stretch
-        return image
-    }
 
     private struct Cell {
         var index: Int
@@ -214,13 +194,6 @@ private final class CandidateBarView: NSView {
             let origin = NSPoint(x: chevron.midX - symbol.size.width / 2, y: chevron.midY - symbol.size.height / 2)
             tinted.draw(in: NSRect(origin: origin, size: symbol.size))
         }
-
-        // Hairline edge so the bar reads on any background.
-        NSColor.separatorColor.setStroke()
-        let radius = expanded ? Self.cardRadius : Self.rowHeight / 2
-        let edge = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.25, dy: 0.25), xRadius: radius, yRadius: radius)
-        edge.lineWidth = 0.5
-        edge.stroke()
     }
 
     /// Draws `string` vertically centered in `frame` at `x`; returns its width.

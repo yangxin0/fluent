@@ -101,8 +101,9 @@ starts only when the letters you type can't be English.
 - Right after Chinese text, any shuangpin that isn't a whole English word
   converts, so you can keep typing Chinese.
 - Letters that are also English (`make`, `like`, `here`) stay English. Pause
-  for a moment and their Chinese readings appear in the preview as a small
-  extra row (`2 马克  3 马克思`); press that number to pick one.
+  for a moment and the candidate bar shows the word first, then its Chinese
+  readings (`1 make  2 马克  3 马克思`): press 2–6 to pick one, 1 or Enter to
+  insert the word as typed, or just keep typing English.
 - Inside an English sentence there are no Chinese candidates at all, so a
   typo like `rela` never turns into 热辣. English words inside Chinese text
   (`这个 bug 修好了`) don't count: the Chinese after them still converts.

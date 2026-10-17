@@ -46,9 +46,11 @@ private let maxChineseKeys = 60
 private let chinesePageSize = 6
 /// Rows of `chinesePageSize` candidates in the expanded bar.
 private let chineseGridRows = 5
-private let maxAlternatives = 6
-/// The Chinese readings of an English word show once typing pauses, so they
-/// don't flicker past while writing English.
+/// Chinese readings shown after an English word that is also shuangpin; the
+/// word itself is candidate 1 of the bar.
+private let maxAlternatives = 5
+/// The bar for such a word shows once typing pauses, so it doesn't flicker
+/// past while writing English.
 private let alternativesDelay = 0.4
 
 @objc(InputController)
@@ -192,7 +194,9 @@ class InputController: IMKInputController {
         switch event.keyCode {
         case Key.enter, Key.keypadEnter:
             guard state.isComposing else { return false }
-            if flags.contains(.shift) {
+            // The bar for a word that is also shuangpin shows it as typed,
+            // so Enter inserts that rather than an unseen rewrite.
+            if flags.contains(.shift) || state.alternativesVisible {
                 commitRaw()
             } else {
                 commit(state.committableImproved ?? state.raw)
@@ -246,11 +250,11 @@ class InputController: IMKInputController {
            !(0xF700...0xF8FF).contains(scalar.value),
            scalar.value >= 0x20, scalar.value != 0x7F
         {
-            // Number keys pick a visible Chinese reading (1 is the English
-            // word itself, so they start at 2).
+            // Number keys pick from the bar shown for a word that is also
+            // shuangpin: 1 is the English word as typed, 2… its readings.
             if state.alternativesVisible, chars.count == 1, let key = chars.first, key.isASCII,
-               let digit = key.wholeNumberValue, digit >= 2, digit - 2 < state.alternatives.count {
-                pickAlternative(state.alternatives[digit - 2])
+               let digit = key.wholeNumberValue, digit >= 1, digit - 1 <= state.alternatives.count {
+                pickEnglishOrAlternative(digit - 1)
                 return true
             }
             // Punctuation right after Chinese text is Chinese too.
@@ -507,6 +511,15 @@ class InputController: IMKInputController {
         state.alternativesVisible = false
     }
 
+    /// Index 0 of the bar for an ambiguous word is the word itself.
+    private func pickEnglishOrAlternative(_ index: Int) {
+        if index == 0 {
+            commitRaw()
+        } else if index - 1 < state.alternatives.count {
+            pickAlternative(state.alternatives[index - 1])
+        }
+    }
+
     /// Commits the English typed before the letters at the caret as is, then
     /// the picked Chinese; keys it leaves unconverted start a new composition.
     private func pickAlternative(_ candidate: ChineseCandidate) {
@@ -613,18 +626,36 @@ class InputController: IMKInputController {
                      near: caretRect())
             return
         }
+        if state.alternativesVisible, !state.alternatives.isEmpty {
+            // A word that is both English and shuangpin: the same bar, with
+            // the word as typed first (`1 make  2 马克 …`).
+            PreviewPanelController.shared.hide()
+            let run = ShuangpinPolicy.run(in: state.raw, cursor: state.cursor)
+            let shown = [ChineseCandidate(text: String(run), keyCount: run.count, code: [], weight: 0)]
+                + state.alternatives
+            let bar = CandidateBarController.shared
+            bar.onSelect = { [weak self] index in self?.pickEnglishOrAlternative(index) }
+            bar.onPage = nil
+            bar.onToggleExpanded = nil
+            bar.show(candidates: shown[...], highlighted: 0, columns: chinesePageSize, expanded: false,
+                     canPageBack: false, canPageForward: false,
+                     appearance: Shared.configStore.current()?.appearancePreference ?? "auto",
+                     near: caretRect())
+            return
+        }
         CandidateBarController.shared.hide()
+        // Short hints, like the bar's: what Enter inserts right now (the
+        // improvement once it is ready, else the text as typed).
         let status: String
         switch state.status {
         case .idle:
-            status = state.raw.count >= maxCompositionLength
-                ? "too long — ↵ inserts as typed" : "↵ inserts as typed"
+            status = state.raw.count >= maxCompositionLength ? "too long · ↵ as typed" : "↵ as typed"
         case .improving:
-            status = "improving… (↵ now inserts as typed)"
+            status = "improving… · ↵ as typed"
         case .done:
-            status = "↵ insert · ⇧↵ as typed · esc cancel"
+            status = "↵"
         case .failed(let message):
-            status = "⚠ \(message) — ↵ inserts as typed"
+            status = "⚠ \(message) · ↵ as typed"
         }
         let config = Shared.configStore.current()
         let appearance = config?.appearancePreference ?? "auto"
@@ -639,7 +670,6 @@ class InputController: IMKInputController {
             typed: state.showTypedInPanel ? TypedText(raw: state.raw, cursor: state.cursor) : nil,
             text: state.improved,
             status: status,
-            alternatives: state.alternativesVisible ? state.alternatives : [],
             appearance: appearance,
             near: caret
         )

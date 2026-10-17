@@ -63,3 +63,74 @@ enum PanelPlacement {
         NSScreen.screens.first { $0.frame.intersects(rect) || $0.frame.contains(rect.origin) }
     }
 }
+
+/// The backdrop both panels share, so they read as one UI: the popover
+/// material clipped to a rounded rect (a capsule when the radius is half the
+/// height), with a hairline edge on top of the content.
+final class PanelChromeView: NSVisualEffectView {
+    /// Called when light/dark flips, for colors snapshotted into layers.
+    var onAppearanceChange: (() -> Void)?
+
+    var cornerRadius: CGFloat = 12 {
+        didSet {
+            guard cornerRadius != oldValue else { return }
+            maskImage = Self.mask(radius: cornerRadius)
+            edge.radius = cornerRadius
+            edge.needsDisplay = true
+        }
+    }
+
+    private let edge = HairlineView()
+
+    init() {
+        super.init(frame: .zero)
+        material = .popover
+        blendingMode = .behindWindow
+        state = .active  // stay vibrant: the IME is never the active app
+        maskImage = Self.mask(radius: cornerRadius)
+        edge.radius = cornerRadius
+        edge.frame = bounds
+        edge.autoresizingMask = [.width, .height]
+        addSubview(edge)
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+    /// Keeps the edge above whatever content is added later.
+    override func didAddSubview(_ subview: NSView) {
+        super.didAddSubview(subview)
+        if subview !== edge { addSubview(edge, positioned: .above, relativeTo: nil) }
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        onAppearanceChange?()
+    }
+
+    /// A rounded rect that stretches to any size, for `maskImage`.
+    private static func mask(radius: CGFloat) -> NSImage {
+        let side = radius * 2 + 1
+        let image = NSImage(size: NSSize(width: side, height: side), flipped: false) { rect in
+            NSColor.black.setFill()
+            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
+            return true
+        }
+        image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
+        image.resizingMode = .stretch
+        return image
+    }
+}
+
+/// The hairline edge, so the panel reads on any background; ignores the mouse.
+private final class HairlineView: NSView {
+    var radius: CGFloat = 12
+
+    override func draw(_ dirtyRect: NSRect) {
+        NSColor.separatorColor.setStroke()
+        let path = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.25, dy: 0.25), xRadius: radius, yRadius: radius)
+        path.lineWidth = 0.5
+        path.stroke()
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+}
