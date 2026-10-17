@@ -96,7 +96,7 @@ bar says why (`Config error: "apiKey" is missing`).
 | Esc | Cancel the composition |
 | Backspace, ← → | Edit within the composition |
 | Ctrl+Tab | Cycle mode (Fix → Polish → Translate) while composing English |
-| Space / punctuation | Just text — composition continues until Enter |
+| Space / punctuation | Just text — composition continues until Enter (punctuation typed with nothing composed goes straight in) |
 | Cmd-shortcuts, Tab, ↑ ↓ | Commit raw text, then act normally |
 | Shift, Shift (double tap) | Toggle the IME **on/off** |
 

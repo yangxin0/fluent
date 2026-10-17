@@ -266,11 +266,14 @@ class InputController: IMKInputController {
                 pickEnglishOrAlternative(digit - 1)
                 return true
             }
-            // Punctuation right after Chinese text is Chinese too.
-            if !state.isComposing, lastCommitWasChinese,
-               Shared.configStore.current()?.chinesePreference != "off", chars.count == 1,
-               let key = chars.first, let converted = punctuation.convert(key) {
-                client()?.insertText(converted, replacementRange: NSRange(location: NSNotFound, length: 0))
+            // Punctuation with nothing composed goes straight in, as Chinese
+            // punctuation right after Chinese text.
+            if !state.isComposing, chars.count == 1, let key = chars.first,
+               ChinesePunctuation.isPunctuation(key) {
+                let afterChinese = lastCommitWasChinese
+                    && Shared.configStore.current()?.chinesePreference != "off"
+                let text = afterChinese ? punctuation.convert(key) ?? chars : chars
+                client()?.insertText(text, replacementRange: NSRange(location: NSNotFound, length: 0))
                 return true
             }
             // Past maxCompositionLength the text is no longer improved, but
