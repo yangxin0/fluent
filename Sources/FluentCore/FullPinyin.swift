@@ -9,9 +9,10 @@ import Foundation
 ///   `abbrev` rules;
 /// - `fuzzy` pairs (`zh=z`, `an=ang`) add spellings at a cost;
 /// - keys left unfinished at the end complete to every syllable they start
-///   (`zhon` → zhong);
+///   (`zhongg` → zhong guo), and librime's auto-corrections read an -ong or
+///   -ou syllable still being typed as itself (`zhon`, `zho` → zhong);
 /// - `'` separates syllables (`xi'an`);
-/// - edges worse than the best way to cover the keys are pruned, so
+/// - edges worse than the best way to reach their end are pruned, so
 ///   abbreviations drop out wherever whole spellings fit.
 public struct FullPinyinLayout: KeyLayout {
     typealias Kind = SyllableGraph.Kind
@@ -66,6 +67,9 @@ public struct FullPinyinLayout: KeyLayout {
         for (index, syllable) in Pinyin.syllables.enumerated() {
             let id = SyllableID(index)
             addWhole(syllable, id, penalty: 0)
+            for spelling in Self.corrections(of: syllable) {
+                addWhole(spelling, id, penalty: 0)
+            }
             // rime-ice spells ü as v; people also type lue / nue.
             if syllable == "lve" || syllable == "nve" {
                 addWhole(String(syllable.first!) + "ue", id, penalty: 0)
@@ -94,6 +98,19 @@ public struct FullPinyinLayout: KeyLayout {
               parts.allSatisfy({ $0.allSatisfy { $0 >= "a" && $0 <= "z" } })
         else { return nil }
         return (parts[0], parts[1])
+    }
+
+    /// luna_pinyin's `derive/ong$/on/` and `derive/([dtngkhrzcs])o(u|ng)$/$1o/`:
+    /// `zhon` and `zho` spell zhong, `do` spells dou and dong. None of them
+    /// is a syllable itself.
+    private static func corrections(of syllable: String) -> [String] {
+        var spellings: [String] = []
+        if syllable.hasSuffix("ong") { spellings.append(String(syllable.dropLast())) }
+        for final in ["ou", "ong"] where syllable.hasSuffix(final) {
+            let stem = syllable.dropLast(final.count)
+            if let last = stem.last, "dtngkhrzcs".contains(last) { spellings.append(stem + "o") }
+        }
+        return spellings
     }
 
     private static let initials: Set<String> = [
@@ -176,8 +193,9 @@ public struct FullPinyinLayout: KeyLayout {
                              keyCount: count)
     }
 
-    /// Keeps the edges on paths from 0 to `end` that are no worse than the
-    /// best path's kind (a path is as bad as its worst edge).
+    /// Keeps the edges on paths from 0 to `end` that are a best way to reach
+    /// their own end (a path is as bad as its worst edge), as librime does:
+    /// one trailing initial (`nihaoz`) does not let `h` stand for hao.
     private static func pruned(_ edges: [Int: [SyllableGraph.Edge]], to end: Int,
                                keyCount: Int) -> [Int: [SyllableGraph.Edge]] {
         var best = [Kind?](repeating: nil, count: keyCount + 1)
@@ -189,8 +207,11 @@ public struct FullPinyinLayout: KeyLayout {
                 if best[edge.end].map({ pathKind < $0 }) ?? true { best[edge.end] = pathKind }
             }
         }
-        let target = best[end] ?? .normal
-        var kept = edges.mapValues { $0.filter { $0.kind <= target } }
+        var kept: [Int: [SyllableGraph.Edge]] = [:]
+        for (vertex, list) in edges {
+            guard let kind = best[vertex] else { continue }
+            kept[vertex] = list.filter { edge in best[edge.end].map { max(kind, edge.kind) <= $0 } ?? false }
+        }
 
         var fromStart = [Bool](repeating: false, count: keyCount + 1)
         fromStart[0] = true

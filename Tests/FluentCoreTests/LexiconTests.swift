@@ -56,4 +56,19 @@ final class LexiconTests: XCTestCase {
             XCTAssertEqual(error as? Lexicon.LoadError, .truncated)
         }
     }
+
+    func testRejectsDamagedEntries() {
+        let full = Lexicon.encode((0..<lexicon.count).map(lexicon.entry(at:)))
+        XCTAssertThrowsError(try Lexicon(data: full + [0])) { error in
+            XCTAssertEqual(error as? Lexicon.LoadError, .corrupt)  // trailing bytes
+        }
+        // The first syllable id: after the 24-byte header and 14 bytes per entry.
+        var unknown = full
+        let pool = unknown.startIndex + 24 + 14 * lexicon.count
+        unknown[pool] = 0xFF
+        unknown[pool + 1] = 0xFF
+        XCTAssertThrowsError(try Lexicon(data: unknown)) { error in
+            XCTAssertEqual(error as? Lexicon.LoadError, .corrupt)
+        }
+    }
 }

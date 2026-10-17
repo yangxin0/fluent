@@ -38,7 +38,9 @@ public final class UserDictionary {
     /// Learns the words of one commit: each picked part, and when the commit
     /// was built from several picks, the whole phrase as a new word.
     public func learn(_ words: [(text: String, code: [SyllableID])]) {
-        let words = words.filter { !$0.code.isEmpty && !$0.text.isEmpty }
+        let words = words.filter {
+            !$0.code.isEmpty && !$0.text.isEmpty && $0.code.count <= Self.maxLearnedSyllables
+        }
         guard !words.isEmpty else { return }
         tick += 1
         for word in words {
@@ -103,8 +105,9 @@ public final class UserDictionary {
 
     public convenience init(contentsOf url: URL) throws {
         self.init()
-        let text = try String(contentsOf: url, encoding: .utf8)
-        for line in text.split(separator: "\n") {
+        // Lossy, so one bad byte costs a row rather than every learned word.
+        let text = String(decoding: try Data(contentsOf: url), as: UTF8.self)
+        for line in text.split(whereSeparator: \.isNewline) {
             if line.hasPrefix("#tick\t") {
                 tick = Double(line.dropFirst(6)) ?? 0
                 continue

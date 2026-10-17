@@ -55,6 +55,9 @@ public final class Lexicon {
         case badHeader
         case staleSyllableTable
         case truncated
+        /// Entries pointing outside the pools, at unknown syllables, or out of
+        /// order: lookups would trap or go wrong.
+        case corrupt
     }
 
     /// Builds an in-memory lexicon (used by tests and the dictionary tool).
@@ -83,6 +86,28 @@ public final class Lexicon {
         weights = try reader.array(Float.self, count: entries)
         codePool = try reader.array(UInt16.self, count: codes)
         textPool = try reader.array(UInt8.self, count: textBytes)
+        guard reader.offset == data.endIndex, isWellFormed() else { throw LoadError.corrupt }
+    }
+
+    /// One pass over the entries, so a damaged file is rejected at load
+    /// rather than trapping on a keystroke.
+    private func isWellFormed() -> Bool {
+        var previous: ArraySlice<UInt16> = []
+        for index in 0..<count {
+            let start = Int(codeStart[index]), length = Int(codeLength[index])
+            guard length > 0, start + length <= codePool.count,
+                  Int(textStart[index]) + Int(textLength[index]) <= textPool.count
+            else { return false }
+            let code = codePool[start..<start + length]
+            guard code.allSatisfy({ Int($0) < Pinyin.syllables.count }) else { return false }
+            if index > 0 {
+                let ordered = code == previous ? weights[index] <= weights[index - 1]
+                    : previous.lexicographicallyPrecedes(code)
+                guard ordered else { return false }
+            }
+            previous = code
+        }
+        return true
     }
 
     // MARK: - Entry access

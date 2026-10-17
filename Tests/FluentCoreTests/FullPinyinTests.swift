@@ -51,11 +51,29 @@ final class FullPinyinTests: XCTestCase {
     }
 
     func testUnfinishedLastSyllableCompletes() throws {
-        let graph = FullPinyinLayout(abbreviations: false).graph(for: "zhon")
+        let graph = FullPinyinLayout(abbreviations: false).graph(for: "zhongg")
         XCTAssertTrue(graph.isComplete)
-        let edge = try XCTUnwrap(graph.edges[0]?.first)
+        let edge = try XCTUnwrap(graph.edges[5]?.first)
         XCTAssertEqual(edge.kind, .completion)
-        XCTAssertTrue(edge.syllables.contains(Pinyin.id(of: "zhong")!))
+        XCTAssertTrue(edge.syllables.contains(Pinyin.id(of: "guo")!))
+    }
+
+    func testOngAndOuReadAsThemselvesWhileTyped() {
+        // Not zh + o + n: librime's auto-corrections spell zhong as zhon / zho.
+        XCTAssertEqual(edges(layout.graph(for: "zhon"), at: 0), ["4:zhong"])
+        XCTAssertEqual(edges(layout.graph(for: "zho"), at: 0), ["3:zhong", "3:zhou"])
+        XCTAssertEqual(edges(layout.graph(for: "do"), at: 0), ["2:dong", "2:dou"])
+        XCTAssertTrue(edges(layout.graph(for: "lon"), at: 0).contains("3:long"))
+        XCTAssertEqual(layout.grouped("zhonguo"), "zhon guo")  // a dropped g still reads
+    }
+
+    func testATrailingInitialKeepsTheWholeSpellingsBeforeIt() {
+        let graph = layout.graph(for: "nihaoz")
+        XCTAssertTrue(graph.isComplete)
+        for (position, list) in graph.edges where position < 5 {
+            XCTAssertTrue(list.allSatisfy { $0.kind == .normal }, "abbreviation at \(position)")
+        }
+        XCTAssertEqual(graph.edges[5]?.first?.kind, .abbreviation)
     }
 
     func testFuzzyPairs() {
@@ -93,6 +111,7 @@ final class FullPinyinTests: XCTestCase {
         XCTAssertEqual(translator.candidates(for: "nihao").first?.text, "你好")
         XCTAssertEqual(translator.candidates(for: "nh").first?.text, "你好")
         XCTAssertEqual(translator.candidates(for: "zhongg").first?.text, "中国")
+        XCTAssertEqual(translator.candidates(for: "zhon").first?.text, "中")
         let xian = translator.candidates(for: "xian").map(\.text)
         XCTAssertEqual(xian.first, "先")  // by weight, though 西安 also covers all four keys
         XCTAssertTrue(xian.contains("西安"))

@@ -15,6 +15,8 @@ final class ChineseInput {
     let english: EnglishWords
     private let userDictionary: UserDictionary
     private var pendingSave: DispatchWorkItem?
+    /// One save at a time, so an older snapshot never replaces a newer one.
+    private static let saveQueue = DispatchQueue(label: "com.yangxin.inputmethod.Fluent.save", qos: .utility)
     private var layoutSettings: LayoutSettings?
 
     private struct LayoutSettings: Equatable {
@@ -62,7 +64,7 @@ final class ChineseInput {
         let item = DispatchWorkItem { [weak self] in
             guard let self else { return }
             let text = self.userDictionary.serialized()
-            DispatchQueue.global(qos: .utility).async {
+            ChineseInput.saveQueue.async {
                 do {
                     let url = ChineseInput.userDictionaryURL
                     try FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
@@ -77,6 +79,23 @@ final class ChineseInput {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: item)
     }
 
+    /// A missing file just means nothing learned yet; an unreadable one is
+    /// kept aside rather than overwritten by the next save.
+    private static func loadLearned() -> UserDictionary {
+        let url = userDictionaryURL
+        do {
+            return try UserDictionary(contentsOf: url)
+        } catch {
+            if FileManager.default.fileExists(atPath: url.path) {
+                let aside = url.appendingPathExtension("unreadable")
+                try? FileManager.default.removeItem(at: aside)
+                try? FileManager.default.moveItem(at: url, to: aside)
+                spLog.error("learned words unreadable, moved to \(aside.path, privacy: .public): \(String(describing: error), privacy: .public)")
+            }
+            return UserDictionary()
+        }
+    }
+
     static func preload() {
         DispatchQueue.global(qos: .userInitiated).async {
             guard let lexiconURL = Bundle.main.url(forResource: "xiaohe", withExtension: "lexicon"),
@@ -87,8 +106,7 @@ final class ChineseInput {
             }
             do {
                 let start = Date()
-                // A missing or unreadable file just means nothing learned yet.
-                let learned = (try? UserDictionary(contentsOf: userDictionaryURL)) ?? UserDictionary()
+                let learned = loadLearned()
                 let engine = ChineseInput(lexicon: try Lexicon(contentsOf: lexiconURL),
                                        english: try EnglishWords(contentsOf: englishURL), userDictionary: learned)
                 let ms = Int(Date().timeIntervalSince(start) * 1000)

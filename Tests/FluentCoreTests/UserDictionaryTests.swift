@@ -31,6 +31,29 @@ final class UserDictionaryTests: XCTestCase {
         XCTAssertEqual(user.words(for: ids("zhe shi")).map(\.text), ["这时", "这是"])
     }
 
+    func testLongPicksAreNotLearned() {
+        let user = UserDictionary()
+        let sentence = ids("wo xian zai jiu qu xue xiao kan ta")  // 9 syllables
+        user.learn([("我现在就去学校看他", sentence)])
+        XCTAssertEqual(user.count, 0)
+        user.learn([("我现在就去学校看他", sentence), ("吧", ids("ba"))])
+        XCTAssertEqual(user.words(for: ids("ba")).map(\.text), ["吧"])
+        XCTAssertEqual(user.count, 1)
+    }
+
+    func testLoadsWindowsLineEndingsAndBadBytes() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("user-\(UUID().uuidString).tsv")
+        defer { try? FileManager.default.removeItem(at: url) }
+        var data = Data("#tick\t3\r\n你好\tni hao\t2\t1.5\t3\r\n".utf8)
+        data += [0xFF, 0x0A]  // a damaged row
+        data += Data("这是\tzhe shi\t1\t1\t2\n".utf8)
+        try data.write(to: url)
+        let loaded = try UserDictionary(contentsOf: url)
+        XCTAssertEqual(loaded.tick, 3)
+        XCTAssertEqual(loaded.count, 2)
+        XCTAssertEqual(loaded.words(for: ids("ni hao")).map(\.text), ["你好"])
+    }
+
     func testDeeDecaysByEEvery200Commits() {
         XCTAssertEqual(UserDictionary.decayed(1, from: 0, to: 200), exp(-1), accuracy: 1e-12)
     }
