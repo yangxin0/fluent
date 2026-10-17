@@ -111,3 +111,7 @@ If typing goes dead after a change, check for a crash report:
 - Terminals cannot wrap marked text, so a composition longer than the rest of
   the row is clipped in the terminal itself; the panel shows the full typed
   text once that is about to happen (see `terminalMode`).
+
+## License
+
+GPL-3.0 — see [LICENSE](LICENSE).
