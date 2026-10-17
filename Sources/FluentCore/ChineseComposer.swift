@@ -56,6 +56,14 @@ public struct ChineseComposer {
         segments.map { ($0.text, $0.code) }
     }
 
+    /// What to learn when punctuation commits `highlightedText`: the picked
+    /// words and the highlighted candidate.
+    public var highlightedWords: [(text: String, code: [SyllableID])] {
+        guard highlighted < candidates.count else { return pickedWords }
+        let candidate = candidates[highlighted]
+        return pickedWords + [(candidate.text, candidate.code)]
+    }
+
     /// Inline text: the converted words, then the remaining keys grouped per
     /// syllable (`这是 ge`).
     public var preedit: (converted: String, raw: String) {

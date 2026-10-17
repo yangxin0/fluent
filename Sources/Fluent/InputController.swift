@@ -145,7 +145,17 @@ class InputController: IMKInputController {
         guard event.type == .keyDown else { return false }
         // A real keypress between two Shift taps means it wasn't a toggle.
         ShiftTapMonitor.shared.interrupt()
+        let handled = handleKeyDown(event)
+        // A key the app handles itself (Return, arrows, a shortcut…) moves
+        // on from the Chinese just committed: punctuation and pinyin after it
+        // are fresh again. Deleting stays in the Chinese text.
+        if !handled, event.keyCode != Key.backspace, event.keyCode != Key.forwardDelete {
+            lastCommitWasChinese = false
+        }
+        return handled
+    }
 
+    private func handleKeyDown(_ event: NSEvent) -> Bool {
         guard Shared.enabled else { return false }
 
         let flags = event.modifierFlags.intersection([.command, .control, .option, .shift, .function])
@@ -207,6 +217,8 @@ class InputController: IMKInputController {
 
         case Key.backspace:
             guard state.isComposing else { return false }
+            // Nothing before the caret: keep the composition and its rewrite.
+            guard state.cursor > 0 else { return true }
             state.backspace()
             if state.isComposing {
                 afterEdit()
@@ -261,9 +273,9 @@ class InputController: IMKInputController {
                 client()?.insertText(converted, replacementRange: NSRange(location: NSNotFound, length: 0))
                 return true
             }
-            if state.raw.count + chars.count <= maxCompositionLength {
-                state.insert(chars)
-            }
+            // Past maxCompositionLength the text is no longer improved, but
+            // every key still goes in.
+            state.insert(chars)
             afterEdit()
             return true
         }
@@ -406,12 +418,14 @@ class InputController: IMKInputController {
             // A capital starts English: picked words stay, the rest is English.
             var english = state.chinesePrefix + composer.keys
             if !composer.segments.isEmpty {
+                ChineseInput.shared?.learn(composer.pickedWords)
                 commitChinese(state.chinesePrefix + composer.confirmedText)
                 english = String(composer.remainingKeys)
             }
             switchToEnglish(english + String(key))
         default:
             let symbol = punctuation.convert(key) ?? String(key)
+            ChineseInput.shared?.learn(composer.highlightedWords)
             commitChinese(state.chinesePrefix + composer.highlightedText + symbol)
         }
         return true
@@ -564,6 +578,8 @@ class InputController: IMKInputController {
             guard gen == generation, state.isComposing else { return }
             state.status = .improving
             state.improved = accumulated
+            // The bar shows the rewrite only once it is done: no redraw.
+            return
         case .done(let gen, let text):
             guard gen == generation, state.isComposing else { return }
             state.improved = text
@@ -782,6 +798,7 @@ class InputController: IMKInputController {
     private func commitRaw() {
         guard state.isComposing else { return }
         if let composer = state.chinese {
+            ChineseInput.shared?.learn(composer.pickedWords)
             commit(state.chinesePrefix + composer.interruptedText)
         } else {
             commit(state.raw)

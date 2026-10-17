@@ -55,8 +55,11 @@ struct CompositionState {
 
     mutating func insert(_ text: String) {
         let idx = raw.index(raw.startIndex, offsetBy: cursor)
+        // Counted after joining: a combining mark merges with the character
+        // before it, so `cursor + text.count` could point past the end.
+        let through = (raw[..<idx] + text).count
         raw.insert(contentsOf: text, at: idx)
-        cursor += text.count
+        cursor = min(through, raw.count)
     }
 
     mutating func backspace() {

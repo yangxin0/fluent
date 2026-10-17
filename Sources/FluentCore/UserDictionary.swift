@@ -36,12 +36,14 @@ public final class UserDictionary {
     public var count: Int { records.count }
 
     /// Learns the words of one commit: each picked part, and when the commit
-    /// was built from several picks, the whole phrase as a new word.
-    public func learn(_ words: [(text: String, code: [SyllableID])]) {
+    /// was built from several picks, the whole phrase as a new word. False
+    /// when there was nothing to learn (keys offered as typed, long words).
+    @discardableResult
+    public func learn(_ words: [(text: String, code: [SyllableID])]) -> Bool {
         let words = words.filter {
             !$0.code.isEmpty && !$0.text.isEmpty && $0.code.count <= Self.maxLearnedSyllables
         }
-        guard !words.isEmpty else { return }
+        guard !words.isEmpty else { return false }
         tick += 1
         for word in words {
             bump(text: word.text, code: word.code)
@@ -50,6 +52,7 @@ public final class UserDictionary {
         if words.count > 1, code.count <= Self.maxLearnedSyllables {
             bump(text: words.map(\.text).joined(), code: code)
         }
+        return true
     }
 
     private func bump(text: String, code: [SyllableID]) {

@@ -59,7 +59,7 @@ final class ChineseInput {
 
     /// Learns the words of a commit; saved a moment later, off the main thread.
     func learn(_ words: [(text: String, code: [SyllableID])]) {
-        userDictionary.learn(words)
+        guard userDictionary.learn(words) else { return }
         pendingSave?.cancel()
         let item = DispatchWorkItem { [weak self] in
             guard let self else { return }

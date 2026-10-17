@@ -26,6 +26,13 @@ final class ChineseComposerTests: XCTestCase {
         XCTAssertEqual(composer.select(0), "这是个")
     }
 
+    func testPunctuationLearnsTheHighlightedCandidateToo() {
+        var composer = ChineseComposer(keys: "veuige", translator: translator)
+        _ = composer.select(composer.candidates.firstIndex { $0.text == "这是" }!)
+        XCTAssertEqual(composer.highlightedWords.map(\.text), ["这是", "个"])
+        XCTAssertEqual(composer.highlightedWords.map(\.code), [ids("zhe shi"), ids("ge")])
+    }
+
     func testBackspaceTakesBackAPickThenDeletesKeys() {
         var composer = ChineseComposer(keys: "veuige", translator: translator)
         _ = composer.select(composer.candidates.firstIndex { $0.text == "这是" }!)
