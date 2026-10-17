@@ -11,7 +11,6 @@ final class Shuangpin {
     private(set) static var shared: Shuangpin?
 
     let translator: XiaoheTranslator
-    let english: EnglishWords
     private let userDictionary: UserDictionary
     private var pendingSave: DispatchWorkItem?
 
@@ -19,9 +18,8 @@ final class Shuangpin {
         .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         .appendingPathComponent("Fluent/xiaohe-user.tsv")
 
-    private init(lexicon: Lexicon, english: EnglishWords, userDictionary: UserDictionary) {
+    private init(lexicon: Lexicon, userDictionary: UserDictionary) {
         translator = XiaoheTranslator(lexicon: lexicon, userDictionary: userDictionary)
-        self.english = english
         self.userDictionary = userDictionary
     }
 
@@ -49,9 +47,7 @@ final class Shuangpin {
 
     static func preload() {
         DispatchQueue.global(qos: .userInitiated).async {
-            guard let lexiconURL = Bundle.main.url(forResource: "xiaohe", withExtension: "lexicon"),
-                  let englishURL = Bundle.main.url(forResource: "english", withExtension: "txt")
-            else {
+            guard let lexiconURL = Bundle.main.url(forResource: "xiaohe", withExtension: "lexicon") else {
                 spLog.error("no shuangpin dictionary in the bundle (make dict)")
                 return
             }
@@ -59,10 +55,9 @@ final class Shuangpin {
                 let start = Date()
                 // A missing or unreadable file just means nothing learned yet.
                 let learned = (try? UserDictionary(contentsOf: userDictionaryURL)) ?? UserDictionary()
-                let engine = Shuangpin(lexicon: try Lexicon(contentsOf: lexiconURL),
-                                       english: try EnglishWords(contentsOf: englishURL), userDictionary: learned)
+                let engine = Shuangpin(lexicon: try Lexicon(contentsOf: lexiconURL), userDictionary: learned)
                 let ms = Int(Date().timeIntervalSince(start) * 1000)
-                spLog.notice("shuangpin dictionary loaded: \(engine.translator.lexicon.count, privacy: .public) entries, \(engine.english.count, privacy: .public) English words, \(learned.count, privacy: .public) learned, in \(ms, privacy: .public) ms")
+                spLog.notice("shuangpin dictionary loaded: \(engine.translator.lexicon.count, privacy: .public) entries, \(learned.count, privacy: .public) learned, in \(ms, privacy: .public) ms")
                 DispatchQueue.main.async { shared = engine }
             } catch {
                 spLog.error("shuangpin dictionary failed to load: \(String(describing: error), privacy: .public)")

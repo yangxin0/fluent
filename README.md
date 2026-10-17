@@ -94,33 +94,32 @@ toggle resets to *on* at relaunch.
 ## 小鹤双拼 (Chinese)
 
 You can also type Chinese with the 小鹤双拼 (Xiaohe shuangpin) layout without
-switching input sources. English always comes first: Chinese conversion
-starts only when the letters you type can't be English.
+switching input sources. English always comes first: what you type is
+always candidate 1, so typing English never turns into Chinese by itself.
 
-- At the start of a composition, letters that are valid shuangpin and don't
-  begin any English word (`nihc`, `veuiyg`) open a **candidate bar** like the
-  system shuangpin input method. The keys show inline grouped per syllable
-  (`ve ui`).
-- Right after Chinese text, any shuangpin that isn't a whole English word
-  converts, so you can keep typing Chinese.
-- Letters that are also English (`make`, `like`, `here`) stay English: the
-  candidate bar shows the word first, then its Chinese readings
-  (`1 make  2 马克  3 马克思`). Press 2–6 to pick one, 1 or Enter to insert
-  the word as typed, or just keep typing English.
-- Inside an English sentence there are no Chinese candidates at all, so a
-  typo like `rela` never turns into 热辣. English words inside Chinese text
-  (`这个 bug 修好了`) don't count: the Chinese after them still converts.
+- When the word you're typing is valid shuangpin, the candidate bar offers
+  its Chinese after the letters as typed: `P [1 bbq] 2 摈弃 3 宾 …`,
+  `P [1 nihc] 2 你好 …`. Press 2–6 to pick Chinese; Space, punctuation or
+  more words just carry on in English, and 1 or Enter inserts the letters.
+- Once a Chinese word is picked for part of the keys (`veuiuu` → 3 这是),
+  the rest is Chinese: its best candidate is highlighted, the badge turns to
+  `双`, and Space picks it (`这是` + `书`). The keys show inline grouped per
+  syllable (`ve ui`) whenever Chinese is highlighted.
+- From the second word of a sentence there are no Chinese candidates at all,
+  so a typo like `rela` never turns into 热辣. English words inside Chinese
+  text (`这个 bug 修好了`) don't count: the Chinese after them still converts.
 
 | Key (candidate bar) | Action |
 |---|---|
-| Space, 1–6 | Pick the highlighted / numbered candidate |
+| 1–6 | Pick the numbered candidate (1 = the letters as typed) |
+| Space | Pick the highlighted candidate; on the letters as typed, keep typing English |
 | ← → | Move the highlight |
 | ↑ ↓, - = | Previous / next page (also scrolling); ↑ ↓ move by row in the grid |
 | Tab | Expand the bar into a grid of more candidates (also the chevron), or collapse it |
 | Enter | Insert the keys as typed |
 | Backspace | Take back the last pick, else delete a key |
 | Esc | Cancel (collapse the grid first) |
-| Punctuation | Insert the highlighted candidate and Chinese punctuation (`，。？`) |
+| Punctuation | On Chinese, insert it with Chinese punctuation (`，。？`); on the letters, keep typing English |
 | A capital letter | Keep the picked words and continue in English |
 
 Picking a candidate that covers only part of the keys keeps converting the

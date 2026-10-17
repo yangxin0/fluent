@@ -9,7 +9,7 @@ BIN         = .build/debug/$(APP_NAME)
 RIME_ICE_REV   = da1fbe602e38f26db846fa10120ee64c2b0324c0
 RIME_ICE_URL   = https://raw.githubusercontent.com/iDvel/rime-ice/$(RIME_ICE_REV)
 RIME_ICE_DIR   = .build/rime-ice-$(RIME_ICE_REV)
-RIME_ICE_FILES = $(addprefix $(RIME_ICE_DIR)/,cn_dicts/8105.dict.yaml cn_dicts/base.dict.yaml en_dicts/en.dict.yaml)
+RIME_ICE_FILES = $(addprefix $(RIME_ICE_DIR)/,cn_dicts/8105.dict.yaml cn_dicts/base.dict.yaml)
 DICT_DIR       = .build/dict
 
 .PHONY: build bundle install register reload logs dev test cli clean icon dict
@@ -34,7 +34,6 @@ Resources/icon.tiff: Scripts/make-icon.swift
 
 # Download the pinned rime-ice sources and compile them into the compact
 # files the IME loads (not committed: they are build products).
-# One run writes both xiaohe.lexicon and english.txt.
 dict: $(DICT_DIR)/xiaohe.lexicon
 
 $(DICT_DIR)/xiaohe.lexicon: $(RIME_ICE_FILES) Sources/FluentDict/main.swift \
@@ -52,7 +51,7 @@ bundle: build icon dict
 	cp "$(BIN)" "$(DIST)/Contents/MacOS/$(APP_NAME)"
 	cp Resources/Info.plist "$(DIST)/Contents/Info.plist"
 	cp Resources/icon.tiff "$(DIST)/Contents/Resources/icon.tiff"
-	cp "$(DICT_DIR)/xiaohe.lexicon" "$(DICT_DIR)/english.txt" LICENSE NOTICE "$(DIST)/Contents/Resources/"
+	cp "$(DICT_DIR)/xiaohe.lexicon" LICENSE NOTICE "$(DIST)/Contents/Resources/"
 
 # Sync bundle contents in place: deleting the installed .app would silently
 # un-register and disable the input source in Text Input Services.

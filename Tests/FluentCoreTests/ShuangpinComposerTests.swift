@@ -96,6 +96,19 @@ final class ShuangpinComposerTests: XCTestCase {
         XCTAssertEqual(composer.highlightedText, "这是个")
     }
 
+    func testKeysAsTypedComeFirstUntilAWordIsPicked() {
+        var composer = ShuangpinComposer(keys: "veuige", translator: translator, offersKeysFirst: true)
+        XCTAssertEqual(composer.candidates.first?.text, "veuige")
+        XCTAssertTrue(composer.highlightsKeys)
+        XCTAssertEqual(composer.highlightedText, "veuige")
+        _ = composer.select(composer.candidates.firstIndex { $0.text == "这是" }!)
+        XCTAssertEqual(composer.candidates.first?.text, "个")
+        XCTAssertFalse(composer.highlightsKeys)
+        XCTAssertTrue(composer.backspace())  // takes back 这是: the keys lead again
+        XCTAssertEqual(composer.candidates.first?.text, "veuige")
+        XCTAssertEqual(composer.select(0), "veuige")
+    }
+
     func testKeysThatAreNoShuangpinAreOfferedAsTyped() {
         let composer = ShuangpinComposer(keys: "fk", translator: translator)
         XCTAssertEqual(composer.candidates.map(\.text), ["fk"])

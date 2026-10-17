@@ -1,10 +1,9 @@
 import Foundation
 import FluentCore
 
-// Compiles rime-ice's dictionaries into the files the IME loads (`make dict`):
+// Compiles rime-ice's dictionaries into the file the IME loads (`make dict`):
 //   swift run fluent-dict [--min-weight N] <rime-ice dir> <output dir>
-// Output: xiaohe.lexicon (characters + words by syllable code) and
-// english.txt (lowercase English words, one per line).
+// Output: xiaohe.lexicon (characters + words by syllable code).
 
 var minWeight = 100.0
 var paths: [String] = []
@@ -79,19 +78,8 @@ do {
     try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
     let lexicon = Lexicon.encode(entries)
     try lexicon.write(to: output.appendingPathComponent("xiaohe.lexicon"))
-
-    // rime-ice comments out single letters and most two-letter words (they
-    // are mostly abbreviations); bring back the real ones so `an` is English.
-    // Capitalized entries (names, acronyms) are left out: see EnglishWords.
-    let restored = ["a", "i", "an", "oh", "ah", "eh", "ha", "uh", "um", "ox", "ye", "yo"]
-    let english = Set(try rows(of: "en_dicts/en.dict.yaml").compactMap { $0.first.map(String.init) } + restored)
-        .filter { $0.utf8.allSatisfy { $0 >= UInt8(ascii: "a") && $0 <= UInt8(ascii: "z") } }
-        .sorted()
-    try (english.joined(separator: "\n") + "\n")
-        .write(to: output.appendingPathComponent("english.txt"), atomically: true, encoding: .utf8)
-
     print("xiaohe.lexicon: \(entries.count) entries (\(lexicon.count / 1024) KB), "
-          + "skipped \(skipped) with unknown syllables; english.txt: \(english.count) words")
+          + "skipped \(skipped) with unknown syllables")
 } catch {
     FileHandle.standardError.write(Data("error: \(error)\n".utf8))
     exit(1)

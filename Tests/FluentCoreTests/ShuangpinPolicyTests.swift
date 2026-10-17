@@ -2,42 +2,21 @@ import XCTest
 @testable import FluentCore
 
 final class ShuangpinPolicyTests: XCTestCase {
-    private let english = EnglishWords(["make", "like", "hello", "nice", "UI", "Mac", "test"])
-
-    func testWordList() {
-        XCTAssertTrue(english.contains("make"))
-        XCTAssertFalse(english.contains("mak"))
-        XCTAssertTrue(english.hasWord(withPrefix: "mak"))
-        XCTAssertTrue(english.hasWord(withPrefix: "make"))
-        XCTAssertFalse(english.hasWord(withPrefix: "veu"))
-        // Capitalized entries are left out: `ui` is 是.
-        XCTAssertFalse(english.contains("ui"))
-        XCTAssertFalse(english.contains("mac"))
-        XCTAssertEqual(english.count, 5)
-    }
-
-    func testFreshInputIsChineseOnlyWhenNoEnglishWordStartsThatWay() {
-        XCTAssertEqual(ShuangpinPolicy.rank(run: "veui", context: .fresh, english: english), .primary)
-        XCTAssertEqual(ShuangpinPolicy.rank(run: "nihc", context: .fresh, english: english), .primary)
-        XCTAssertEqual(ShuangpinPolicy.rank(run: "ni", context: .fresh, english: english), .alternatives)
-        XCTAssertEqual(ShuangpinPolicy.rank(run: "make", context: .fresh, english: english), .alternatives)
+    func testShuangpinIsOfferedChinese() {
+        XCTAssertTrue(ShuangpinPolicy.offersChinese(run: "nihc", afterEnglishWords: false))
+        XCTAssertTrue(ShuangpinPolicy.offersChinese(run: "make", afterEnglishWords: false))
+        XCTAssertTrue(ShuangpinPolicy.offersChinese(run: "bbq", afterEnglishWords: false))
     }
 
     func testNotShuangpinIsEnglishOnly() {
-        XCTAssertEqual(ShuangpinPolicy.rank(run: "test", context: .fresh, english: english), .none)
-        XCTAssertEqual(ShuangpinPolicy.rank(run: "Veui", context: .fresh, english: english), .none)
-        XCTAssertEqual(ShuangpinPolicy.rank(run: "", context: .afterChinese, english: english), .none)
-    }
-
-    func testAfterChineseOnlyWholeEnglishWordsGoFirst() {
-        XCTAssertEqual(ShuangpinPolicy.rank(run: "ni", context: .afterChinese, english: english), .primary)
-        XCTAssertEqual(ShuangpinPolicy.rank(run: "make", context: .afterChinese, english: english), .alternatives)
+        XCTAssertFalse(ShuangpinPolicy.offersChinese(run: "test", afterEnglishWords: false))  // s·ue
+        XCTAssertFalse(ShuangpinPolicy.offersChinese(run: "Veui", afterEnglishWords: false))
+        XCTAssertFalse(ShuangpinPolicy.offersChinese(run: "", afterEnglishWords: false))
     }
 
     func testEnglishSentencesGetNoChinese() {
-        XCTAssertEqual(ShuangpinPolicy.rank(run: "rela", context: .afterEnglish, english: english), .none)
-        XCTAssertEqual(ShuangpinPolicy.rank(run: "make", context: .afterEnglish, english: english), .none)
-        XCTAssertEqual(ShuangpinPolicy.rank(run: "veui", context: .afterEnglish, english: english), .none)
+        XCTAssertFalse(ShuangpinPolicy.offersChinese(run: "rela", afterEnglishWords: true))
+        XCTAssertFalse(ShuangpinPolicy.offersChinese(run: "veui", afterEnglishWords: true))
     }
 
     func testRunAtCursor() {
