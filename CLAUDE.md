@@ -22,4 +22,4 @@ The `Makefile` is the entrypoint for every task — use `make <target>`, not raw
 - `make clean` removes `.build/` and `dist/`
 - `Sources/FluentCore/` must stay AppKit-free so it remains unit-testable; IMK/AppKit code lives in `Sources/Fluent/`.
 - All IMK client calls (`setMarkedText`, `insertText`, panel updates) must run on the main thread.
-- Info.plist's `InputMethodConnectionName` must match the string passed to `IMKServer` in `main.swift`, or the IME silently never connects.
+- `main.swift` passes Info.plist's `InputMethodConnectionName` to `IMKServer` (its hard-coded fallback must match it), or the IME silently never connects.

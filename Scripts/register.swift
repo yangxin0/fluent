@@ -1,5 +1,5 @@
-// Registers (and tries to enable) the installed input source.
-// Run once after the first `make install`:  swift Scripts/register.swift
+// Registers (and tries to enable) the installed input source. `make install`
+// runs it every time:  swift Scripts/register.swift
 import Carbon
 import Foundation
 

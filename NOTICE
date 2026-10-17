@@ -21,9 +21,11 @@ RIME_ICE_REV in the Makefile and bundled, converted, in the app.
 
 librime — https://github.com/rime/librime
 -----------------------------------------
-The shuangpin engine in Sources/FluentCore (Lexicon, XiaoheTranslator,
-ShuangpinComposer) ports algorithms from librime: candidate ordering,
-sentence making, completion of a dangling key and partial selection.
+The Chinese engine in Sources/FluentCore (Lexicon, SyllableGraph,
+FullPinyin, ChineseTranslator, ChineseComposer, UserDictionary) ports
+algorithms from librime: the syllable graph and its pruning, candidate
+ordering, sentence making, completion and auto-correction spellings, partial
+selection and the user dictionary formulas.
 librime is licensed under the BSD 3-Clause License:
 
     Copyright (c) 2014, RIME Developers

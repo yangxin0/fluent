@@ -20,7 +20,8 @@ provider exposing `/v1/responses` with SSE streaming).
 
 The bar starts with the mode's badge (`双` while typing 小鹤双拼, `拼` for
 全拼). Switch modes
-from the input-method menu in the menu bar, or **Ctrl+Tab** while composing.
+from the input-method menu in the menu bar, or **Ctrl+Tab** while composing
+English.
 The last mode is remembered.
 
 ## Install
@@ -48,12 +49,19 @@ also reachable via IME menu ▸ *Open Config File*):
   "model": "gpt-4o-mini",
   "appearance": "auto",
   "terminalMode": "auto",
+  "chinese": "xiaohe",
   "debounceMs": 350,
   "timeoutSeconds": 10
 }
 ```
 
 Any Responses-compatible provider works — point `baseURL` at its `/v1` root.
+`reasoningEffort` (optional, e.g. `"low"` or `"none"`) is sent as
+`reasoning.effort`. For models whose name starts with `gpt` or contains
+`codex`, requests identify as the Codex CLI (`originator: codex_cli_rs`),
+which some gateways require for the Responses API. `timeoutSeconds` is how
+long the stream may stay silent before the rewrite fails, not a cap on the
+whole reply.
 `appearance` controls the candidate bar's color scheme: `"auto"` follows the
 system light/dark setting (and updates live when it changes), or force it with
 `"light"` / `"dark"`.
@@ -75,6 +83,9 @@ syllable (`zg` → 中国), and `"fuzzyPinyin"` lists pairs to treat as the same
 e.g. `["zh=z", "ch=c", "sh=s", "n=l", "an=ang", "en=eng", "in=ing"]`
 (default none).
 Config changes are picked up automatically (or use IME menu ▸ *Reload Config*).
+The file holds your API key, so Fluent keeps it readable only by you. A
+wrongly typed optional key is ignored; if the file can't be used at all, the
+bar says why (`Config error: "apiKey" is missing`).
 
 ## Keys while composing
 
@@ -84,7 +95,7 @@ Config changes are picked up automatically (or use IME menu ▸ *Reload Config*)
 | Shift+Enter | Insert the text exactly **as typed** |
 | Esc | Cancel the composition |
 | Backspace, ← → | Edit within the composition |
-| Ctrl+Tab | Cycle mode (Fix → Polish → Translate) |
+| Ctrl+Tab | Cycle mode (Fix → Polish → Translate) while composing English |
 | Space / punctuation | Just text — composition continues until Enter |
 | Cmd-shortcuts, Tab, ↑ ↓ | Commit raw text, then act normally |
 | Shift, Shift (double tap) | Toggle the IME **on/off** |
@@ -130,7 +141,8 @@ In full pinyin, keys can split more than one way (`xian` is 先 or 西安):
 every reading is offered, best first. Type `'` to split syllables yourself
 (`xi'an` → 西安), type only initials (`zg` → 中国, `bj` → 北京, `zhg` with
 `zh` as one initial), and an unfinished last syllable is completed
-(`zhongg` → 中国). Fuzzy pairs from the config add the other spelling
+(`zhongg` → 中国); an -ong or -ou syllable reads as itself while you type it
+(`zhon`, `zho` → 中, as in librime's luna_pinyin). Fuzzy pairs from the config add the other spelling
 (`zh=z`: `zi` also finds 只). The inline keys are split the same way
 (`zhong guo`).
 
@@ -162,10 +174,10 @@ The dictionaries come from [rime-ice](https://github.com/iDvel/rime-ice):
 ## Development
 
 ```sh
-make dev        # rebuild + reinstall + kill the running IME (macOS relaunches it on next keystroke)
-make test       # unit tests (SSE parser, config, prompts, shuangpin engine)
+make dev        # rebuild + reinstall + restart the IME and re-select it (macOS relaunches it on next keystroke)
+make test       # unit tests (SSE parser, config, prompts, Chinese engine)
 make logs       # tail the IME's os_log output
-swift run fluent-cli --mode polish "helo wrold how r u"   # test the API path without the IME
+swift run fluent-cli --mode polish "helo wrold how r u"   # test the API path without the IME (--help)
 make dict       # download the pinned rime-ice dictionaries and compile them (bundle/install run it)
 make cli ARGS='--xiaohe veui nihc'   # 小鹤双拼 candidates from the compiled dictionary
 make cli ARGS='--pinyin nihao zg'    # full pinyin (--no-abbreviations, --fuzzy zh=z,an=ang)
@@ -179,17 +191,17 @@ If typing goes dead after a change, check for a crash report:
 - **Password fields**: macOS Secure Input bypasses all IMEs there by design.
 - **Dead keys** (e.g. Option-e for accents) are not composed; unusual modifier
   combos end the composition and pass through.
-- Composition is capped at 500 characters; beyond that the LLM is no longer
-  queried (Enter still inserts your raw text).
+- Compositions over 500 characters are no longer improved; keep typing, and
+  Enter inserts your raw text.
 - Some Electron apps report no caret position; the panel then falls back to a
-  fixed position near the bottom of the screen.
+  fixed position near the bottom of the screen under the pointer.
 - Terminals cannot wrap marked text, so a composition longer than the rest of
   the row is clipped in the terminal itself; the panel shows the full typed
   text once that is about to happen (see `terminalMode`).
 
 ## License
 
-GPL-3.0 — see [LICENSE](LICENSE). The 小鹤双拼 dictionaries come from
-[rime-ice](https://github.com/iDvel/rime-ice) (GPL-3.0) and the shuangpin
+GPL-3.0 — see [LICENSE](LICENSE). The Chinese and English dictionaries come
+from [rime-ice](https://github.com/iDvel/rime-ice) (GPL-3.0) and the Chinese
 engine ports algorithms from [librime](https://github.com/rime/librime)
 (BSD-3-Clause); see [NOTICE](NOTICE).
