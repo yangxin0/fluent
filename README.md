@@ -3,7 +3,7 @@
 A macOS input method (IME) that improves your English as you type. Your raw
 text appears inline as underlined composition text in any app; an LLM
 rewrites it, and a candidate bar next to the caret shows what Enter will
-insert (`P  We should figure out a way.`): **Enter inserts the improved
+insert (`P  We should figure out a way.  ↵`): **Enter inserts the improved
 text**, Shift+Enter inserts exactly what you typed, Esc cancels. The same bar
 is used for 小鹤双拼 Chinese (see below).
 
@@ -117,7 +117,7 @@ starts only when the letters you type can't be English.
 | ← → | Move the highlight |
 | ↑ ↓, - = | Previous / next page (also scrolling); ↑ ↓ move by row in the grid |
 | Tab | Expand the bar into a grid of more candidates (also the chevron), or collapse it |
-| Enter | Insert the keys as typed |
+| Enter | Insert the keys as typed (the bar ends with `↵ keys` as a reminder) |
 | Backspace | Take back the last pick, else delete a key |
 | Esc | Cancel (collapse the grid first) |
 | Punctuation | Insert the highlighted candidate and Chinese punctuation (`，。？`) |
