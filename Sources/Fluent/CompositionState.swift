@@ -22,14 +22,17 @@ struct CompositionState {
     /// Character count at the last edge check, to skip redundant checks.
     var edgeCheckedCount = -1
 
-    /// Set while the bar offers Chinese for 小鹤双拼 keys (the keys as typed
-    /// stay candidate 1 until a word is picked); `raw` is then empty and
-    /// `chinesePrefix` holds what was typed before the keys, committed with
-    /// whatever is picked.
+    /// Set while composing Chinese (小鹤双拼 keys that cannot be English);
+    /// `raw` is then empty and `chinesePrefix` holds the whitespace typed
+    /// before the keys, which is committed with the Chinese text.
     var chinese: ShuangpinComposer?
     var chinesePrefix = ""
     /// The candidate bar is expanded into a grid (Tab or its chevron).
     var chineseExpanded = false
+    /// Chinese readings of the letters at the caret when they are also (the
+    /// start of) English, shown in the candidate bar after the English word
+    /// and picked with 2….
+    var alternatives: [ChineseCandidate] = []
 
     var isComposing: Bool { !raw.isEmpty || chinese != nil }
 

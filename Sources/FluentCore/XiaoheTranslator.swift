@@ -13,9 +13,6 @@ public struct ChineseCandidate: Equatable {
     /// Ranking score (log probability, librime scale).
     public var weight: Float
 
-    /// The keys themselves, offered as typed rather than converted.
-    public var isKeysAsTyped: Bool { code.isEmpty }
-
     public init(text: String, keyCount: Int, code: [SyllableID], comment: String? = nil,
                 weight: Float) {
         self.text = text

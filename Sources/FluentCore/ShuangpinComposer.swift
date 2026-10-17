@@ -5,8 +5,7 @@ import Foundation
 ///
 /// Picking a candidate that converts only some of the remaining keys keeps
 /// composing with what is left (librime's partial selection); Backspace right
-/// after such a pick takes it back. With `offersKeysFirst`, the keys as typed
-/// are candidate 1 (and highlighted) until a word is picked.
+/// after such a pick takes it back.
 public struct ShuangpinComposer {
     public struct Segment: Equatable {
         public var text: String
@@ -20,21 +19,14 @@ public struct ShuangpinComposer {
     /// Index into `candidates`.
     public private(set) var highlighted = 0
     public let pageSize: Int
-    public let offersKeysFirst: Bool
     private let translator: XiaoheTranslator
     private var lastEditWasSelection = false
 
-    public init(keys: String, translator: XiaoheTranslator, pageSize: Int = 6, offersKeysFirst: Bool = false) {
+    public init(keys: String, translator: XiaoheTranslator, pageSize: Int = 6) {
         self.keys = keys
         self.translator = translator
         self.pageSize = pageSize
-        self.offersKeysFirst = offersKeysFirst
         translate()
-    }
-
-    /// The highlighted candidate is the keys as typed, not Chinese.
-    public var highlightsKeys: Bool {
-        highlighted < candidates.count && candidates[highlighted].isKeysAsTyped
     }
 
     public var confirmedKeyCount: Int { segments.reduce(0) { $0 + $1.keyCount } }
@@ -140,16 +132,11 @@ public struct ShuangpinComposer {
 
     private mutating func translate() {
         let remaining = remainingKeys
-        let asTyped = ChineseCandidate(text: String(remaining), keyCount: remaining.count, code: [],
-                                       weight: -.infinity)
-        let converted = translator.candidates(for: remaining)
-        if converted.isEmpty {
+        candidates = translator.candidates(for: remaining)
+        if candidates.isEmpty {
             // Not shuangpin from the start: offer the keys as typed.
-            candidates = [asTyped]
-        } else if offersKeysFirst && segments.isEmpty {
-            candidates = [asTyped] + converted
-        } else {
-            candidates = converted
+            candidates = [ChineseCandidate(text: String(remaining), keyCount: remaining.count,
+                                           code: [], weight: -.infinity)]
         }
         highlighted = 0
     }

@@ -14,7 +14,7 @@ Third-party work
 rime-ice (雾凇拼音) — https://github.com/iDvel/rime-ice
 ------------------------------------------------------
 The Chinese and English dictionaries that `make dict` compiles into the app
-(cn_dicts/8105.dict.yaml, cn_dicts/base.dict.yaml)
+(cn_dicts/8105.dict.yaml, cn_dicts/base.dict.yaml, en_dicts/en.dict.yaml)
 come from rime-ice and are licensed under the GNU General Public License,
 version 3 only. They are downloaded at build time from the commit pinned as
 RIME_ICE_REV in the Makefile and bundled, converted, in the app.

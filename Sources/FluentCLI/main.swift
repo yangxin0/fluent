@@ -33,9 +33,10 @@ if xiaohe {
     do {
         let translator = XiaoheTranslator(
             lexicon: try Lexicon(contentsOf: directory.appendingPathComponent("xiaohe.lexicon")))
+        let english = try EnglishWords(contentsOf: directory.appendingPathComponent("english.txt"))
         for keys in words {
-            let offered = ShuangpinPolicy.offersChinese(run: keys, afterEnglishWords: false)
-            print("\(Xiaohe.grouped(keys))\(offered ? "" : "  [not shuangpin: English only]")")
+            let rank = ShuangpinPolicy.rank(run: keys, context: .fresh, english: english)
+            print("\(Xiaohe.grouped(keys))  [\(rank)]")
             for (index, candidate) in translator.candidates(for: keys).prefix(12).enumerated() {
                 let comment = candidate.comment.map { " \($0)" } ?? ""
                 let partial = candidate.keyCount < keys.count ? " (\(candidate.keyCount) keys)" : ""
