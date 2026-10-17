@@ -2,22 +2,25 @@
 
 A macOS input method (IME) that improves your English as you type. Your raw
 text appears inline as underlined composition text in any app; an LLM
-continuously rewrites it in a floating preview panel; **Enter inserts the
-improved text**, Shift+Enter inserts exactly what you typed, Esc cancels.
+rewrites it, and a candidate bar next to the caret shows what Enter will
+insert (`P  We should figure out a way.`): **Enter inserts the improved
+text**, Shift+Enter inserts exactly what you typed, Esc cancels. The same bar
+is used for 小鹤双拼 Chinese (see below).
 
 Powered by any **OpenAI Responses-API-compatible endpoint** (OpenAI, or any
 provider exposing `/v1/responses` with SSE streaming).
 
 ## Modes
 
-| Mode | What it does |
-|---|---|
-| **Fix** | Grammar, spelling, punctuation only — keeps your wording |
-| **Polish** | Rewrites into natural, native-speaker English |
-| **Interpret** | Turns rough / fragmentary / Chinese-mixed input into the intended English |
+| Badge | Mode | What it does |
+|---|---|---|
+| **F** | **Fix** | Grammar, spelling, punctuation only — keeps your wording |
+| **P** | **Polish** | Rewrites into natural, native-speaker English |
+| **T** | **Translate** | Turns rough / fragmentary / Chinese-mixed input into the intended English (`"interpret"` in the CLI) |
 
-Switch modes from the input-method menu in the menu bar, or **Ctrl+Tab**
-while composing. The last mode is remembered.
+The bar starts with the mode's badge (`双` while typing Chinese). Switch modes
+from the input-method menu in the menu bar, or **Ctrl+Tab** while composing.
+The last mode is remembered.
 
 ## Install
 
@@ -50,7 +53,7 @@ also reachable via IME menu ▸ *Open Config File*):
 ```
 
 Any Responses-compatible provider works — point `baseURL` at its `/v1` root.
-`appearance` controls the preview panel's color scheme: `"auto"` follows the
+`appearance` controls the candidate bar's color scheme: `"auto"` follows the
 system light/dark setting (and updates live when it changes), or force it with
 `"light"` / `"dark"`.
 `terminalMode` handles terminal emulators, which draw marked text as a single
@@ -73,7 +76,7 @@ Config changes are picked up automatically (or use IME menu ▸ *Reload Config*)
 | Shift+Enter | Insert the text exactly **as typed** |
 | Esc | Cancel the composition |
 | Backspace, ← → | Edit within the composition |
-| Ctrl+Tab | Cycle mode (Fix → Polish → Interpret) |
+| Ctrl+Tab | Cycle mode (Fix → Polish → Translate) |
 | Space / punctuation | Just text — composition continues until Enter |
 | Cmd-shortcuts, Tab, ↑ ↓ | Commit raw text, then act normally |
 | Shift, Shift (double tap) | Toggle the IME **on/off** |

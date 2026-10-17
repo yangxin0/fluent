@@ -1,7 +1,7 @@
 import Cocoa
 
-/// What the preview panel and the candidate bar share, so both land in the
-/// same spot and follow the same color scheme.
+/// Placement and color scheme for Fluent's floating panel (the candidate
+/// bar): next to the caret, light/dark as configured.
 enum PanelPlacement {
     /// A borderless, non-activating floating panel: it never takes focus from
     /// the client app.
@@ -64,9 +64,9 @@ enum PanelPlacement {
     }
 }
 
-/// The backdrop both panels share, so they read as one UI: the popover
-/// material clipped to a rounded rect (a capsule when the radius is half the
-/// height), with a hairline edge on top of the content.
+/// The bar's backdrop: the popover material clipped to a rounded rect (a
+/// capsule when the radius is half the height), with a hairline edge on top
+/// of the content.
 final class PanelChromeView: NSVisualEffectView {
     /// Called when light/dark flips, for colors snapshotted into layers.
     var onAppearanceChange: (() -> Void)?

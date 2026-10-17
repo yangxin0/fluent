@@ -11,16 +11,16 @@ public enum Mode: String, CaseIterable, Codable {
         switch self {
         case .fix: return "Fix — grammar & spelling only"
         case .polish: return "Polish — native-speaker rephrase"
-        case .interpret: return "Interpret — rough/mixed input"
+        case .interpret: return "Translate — rough/mixed input to English"
         }
     }
 
-    /// Short badge shown in the preview panel.
+    /// One-letter badge at the start of the candidate bar (Chinese shows 双).
     public var badge: String {
         switch self {
-        case .fix: return "Fix"
-        case .polish: return "Polish"
-        case .interpret: return "Interpret"
+        case .fix: return "F"
+        case .polish: return "P"
+        case .interpret: return "T"
         }
     }
 

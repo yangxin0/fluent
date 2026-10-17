@@ -83,7 +83,6 @@ class InputController: IMKInputController {
         ShiftTapMonitor.shared.sessionActivated(self)
         state.reset()
         lastCommitWasChinese = false
-        PreviewPanelController.shared.hide()
         CandidateBarController.shared.hide()
     }
 
@@ -195,7 +194,7 @@ class InputController: IMKInputController {
             if flags.contains(.shift) || !state.alternatives.isEmpty {
                 commitRaw()
             } else {
-                commit(state.committableImproved ?? state.raw)
+                commitEnglish()
             }
             return true
 
@@ -295,7 +294,7 @@ class InputController: IMKInputController {
         if !Shared.enabled {
             message.append(NSAttributedString(string: "\n⇧⇧ to re-enable"))
         }
-        PreviewPanelController.shared.flash(message: message, appearance: appearance, near: caretRect())
+        CandidateBarController.shared.flash(message: message, appearance: appearance, near: caretRect())
     }
 
     // MARK: - 小鹤双拼
@@ -587,73 +586,93 @@ class InputController: IMKInputController {
             as? [NSAttributedString.Key: Any] ?? [:]
     }
 
+    /// Everything shows in the one candidate bar: Chinese candidates behind
+    /// a `双` badge, English behind the mode letter, as one line that reads
+    /// what Enter inserts (`P We should figure out a way.`), and a word that
+    /// is both as `P [1 make] 2 马克 …`.
     private func refreshPanel() {
+        let bar = CandidateBarController.shared
         guard state.isComposing else {
-            PreviewPanelController.shared.hide()
-            CandidateBarController.shared.hide()
+            bar.hide()
             return
-        }
-        if let composer = state.chinese {
-            PreviewPanelController.shared.hide()
-            let bar = CandidateBarController.shared
-            bar.onSelect = { [weak self] index in self?.pickChinese(index) }
-            bar.onPage = { [weak self] delta in self?.turnChinesePage(by: delta) }
-            bar.onToggleExpanded = { [weak self] in self?.toggleChineseGrid() }
-            let shown = composer.gridRange(rows: state.chineseExpanded ? chineseGridRows : 1)
-            bar.show(candidates: composer.candidates[shown], highlighted: composer.highlighted,
-                     columns: composer.pageSize, expanded: state.chineseExpanded,
-                     canPageBack: shown.lowerBound > 0, canPageForward: shown.upperBound < composer.candidates.count,
-                     appearance: Shared.configStore.current()?.appearancePreference ?? "auto",
-                     near: caretRect())
-            return
-        }
-        if !state.alternatives.isEmpty {
-            // A word that is both English and shuangpin: the same bar, with
-            // the word as typed first (`1 make  2 马克 …`).
-            PreviewPanelController.shared.hide()
-            let run = ShuangpinPolicy.run(in: state.raw, cursor: state.cursor)
-            let shown = [ChineseCandidate(text: String(run), keyCount: run.count, code: [], weight: 0)]
-                + state.alternatives
-            let bar = CandidateBarController.shared
-            bar.onSelect = { [weak self] index in self?.pickEnglishOrAlternative(index) }
-            bar.onPage = nil
-            bar.onToggleExpanded = nil
-            bar.show(candidates: shown[...], highlighted: 0, columns: chinesePageSize, expanded: false,
-                     canPageBack: false, canPageForward: false,
-                     appearance: Shared.configStore.current()?.appearancePreference ?? "auto",
-                     near: caretRect())
-            return
-        }
-        CandidateBarController.shared.hide()
-        // Short hints, like the bar's: what Enter inserts right now (the
-        // improvement once it is ready, else the text as typed).
-        let status: String
-        switch state.status {
-        case .idle:
-            status = state.raw.count >= maxCompositionLength ? "too long · ↵ as typed" : "↵ as typed"
-        case .improving:
-            status = "improving… · ↵ as typed"
-        case .done:
-            status = "↵"
-        case .failed(let message):
-            status = "⚠ \(message) · ↵ as typed"
         }
         let config = Shared.configStore.current()
         let appearance = config?.appearancePreference ?? "auto"
+        var content = BarContent()
+        if let composer = state.chinese {
+            let shown = composer.gridRange(rows: state.chineseExpanded ? chineseGridRows : 1)
+            content.badge = "双"
+            content.cells = shown.map { index in
+                let candidate = composer.candidates[index]
+                return BarContent.Cell(text: candidate.text, comment: candidate.comment,
+                                       number: (index - shown.lowerBound) % composer.pageSize + 1, index: index)
+            }
+            content.highlighted = composer.highlighted - shown.lowerBound
+            content.columns = composer.pageSize
+            content.expanded = state.chineseExpanded
+            content.chevron = state.chineseExpanded ? .less : .more(enabled: shown.upperBound < composer.candidates.count)
+            content.canPageBack = shown.lowerBound > 0
+            content.canPageForward = shown.upperBound < composer.candidates.count
+            bar.onSelect = { [weak self] index in self?.pickChinese(index) }
+            bar.onPage = { [weak self] delta in self?.turnChinesePage(by: delta) }
+            bar.onToggleExpanded = { [weak self] in self?.toggleChineseGrid() }
+            bar.show(content, appearance: appearance, near: caretRect())
+            return
+        }
+
         let (caret, attrs) = caretRectAndAttributes()
         if isTerminalClient(preference: config?.terminalModePreference ?? "auto",
                             extra: config?.terminalApps ?? []) {
             updateTypedInPanel(caret: caret, attributes: attrs,
                                configuredCellWidth: config?.terminalCellWidth)
         }
-        PreviewPanelController.shared.show(
-            mode: Shared.mode,
-            typed: state.showTypedInPanel ? TypedText(raw: state.raw, cursor: state.cursor) : nil,
-            text: state.improved,
-            status: status,
-            appearance: appearance,
-            near: caret
-        )
+        content.badge = Shared.mode.badge
+        content.typed = state.showTypedInPanel ? TypedText(raw: state.raw, cursor: state.cursor) : nil
+        bar.onPage = nil
+        bar.onToggleExpanded = nil
+        if !state.alternatives.isEmpty {
+            // A word that is both English and shuangpin: the word as typed
+            // first (Enter inserts it), then its Chinese readings.
+            let run = ShuangpinPolicy.run(in: state.raw, cursor: state.cursor)
+            content.cells = [BarContent.Cell(text: String(run), comment: nil, number: 1, index: 0)]
+                + state.alternatives.enumerated().map { offset, candidate in
+                    BarContent.Cell(text: candidate.text, comment: candidate.comment, number: offset + 2,
+                                    index: offset + 1)
+                }
+            content.highlighted = 0
+            content.chevron = .more(enabled: false)
+            bar.onSelect = { [weak self] index in self?.pickEnglishOrAlternative(index) }
+        } else {
+            content.cells = [englishCell()]
+            bar.onSelect = { [weak self] _ in self?.commitEnglish() }
+        }
+        bar.show(content, appearance: appearance, near: caret)
+    }
+
+    /// The English line shows what Enter inserts right now: the improvement
+    /// once it is ready, else the text as typed with the rewrite's status.
+    private func englishCell() -> BarContent.Cell {
+        let typed = state.raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        var text = typed
+        var comment: String?
+        switch state.status {
+        case .idle:
+            if state.raw.count >= maxCompositionLength { comment = "too long to improve" }
+        case .improving:
+            comment = "…"
+        case .done:
+            if let improved = state.committableImproved {
+                text = improved.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        case .failed(let message):
+            comment = "⚠ \(message)"
+        }
+        return BarContent.Cell(text: text, comment: comment, number: nil, index: 0)
+    }
+
+    /// What Enter does for English: the improvement once ready, else as typed.
+    private func commitEnglish() {
+        commit(state.committableImproved ?? state.raw)
     }
 
     // MARK: - Terminal edge detection
@@ -761,7 +780,6 @@ class InputController: IMKInputController {
         }
         state.reset()
         lastCommitWasChinese = false
-        PreviewPanelController.shared.hide()
         CandidateBarController.shared.hide()
     }
 
@@ -782,7 +800,6 @@ class InputController: IMKInputController {
             )
         }
         state.reset()
-        PreviewPanelController.shared.hide()
     }
 
     // MARK: - Menu actions (IMK may pass the NSMenuItem or a dictionary)
