@@ -117,7 +117,7 @@ starts only when the letters you type can't be English.
 | ← → | Move the highlight |
 | ↑ ↓, - = | Previous / next page (also scrolling); ↑ ↓ move by row in the grid |
 | Tab | Expand the bar into a grid of more candidates (also the chevron), or collapse it |
-| Enter | Insert the keys as typed, marked `↵` in the bar (`1 make ↵`, or `↵ nihc` at the end when Chinese leads) |
+| Enter | Insert the keys as typed (when they lead, the bar marks them: `1 make ↵`) |
 | Backspace | Take back the last pick, else delete a key |
 | Esc | Cancel (collapse the grid first) |
 | Punctuation | Insert the highlighted candidate and Chinese punctuation (`，。？`) |

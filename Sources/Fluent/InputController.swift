@@ -613,7 +613,6 @@ class InputController: IMKInputController {
             content.chevron = state.chineseExpanded ? .less : .more(enabled: shown.upperBound < composer.candidates.count)
             content.canPageBack = shown.lowerBound > 0
             content.canPageForward = shown.upperBound < composer.candidates.count
-            content.enterHint = enterHint(for: composer.keys)
             bar.onSelect = { [weak self] index in self?.pickChinese(index) }
             bar.onPage = { [weak self] delta in self?.turnChinesePage(by: delta) }
             bar.onToggleExpanded = { [weak self] in self?.toggleChineseGrid() }
@@ -649,11 +648,6 @@ class InputController: IMKInputController {
             bar.onSelect = { [weak self] _ in self?.commitEnglish() }
         }
         bar.show(content, appearance: appearance, near: caret)
-    }
-
-    /// `↵ bbq`: in a candidate bar Enter inserts the keys as typed.
-    private func enterHint(for keys: String) -> String {
-        "↵ " + (keys.count > 16 ? keys.prefix(15) + "…" : keys)
     }
 
     /// The English line shows what Enter inserts right now: the improvement

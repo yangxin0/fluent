@@ -36,8 +36,7 @@ struct BarContent {
     var chevron = Chevron.none
     var canPageBack = false
     var canPageForward = false
-    /// What Enter inserts, dimmed after the cells (`↵`, `↵ bbq`): Space picks
-    /// the highlighted candidate, Enter keeps what was written.
+    /// Dimmed after the English line (`↵`): Enter inserts that line.
     var enterHint: String?
     /// A notice (the ⇧⇧ toggle) shown instead of cells.
     var message: NSAttributedString?
@@ -244,10 +243,7 @@ private final class CandidateBarView: NSView {
 
         hintFrame = nil
         if let hint = content.enterHint, content.message == nil {
-            // After a divider when it follows candidates, right after the
-            // text when it follows the English line.
-            let gap: CGFloat = hasDividedHint ? 13 : 4
-            let frame = NSRect(x: maxX + gap, y: top, width: ceil(Self.measure(hint, Self.hintFont)) + 4,
+            let frame = NSRect(x: maxX + 4, y: top, width: ceil(Self.measure(hint, Self.hintFont)) + 4,
                                height: Self.pillHeight)
             hintFrame = frame
             maxX = frame.maxX + 4
@@ -261,12 +257,6 @@ private final class CandidateBarView: NSView {
             size = NSSize(width: maxX + 1 + Self.chevronWidth + inset, height: bottom + inset)
         }
         isCapsule = typedFrame == nil && size.height <= Self.pillHeight + 2 * inset + 0.5
-    }
-
-    /// Candidates are set off from the hint by a divider; the English line is not.
-    private var hasDividedHint: Bool {
-        if case .none = content.chevron { return false }
-        return true
     }
 
     private static func cellWidth(_ cell: BarContent.Cell) -> CGFloat {
@@ -374,10 +364,6 @@ private final class CandidateBarView: NSView {
         }
 
         if let hintFrame, let hint = content.enterHint {
-            if hasDividedHint {
-                NSColor.separatorColor.setFill()
-                NSRect(x: hintFrame.minX - 7, y: hintFrame.minY + 6, width: 1, height: hintFrame.height - 12).fill()
-            }
             _ = drawText(hint, Self.hintFont, .tertiaryLabelColor, x: hintFrame.minX, in: hintFrame)
         }
 
