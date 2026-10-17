@@ -1,4 +1,4 @@
-APP_NAME    = EnglishInput
+APP_NAME    = Fluent
 DIST        = dist/$(APP_NAME).app
 INSTALL_DIR = $(HOME)/Library/Input Methods
 INSTALLED   = $(INSTALL_DIR)/$(APP_NAME).app
@@ -25,7 +25,7 @@ test:
 # or the shuangpin engine (after make dict):
 #   make cli ARGS='--xiaohe veui nihc'
 cli:
-	swift run english-input-cli $(ARGS)
+	swift run fluent-cli $(ARGS)
 
 icon: Resources/icon.tiff
 
@@ -37,9 +37,9 @@ Resources/icon.tiff: Scripts/make-icon.swift
 # One run writes both xiaohe.lexicon and english.txt.
 dict: $(DICT_DIR)/xiaohe.lexicon
 
-$(DICT_DIR)/xiaohe.lexicon: $(RIME_ICE_FILES) Sources/EnglishInputDict/main.swift \
-		Sources/EnglishInputCore/Lexicon.swift Sources/EnglishInputCore/Xiaohe.swift
-	swift run english-input-dict "$(RIME_ICE_DIR)" "$(DICT_DIR)"
+$(DICT_DIR)/xiaohe.lexicon: $(RIME_ICE_FILES) Sources/FluentDict/main.swift \
+		Sources/FluentCore/Lexicon.swift Sources/FluentCore/Xiaohe.swift
+	swift run fluent-dict "$(RIME_ICE_DIR)" "$(DICT_DIR)"
 
 $(RIME_ICE_DIR)/%:
 	mkdir -p "$(dir $@)"
@@ -72,7 +72,7 @@ register:
 	swift Scripts/register.swift
 
 logs:
-	log stream --predicate 'subsystem == "com.yangxin.inputmethod.EnglishInput"' --level debug
+	log stream --predicate 'subsystem == "com.yangxin.inputmethod.Fluent"' --level debug
 
 dev: install reload
 

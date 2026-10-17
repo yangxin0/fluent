@@ -1,5 +1,5 @@
 import Foundation
-import EnglishInputCore
+import FluentCore
 
 struct CompositionState {
     enum Status {

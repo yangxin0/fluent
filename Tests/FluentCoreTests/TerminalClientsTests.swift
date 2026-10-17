@@ -1,5 +1,5 @@
 import XCTest
-@testable import EnglishInputCore
+@testable import FluentCore
 
 final class TerminalClientsTests: XCTestCase {
     func testDetection() {

@@ -1,5 +1,5 @@
 import XCTest
-@testable import EnglishInputCore
+@testable import FluentCore
 
 final class AppConfigTests: XCTestCase {
     func testDecodeWithDefaults() throws {
@@ -91,6 +91,21 @@ final class AppConfigTests: XCTestCase {
         XCTAssertNil(deepseek.value(forHTTPHeaderField: "User-Agent"))
         let obj = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(deepseek.httpBody)) as? [String: Any])
         XCTAssertEqual((obj["reasoning"] as? [String: String])?["effort"], "none")
+    }
+
+    func testLegacyConfigIsCopiedOnce() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("cfg-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let legacy = dir.appendingPathComponent("english-input/config.json")
+        let url = dir.appendingPathComponent("fluent/config.json")
+        try FileManager.default.createDirectory(at: legacy.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try "old".write(to: legacy, atomically: true, encoding: .utf8)
+        ConfigStore.migrate(from: legacy, to: url)
+        XCTAssertEqual(try String(contentsOf: url, encoding: .utf8), "old")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: legacy.path))
+        try "new".write(to: url, atomically: true, encoding: .utf8)
+        ConfigStore.migrate(from: legacy, to: url)
+        XCTAssertEqual(try String(contentsOf: url, encoding: .utf8), "new")
     }
 
     func testTemplateWriteAndLoad() throws {

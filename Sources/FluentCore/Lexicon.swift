@@ -1,7 +1,7 @@
 import Foundation
 
 /// Chinese words keyed by syllable sequences, compiled from rime-ice by
-/// `english-input-dict` (`make dict`).
+/// `fluent-dict` (`make dict`).
 ///
 /// Entries are sorted by code (syllable ids, shorter first on a shared
 /// prefix) and then by weight, highest first. All entries sharing a code

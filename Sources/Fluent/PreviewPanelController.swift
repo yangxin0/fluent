@@ -1,5 +1,5 @@
 import Cocoa
-import EnglishInputCore
+import FluentCore
 
 /// The in-progress composition, for clients that clip their marked text.
 struct TypedText {

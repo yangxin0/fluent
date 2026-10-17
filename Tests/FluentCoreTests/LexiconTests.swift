@@ -1,5 +1,5 @@
 import XCTest
-@testable import EnglishInputCore
+@testable import FluentCore
 
 /// A lexicon from `(text, space-separated pinyin, raw weight)` rows.
 func makeLexicon(_ rows: [(String, String, Double)]) -> Lexicon {

@@ -1,10 +1,10 @@
 import Foundation
-import EnglishInputCore
+import FluentCore
 
 // Debug harness: exercises the streaming client outside the IME loop.
-//   swift run english-input-cli [--mode fix|polish|interpret] "helo wrold"
+//   swift run fluent-cli [--mode fix|polish|interpret] "helo wrold"
 // or the shuangpin engine against the compiled dictionary (`make dict`):
-//   swift run english-input-cli --xiaohe [--dict .build/dict] veui nihc
+//   swift run fluent-cli --xiaohe [--dict .build/dict] veui nihc
 
 var mode = Mode.fix
 var xiaohe = false
@@ -53,7 +53,7 @@ if xiaohe {
 
 let input = words.joined(separator: " ")
 guard !input.isEmpty else {
-    FileHandle.standardError.write(Data("usage: english-input-cli [--mode fix|polish|interpret] <text>\n".utf8))
+    FileHandle.standardError.write(Data("usage: fluent-cli [--mode fix|polish|interpret] <text>\n".utf8))
     exit(2)
 }
 

@@ -2,18 +2,18 @@
 import PackageDescription
 
 let package = Package(
-    name: "EnglishInput",
+    name: "Fluent",
     platforms: [.macOS(.v13)],
     products: [
-        .executable(name: "EnglishInput", targets: ["EnglishInput"]),
-        .executable(name: "english-input-cli", targets: ["EnglishInputCLI"]),
-        .executable(name: "english-input-dict", targets: ["EnglishInputDict"]),
+        .executable(name: "Fluent", targets: ["Fluent"]),
+        .executable(name: "fluent-cli", targets: ["FluentCLI"]),
+        .executable(name: "fluent-dict", targets: ["FluentDict"]),
     ],
     targets: [
-        .target(name: "EnglishInputCore"),
+        .target(name: "FluentCore"),
         .executableTarget(
-            name: "EnglishInput",
-            dependencies: ["EnglishInputCore"],
+            name: "Fluent",
+            dependencies: ["FluentCore"],
             linkerSettings: [
                 .linkedFramework("Cocoa"),
                 .linkedFramework("InputMethodKit"),
@@ -21,16 +21,16 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "EnglishInputCLI",
-            dependencies: ["EnglishInputCore"]
+            name: "FluentCLI",
+            dependencies: ["FluentCore"]
         ),
         .executableTarget(
-            name: "EnglishInputDict",
-            dependencies: ["EnglishInputCore"]
+            name: "FluentDict",
+            dependencies: ["FluentCore"]
         ),
         .testTarget(
-            name: "EnglishInputCoreTests",
-            dependencies: ["EnglishInputCore"]
+            name: "FluentCoreTests",
+            dependencies: ["FluentCore"]
         ),
     ]
 )

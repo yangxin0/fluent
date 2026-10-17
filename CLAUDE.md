@@ -1,4 +1,4 @@
-# English Input
+# Fluent
 
 A macOS InputMethodKit IME that improves English phrases as you type via an
 OpenAI Responses-compatible API. See README.md for usage and architecture.
@@ -20,6 +20,6 @@ The `Makefile` is the entrypoint for every task — use `make <target>`, not raw
 - `make logs` · API smoke test: `make cli ARGS='--mode polish "helo wrld"'`
 - `make dict` downloads the rime-ice dictionaries pinned by `RIME_ICE_REV` and compiles them into `.build/dict` (`xiaohe.lexicon` + `english.txt`; build products, never committed); `bundle`/`install` run it. Shuangpin smoke test: `make cli ARGS='--xiaohe veui'`. The lexicon stores syllable ids, so changing `Pinyin.syllables` needs a `make dict` (stale files are rejected by `Pinyin.tableHash`).
 - `make clean` removes `.build/` and `dist/`
-- `Sources/EnglishInputCore/` must stay AppKit-free so it remains unit-testable; IMK/AppKit code lives in `Sources/EnglishInput/`.
+- `Sources/FluentCore/` must stay AppKit-free so it remains unit-testable; IMK/AppKit code lives in `Sources/Fluent/`.
 - All IMK client calls (`setMarkedText`, `insertText`, panel updates) must run on the main thread.
 - Info.plist's `InputMethodConnectionName` must match the string passed to `IMKServer` in `main.swift`, or the IME silently never connects.

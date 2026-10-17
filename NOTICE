@@ -1,4 +1,4 @@
-English Input
+Fluent
 Copyright (C) 2026 Xin Yang
 
 This program is free software: you can redistribute it and/or modify it
@@ -21,7 +21,7 @@ RIME_ICE_REV in the Makefile and bundled, converted, in the app.
 
 librime — https://github.com/rime/librime
 -----------------------------------------
-The shuangpin engine in Sources/EnglishInputCore (Lexicon, XiaoheTranslator,
+The shuangpin engine in Sources/FluentCore (Lexicon, XiaoheTranslator,
 ShuangpinComposer) ports algorithms from librime: candidate ordering,
 sentence making, completion of a dangling key and partial selection.
 librime is licensed under the BSD 3-Clause License:

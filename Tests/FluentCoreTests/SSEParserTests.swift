@@ -1,5 +1,5 @@
 import XCTest
-@testable import EnglishInputCore
+@testable import FluentCore
 
 final class SSEParserTests: XCTestCase {
     private func parse(_ lines: [String]) -> [SSEEvent] {

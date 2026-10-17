@@ -2,19 +2,19 @@ import Cocoa
 import InputMethodKit
 import Carbon.HIToolbox
 import os.log
-import EnglishInputCore
+import FluentCore
 
-private let ctlLog = Logger(subsystem: "com.yangxin.inputmethod.EnglishInput", category: "controller")
+private let ctlLog = Logger(subsystem: "com.yangxin.inputmethod.Fluent", category: "controller")
 
 /// Shared across all controller instances (one per client app) so the mode
 /// and config stay consistent everywhere.
 private enum Shared {
     static let configStore = ConfigStore()
     static var mode: Mode = {
-        if let raw = UserDefaults.standard.string(forKey: "mode"), let m = Mode(rawValue: raw) {
-            return m
-        }
-        return .fix
+        // Fall back to the mode saved under the app's former name.
+        let raw = UserDefaults.standard.string(forKey: "mode")
+            ?? UserDefaults(suiteName: "com.yangxin.inputmethod.EnglishInput")?.string(forKey: "mode")
+        return raw.flatMap(Mode.init(rawValue:)) ?? .fix
     }() {
         didSet { UserDefaults.standard.set(mode.rawValue, forKey: "mode") }
     }
@@ -291,7 +291,7 @@ class InputController: IMKInputController {
                 .foregroundColor: NSColor.black,
                 .font: NSFont.systemFont(ofSize: 13, weight: .bold),
             ])
-        message.append(NSAttributedString(string: " English Input"))
+        message.append(NSAttributedString(string: " Fluent"))
         if !Shared.enabled {
             message.append(NSAttributedString(string: "\n⇧⇧ to re-enable"))
         }

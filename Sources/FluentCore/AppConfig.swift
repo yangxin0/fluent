@@ -100,7 +100,7 @@ public struct AppConfig: Codable, Equatable {
     }
 }
 
-/// Loads `~/.config/english-input/config.json`, re-reading it whenever the
+/// Loads `~/.config/fluent/config.json`, re-reading it whenever the
 /// file's mtime changes (so "Reload Config" is mostly a formality).
 public final class ConfigStore {
     public let configURL: URL
@@ -108,9 +108,23 @@ public final class ConfigStore {
     private var cachedMtime: Date?
 
     public init(configURL: URL? = nil) {
-        self.configURL = configURL
-            ?? FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent(".config/english-input/config.json")
+        if let configURL {
+            self.configURL = configURL
+        } else {
+            let home = FileManager.default.homeDirectoryForCurrentUser
+            self.configURL = home.appendingPathComponent(".config/fluent/config.json")
+            ConfigStore.migrate(from: home.appendingPathComponent(".config/english-input/config.json"),
+                                to: self.configURL)
+        }
+    }
+
+    /// Fluent was called English Input before: carry its config over once,
+    /// leaving the original in place.
+    static func migrate(from legacy: URL, to url: URL) {
+        let files = FileManager.default
+        guard !files.fileExists(atPath: url.path), files.fileExists(atPath: legacy.path) else { return }
+        try? files.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? files.copyItem(at: legacy, to: url)
     }
 
     public func current() -> AppConfig? {

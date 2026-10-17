@@ -1,5 +1,5 @@
 import XCTest
-@testable import EnglishInputCore
+@testable import FluentCore
 
 final class ShuangpinPolicyTests: XCTestCase {
     private let english = EnglishWords(["make", "like", "hello", "nice", "UI", "Mac", "test"])

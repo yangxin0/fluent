@@ -1,8 +1,8 @@
 import Foundation
-import EnglishInputCore
+import FluentCore
 
 // Compiles rime-ice's dictionaries into the files the IME loads (`make dict`):
-//   swift run english-input-dict [--min-weight N] <rime-ice dir> <output dir>
+//   swift run fluent-dict [--min-weight N] <rime-ice dir> <output dir>
 // Output: xiaohe.lexicon (characters + words by syllable code) and
 // english.txt (lowercase English words, one per line).
 
@@ -19,7 +19,7 @@ while !args.isEmpty {
     }
 }
 guard paths.count == 2 else {
-    FileHandle.standardError.write(Data("usage: english-input-dict [--min-weight N] <rime-ice dir> <output dir>\n".utf8))
+    FileHandle.standardError.write(Data("usage: fluent-dict [--min-weight N] <rime-ice dir> <output dir>\n".utf8))
     exit(2)
 }
 let source = URL(fileURLWithPath: paths[0])

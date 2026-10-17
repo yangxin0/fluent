@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleIdentifier</key>
-    <string>com.yangxin.inputmethod.EnglishInput</string>
+    <string>com.yangxin.inputmethod.Fluent</string>
     <key>CFBundleName</key>
-    <string>EnglishInput</string>
+    <string>Fluent</string>
     <key>CFBundleDisplayName</key>
-    <string>English Input</string>
+    <string>Fluent</string>
     <key>CFBundleExecutable</key>
-    <string>EnglishInput</string>
+    <string>Fluent</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleVersion</key>
@@ -24,11 +24,11 @@
     <string>13.0</string>
 
     <key>InputMethodConnectionName</key>
-    <string>com.yangxin.inputmethod.EnglishInput_Connection</string>
+    <string>com.yangxin.inputmethod.Fluent_Connection</string>
     <key>InputMethodServerControllerClass</key>
     <string>InputController</string>
     <key>TISInputSourceID</key>
-    <string>com.yangxin.inputmethod.EnglishInput</string>
+    <string>com.yangxin.inputmethod.Fluent</string>
     <key>TISIntendedLanguage</key>
     <string>en</string>
     <key>tsInputMethodCharacterRepertoireKey</key>

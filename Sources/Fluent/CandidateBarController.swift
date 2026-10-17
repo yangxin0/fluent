@@ -1,5 +1,5 @@
 import Cocoa
-import EnglishInputCore
+import FluentCore
 
 /// The 小鹤双拼 candidate bar, styled after the system shuangpin input
 /// method: a capsule of numbered candidates with the highlighted one on an

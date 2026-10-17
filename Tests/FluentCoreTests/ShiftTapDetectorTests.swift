@@ -1,5 +1,5 @@
 import XCTest
-@testable import EnglishInputCore
+@testable import FluentCore
 
 final class ShiftTapDetectorTests: XCTestCase {
     private var detector = ShiftTapDetector(maxTapDuration: 0.3, maxTapInterval: 0.4)

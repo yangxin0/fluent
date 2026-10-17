@@ -3,7 +3,7 @@
 import Carbon
 import Foundation
 
-let bundlePath = NSString(string: "~/Library/Input Methods/EnglishInput.app").expandingTildeInPath
+let bundlePath = NSString(string: "~/Library/Input Methods/Fluent.app").expandingTildeInPath
 let bundleURL = URL(fileURLWithPath: bundlePath)
 
 guard FileManager.default.fileExists(atPath: bundlePath) else {
@@ -20,7 +20,7 @@ print("Registered \(bundlePath)")
 
 // Best effort: enable it so it shows in the input menu without a trip to
 // System Settings. Selecting it is still up to the user.
-let sourceID = "com.yangxin.inputmethod.EnglishInput"
+let sourceID = "com.yangxin.inputmethod.Fluent"
 let filter = [kTISPropertyInputSourceID as String: sourceID] as CFDictionary
 if let list = TISCreateInputSourceList(filter, true)?.takeRetainedValue() as? [TISInputSource],
    let source = list.first {

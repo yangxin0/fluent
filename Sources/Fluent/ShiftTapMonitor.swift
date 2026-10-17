@@ -1,9 +1,9 @@
 import Cocoa
 import Carbon.HIToolbox
 import os.log
-import EnglishInputCore
+import FluentCore
 
-private let monLog = Logger(subsystem: "com.yangxin.inputmethod.EnglishInput", category: "shift-tap")
+private let monLog = Logger(subsystem: "com.yangxin.inputmethod.Fluent", category: "shift-tap")
 
 /// Watches for the ⇧⇧ toggle from a process-wide event monitor instead of
 /// the events IMK forwards.
@@ -101,6 +101,6 @@ final class ShiftTapMonitor {
               let ptr = TISGetInputSourceProperty(source, kTISPropertyInputSourceID)
         else { return false }
         let id = Unmanaged<CFString>.fromOpaque(ptr).takeUnretainedValue() as String
-        return id == (Bundle.main.bundleIdentifier ?? "com.yangxin.inputmethod.EnglishInput")
+        return id == (Bundle.main.bundleIdentifier ?? "com.yangxin.inputmethod.Fluent")
     }
 }

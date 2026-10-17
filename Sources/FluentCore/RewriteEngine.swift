@@ -1,7 +1,7 @@
 import Foundation
 import os.log
 
-private let log = Logger(subsystem: "com.yangxin.inputmethod.EnglishInput", category: "rewrite")
+private let log = Logger(subsystem: "com.yangxin.inputmethod.Fluent", category: "rewrite")
 
 /// Debounces keystrokes into at most one in-flight LLM request, cancelling
 /// stale ones. Callbacks are delivered on the main queue; the generation

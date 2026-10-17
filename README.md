@@ -1,4 +1,4 @@
-# English Input
+# Fluent
 
 A macOS input method (IME) that improves your English as you type. Your raw
 text appears inline as underlined composition text in any app; an LLM
@@ -22,18 +22,19 @@ while composing. The last mode is remembered.
 ## Install
 
 ```sh
-make install    # build, assemble EnglishInput.app, install to ~/Library/Input Methods, ad-hoc sign, register
+make install    # build, assemble Fluent.app, install to ~/Library/Input Methods, ad-hoc sign, register
 ```
 
 Then (one-time, macOS requires manual consent for third-party input sources):
 
 1. **System Settings ▸ Keyboard ▸ Text Input ▸ Input Sources ▸ Edit… ▸ +**
-2. Under **English**, add **English Input**.
-3. Pick **English Input** from the input menu in the menu bar (or Ctrl+Space).
+2. Under **English**, add **Fluent**.
+3. Pick **Fluent** from the input menu in the menu bar (or Ctrl+Space).
 
 ## Configure
 
-Edit `~/.config/english-input/config.json` (a template is created on first run;
+Edit `~/.config/fluent/config.json` (a template is created on first run, or
+your config from before the rename to Fluent is copied over;
 also reachable via IME menu ▸ *Open Config File*):
 
 ```json
@@ -124,7 +125,7 @@ whole feature off with IME menu ▸ *小鹤双拼 Chinese*.
 Words you pick are learned the way Rime does it: they move ahead of other
 words of the same length, words picked one after another become a new
 phrase, and words you stop using fade over a few hundred picks. They are
-saved in `~/Library/Application Support/EnglishInput/xiaohe-user.tsv`;
+saved in `~/Library/Application Support/Fluent/xiaohe-user.tsv`;
 delete the file to forget them.
 
 The dictionaries come from [rime-ice](https://github.com/iDvel/rime-ice):
@@ -136,7 +137,7 @@ The dictionaries come from [rime-ice](https://github.com/iDvel/rime-ice):
 make dev        # rebuild + reinstall + kill the running IME (macOS relaunches it on next keystroke)
 make test       # unit tests (SSE parser, config, prompts, shuangpin engine)
 make logs       # tail the IME's os_log output
-swift run english-input-cli --mode polish "helo wrold how r u"   # test the API path without the IME
+swift run fluent-cli --mode polish "helo wrold how r u"   # test the API path without the IME
 make dict       # download the pinned rime-ice dictionaries and compile them (bundle/install run it)
 make cli ARGS='--xiaohe veui nihc'   # 小鹤双拼 candidates from the compiled dictionary
 ```

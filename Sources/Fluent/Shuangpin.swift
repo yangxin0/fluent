@@ -1,8 +1,8 @@
 import Foundation
 import os.log
-import EnglishInputCore
+import FluentCore
 
-private let spLog = Logger(subsystem: "com.yangxin.inputmethod.EnglishInput", category: "shuangpin")
+private let spLog = Logger(subsystem: "com.yangxin.inputmethod.Fluent", category: "shuangpin")
 
 /// The 小鹤双拼 dictionary bundled by `make dict`, loaded off the main
 /// thread at launch, plus the words learned from your picks. Until it is
@@ -17,7 +17,7 @@ final class Shuangpin {
 
     static let userDictionaryURL = FileManager.default
         .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("EnglishInput/xiaohe-user.tsv")
+        .appendingPathComponent("Fluent/xiaohe-user.tsv")
 
     private init(lexicon: Lexicon, english: EnglishWords, userDictionary: UserDictionary) {
         translator = XiaoheTranslator(lexicon: lexicon, userDictionary: userDictionary)

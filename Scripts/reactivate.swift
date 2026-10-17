@@ -7,7 +7,7 @@
 import Carbon
 import Foundation
 
-let sourceID = "com.yangxin.inputmethod.EnglishInput"
+let sourceID = "com.yangxin.inputmethod.Fluent"
 
 func id(of source: TISInputSource) -> String {
     guard let ptr = TISGetInputSourceProperty(source, kTISPropertyInputSourceID) else { return "" }
@@ -17,7 +17,7 @@ func id(of source: TISInputSource) -> String {
 guard let current = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue(),
       id(of: current) == sourceID
 else {
-    print("English Input is not the selected input source; nothing to re-activate.")
+    print("Fluent is not the selected input source; nothing to re-activate.")
     exit(0)
 }
 
