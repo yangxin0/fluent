@@ -39,13 +39,15 @@ enum PanelPlacement {
 
     /// Below the composed line by default; flipped above it near the bottom
     /// edge; clamped horizontally; fallback position for clients that report
-    /// a zero caret rect (some Electron apps).
+    /// no caret (some Electron apps return a zero rect, or one at the
+    /// origin), on the screen under the pointer.
     static func origin(for size: NSSize, caretRect: NSRect) -> NSPoint {
-        let screen = screenContaining(caretRect) ?? NSScreen.main
+        let known = caretRect.origin != .zero
+        let screen = (known ? screenContaining(caretRect) : screenUnderPointer()) ?? NSScreen.main
         guard let visible = screen?.visibleFrame else {
             return NSPoint(x: 100, y: 100)
         }
-        if caretRect == .zero {
+        if !known {
             return NSPoint(x: visible.midX - size.width / 2,
                            y: visible.minY + visible.height * 0.2)
         }
@@ -61,6 +63,11 @@ enum PanelPlacement {
 
     private static func screenContaining(_ rect: NSRect) -> NSScreen? {
         NSScreen.screens.first { $0.frame.intersects(rect) || $0.frame.contains(rect.origin) }
+    }
+
+    private static func screenUnderPointer() -> NSScreen? {
+        let pointer = NSEvent.mouseLocation
+        return NSScreen.screens.first { NSMouseInRect(pointer, $0.frame, false) }
     }
 }
 

@@ -641,9 +641,10 @@ class InputController: IMKInputController {
             content.highlighted = composer.highlighted - shown.lowerBound
             content.columns = composer.pageSize
             content.expanded = state.chineseExpanded
-            content.chevron = state.chineseExpanded ? .less : .more(enabled: shown.upperBound < composer.candidates.count)
-            content.canPageBack = shown.lowerBound > 0
-            content.canPageForward = shown.upperBound < composer.candidates.count
+            content.chevron = state.chineseExpanded ? .less : .more(enabled: composer.pageCount > 1)
+            // Scrolling turns one page (a row of the grid), like - and =.
+            content.canPageBack = composer.page > 0
+            content.canPageForward = composer.page < composer.pageCount - 1
             bar.onSelect = { [weak self] index in self?.pickChinese(index) }
             bar.onPage = { [weak self] delta in self?.turnChinesePage(by: delta) }
             bar.onToggleExpanded = { [weak self] in self?.toggleChineseGrid() }

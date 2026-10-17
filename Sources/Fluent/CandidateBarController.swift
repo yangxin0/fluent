@@ -148,6 +148,8 @@ private final class CandidateBarView: NSView {
     private var hovered: Int?
     private var pressed: Int?
     private var scrollAccumulator: CGFloat = 0
+    /// A trackpad gesture turns at most one page.
+    private var scrollGesturePaged = false
 
     /// Pressing the chevron is this index in `pressed`.
     private static let chevronIndex = -1
@@ -171,7 +173,10 @@ private final class CandidateBarView: NSView {
     private func layoutContent() {
         let inset = Self.edgeInset
         var top = inset
+        // Right edge of the badge-and-cells line; the hint and chevron follow
+        // it even when the typed line above is wider.
         var maxX: CGFloat = inset
+        var typedMaxX: CGFloat = inset
 
         typedFrame = nil
         if let typed = content.typed {
@@ -182,7 +187,7 @@ private final class CandidateBarView: NSView {
             let frame = NSRect(x: inset + Self.cellPadding, y: top + 4, width: width, height: height)
             typedFrame = frame
             top = frame.maxY + 4
-            maxX = max(maxX, frame.maxX + Self.cellPadding)
+            typedMaxX = frame.maxX + Self.cellPadding
         }
 
         var x = inset
@@ -222,14 +227,17 @@ private final class CandidateBarView: NSView {
                     let left = x + columnWidths[..<column].reduce(0, +) + CGFloat(column) * Self.cellSpacing
                     frame = NSRect(x: left, y: top + CGFloat(row) * (Self.pillHeight + Self.cellSpacing),
                                    width: columnWidths[column], height: Self.pillHeight)
-                } else if content.cells.count == 1, widths[offset] > Self.maxLineWidth {
-                    // A long English line wraps into a taller cell.
+                } else if content.cells.count == 1,
+                          widths[offset] > Self.maxLineWidth || item.text.contains(where: \.isNewline) {
+                    // A long English line (or one the model broke into
+                    // lines) wraps into a taller cell.
                     wraps = true
+                    let width = min(widths[offset], Self.maxLineWidth)
                     let text = Self.cellString(item, highlighted: false)
-                    let height = ceil(text.boundingRect(with: NSSize(width: Self.maxLineWidth - 2 * Self.cellPadding,
+                    let height = ceil(text.boundingRect(with: NSSize(width: width - 2 * Self.cellPadding,
                                                                      height: .greatestFiniteMagnitude),
                                                         options: [.usesLineFragmentOrigin]).height)
-                    frame = NSRect(x: cellX, y: top, width: Self.maxLineWidth, height: max(Self.pillHeight, height + 10))
+                    frame = NSRect(x: cellX, y: top, width: width, height: max(Self.pillHeight, height + 10))
                 } else {
                     frame = NSRect(x: cellX, y: top, width: widths[offset], height: Self.pillHeight)
                 }
@@ -251,12 +259,15 @@ private final class CandidateBarView: NSView {
         }
 
         chevronFrame = nil
+        var width: CGFloat
         if case .none = content.chevron {
-            size = NSSize(width: maxX + inset + 4, height: bottom + inset)
+            width = maxX + inset + 4
         } else {
             chevronFrame = NSRect(x: maxX + 1, y: top - inset, width: Self.chevronWidth, height: Self.pillHeight + 2 * inset)
-            size = NSSize(width: maxX + 1 + Self.chevronWidth + inset, height: bottom + inset)
+            width = maxX + 1 + Self.chevronWidth + inset
         }
+        width = max(width, typedMaxX + inset + 4)
+        size = NSSize(width: width, height: bottom + inset)
         isCapsule = typedFrame == nil && size.height <= Self.pillHeight + 2 * inset + 0.5
     }
 
@@ -334,7 +345,7 @@ private final class CandidateBarView: NSView {
                         options: [.usesLineFragmentOrigin])
         }
 
-        let highlightedRow = content.highlighted.map { cells[$0].row }
+        let highlightedRow = content.highlighted.flatMap { cells.indices.contains($0) ? cells[$0].row : nil }
         for (offset, cell) in cells.enumerated() {
             let isHighlighted = offset == content.highlighted
             if isHighlighted || offset == hovered {
@@ -454,11 +465,25 @@ private final class CandidateBarView: NSView {
         }
     }
 
+    /// A mouse wheel turns a page per notch (its deltas are lines); a
+    /// trackpad turns one page per swipe (its deltas are points), ignoring
+    /// momentum, so a flick doesn't skip pages.
     override func scrollWheel(with event: NSEvent) {
-        scrollAccumulator += event.scrollingDeltaY
-        guard abs(scrollAccumulator) > 10 else { return }
-        let delta = scrollAccumulator < 0 ? 1 : -1
-        scrollAccumulator = 0
+        let delta: Int
+        if event.hasPreciseScrollingDeltas {
+            if event.phase == .began {
+                scrollAccumulator = 0
+                scrollGesturePaged = false
+            }
+            guard event.momentumPhase.isEmpty, !scrollGesturePaged else { return }
+            scrollAccumulator += event.scrollingDeltaY
+            guard abs(scrollAccumulator) > 20 else { return }
+            scrollGesturePaged = true
+            delta = scrollAccumulator < 0 ? 1 : -1
+        } else {
+            guard event.scrollingDeltaY != 0 else { return }
+            delta = event.scrollingDeltaY < 0 ? 1 : -1
+        }
         if (delta > 0 && content.canPageForward) || (delta < 0 && content.canPageBack) { onPage?(delta) }
     }
 }
