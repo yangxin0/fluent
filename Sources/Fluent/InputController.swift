@@ -633,16 +633,15 @@ class InputController: IMKInputController {
         bar.onToggleExpanded = nil
         if !state.alternatives.isEmpty {
             // A word that is both English and shuangpin: the word as typed
-            // first (Enter inserts it), then its Chinese readings.
+            // first, marked ↵ since Enter inserts it, then its Chinese readings.
             let run = ShuangpinPolicy.run(in: state.raw, cursor: state.cursor)
-            content.cells = [BarContent.Cell(text: String(run), comment: nil, number: 1, index: 0)]
+            content.cells = [BarContent.Cell(text: String(run), comment: "↵", number: 1, index: 0)]
                 + state.alternatives.enumerated().map { offset, candidate in
                     BarContent.Cell(text: candidate.text, comment: candidate.comment, number: offset + 2,
                                     index: offset + 1)
                 }
             content.highlighted = 0
             content.chevron = .more(enabled: false)
-            content.enterHint = enterHint(for: String(run))
             bar.onSelect = { [weak self] index in self?.pickEnglishOrAlternative(index) }
         } else {
             content.cells = [englishCell()]
