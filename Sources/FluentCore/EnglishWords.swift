@@ -73,6 +73,8 @@ public enum RunContext: Equatable {
 public enum ChinesePolicy {
     public static func rank<S: StringProtocol>(run: S, context: RunContext, english: EnglishWords,
                                                layout: any KeyLayout = XiaoheLayout()) -> ChineseRank {
+        // A capital starts English, even after pinyin keys (`nihcK`).
+        guard !run.contains(where: \.isUppercase) else { return .none }
         let graph = layout.graph(for: run)
         guard graph.end > 0 else { return .none }
         if !graph.isComplete {

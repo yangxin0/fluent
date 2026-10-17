@@ -122,6 +122,8 @@ final class FullPinyinTests: XCTestCase {
         XCTAssertEqual(rank("hanging"), .none)
         XCTAssertEqual(rank("hanging", .afterChinese), .none)  // `hang` is pinyin, the run is English
         XCTAssertEqual(rank("beautiful"), .none)
+        XCTAssertEqual(rank("nihaoK"), .none)  // a capital starts English
+        XCTAssertEqual(rank("nihaoK", .afterChinese), .none)
     }
 
     func testPickingBeforeAStrayKeyLeavesItToFix() {

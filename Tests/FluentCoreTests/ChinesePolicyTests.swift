@@ -34,6 +34,13 @@ final class ChinesePolicyTests: XCTestCase {
         XCTAssertEqual(ChinesePolicy.rank(run: "nifk", context: .fresh, english: english), .none)  // ni → nice
     }
 
+    func testACapitalAfterShuangpinIsEnglish() {
+        for context in [RunContext.fresh, .afterChinese] {
+            XCTAssertEqual(ChinesePolicy.rank(run: "nihcK", context: context, english: english), .none)
+            XCTAssertEqual(ChinesePolicy.rank(run: "veuiKevin", context: context, english: english), .none)
+        }
+    }
+
     func testAfterChineseOnlyWholeEnglishWordsGoFirst() {
         XCTAssertEqual(ChinesePolicy.rank(run: "ni", context: .afterChinese, english: english), .primary)
         XCTAssertEqual(ChinesePolicy.rank(run: "make", context: .afterChinese, english: english), .alternatives)

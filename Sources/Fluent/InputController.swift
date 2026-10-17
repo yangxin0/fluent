@@ -453,6 +453,7 @@ class InputController: IMKInputController {
     /// Leaves Chinese composing with `text` as the English composition.
     private func switchToEnglish(_ text: String) {
         state.chinese = nil
+        state.chineseExpanded = false
         state.chinesePrefix = ""
         state.raw = ""
         state.cursor = 0
