@@ -208,22 +208,19 @@ public final class ConfigStore {
         cachedMtime = nil
     }
 
-    /// Sets one key in the config file and keeps the others (keys come out
-    /// sorted). Used by the IME menu's choices.
+    /// Sets one key in the config file (nil removes it), editing only that
+    /// key's text: the others keep their order and formatting. Used by the
+    /// IME menu and the Settings app. False when the file isn't a JSON
+    /// object, which is then left alone.
     @discardableResult
-    public func set(_ key: String, to value: Any) -> Bool {
+    public func set(_ key: String, to value: Any?) -> Bool {
         writeTemplateIfMissing()
         guard let data = try? Data(contentsOf: configURL),
-              var object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-              JSONSerialization.isValidJSONObject([key: value])
-        else { return false }
-        object[key] = value
-        guard let output = try? JSONSerialization.data(
-            withJSONObject: object, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
+              let output = JSONEdit.setting(key, to: value, in: String(decoding: data, as: UTF8.self))
         else { return false }
         // Into the file a symlink points at, keeping the link.
         let target = configURL.resolvingSymlinksInPath()
-        let written = (try? (output + Data("\n".utf8)).write(to: target, options: .atomic)) != nil
+        let written = (try? Data(output.utf8).write(to: target, options: .atomic)) != nil
         invalidate()
         return written
     }
