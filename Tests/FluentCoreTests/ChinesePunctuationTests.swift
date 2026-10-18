@@ -10,12 +10,13 @@ final class ChinesePunctuationTests: XCTestCase {
         XCTAssertEqual(punctuation.convert("<"), "《")
     }
 
-    func testPunctuationAndSymbolsGoStraightIn() {
-        for key: Character in [".", ",", "(", "-", "\"", "'", "@", "#", "$", "+", "<", "~", "/", "_", "`"] {
-            XCTAssertTrue(ChinesePunctuation.isPunctuation(key), "\(key)")
+    func testPunctuationSymbolsSpacesAndDigitsGoStraightIn() {
+        for key: Character in [".", ",", "(", "-", "\"", "'", "@", "#", "$", "+", "<", "~", "/", "_", "`",
+                               " ", "0", "1", "9"] {
+            XCTAssertTrue(ChinesePunctuation.goesStraightIn(key), "\(key)")
         }
-        for key: Character in ["a", "Z", "1", " ", "中"] {
-            XCTAssertFalse(ChinesePunctuation.isPunctuation(key), "\(key)")
+        for key: Character in ["a", "Z", "中", "\t", "½", "١"] {
+            XCTAssertFalse(ChinesePunctuation.goesStraightIn(key), "\(key)")
         }
     }
 

@@ -266,10 +266,10 @@ class InputController: IMKInputController {
                 pickEnglishOrAlternative(digit - 1)
                 return true
             }
-            // Punctuation with nothing composed goes straight in, as Chinese
-            // punctuation right after Chinese text.
+            // Punctuation, a space or a digit with nothing composed goes
+            // straight in; punctuation right after Chinese text as Chinese.
             if !state.isComposing, chars.count == 1, let key = chars.first,
-               ChinesePunctuation.isPunctuation(key) {
+               ChinesePunctuation.goesStraightIn(key) {
                 let afterChinese = lastCommitWasChinese
                     && Shared.configStore.current()?.chinesePreference != "off"
                 let text = afterChinese ? punctuation.convert(key) ?? chars : chars

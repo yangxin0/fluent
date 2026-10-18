@@ -15,10 +15,12 @@ public struct ChinesePunctuation {
 
     public init() {}
 
-    /// Punctuation or a symbol (`.`, `(`, `-`, `@`, `$`): typed with nothing
-    /// composed, it goes straight in, since there is nothing to improve yet.
-    public static func isPunctuation(_ character: Character) -> Bool {
-        character.isPunctuation || character.isSymbol
+    /// Punctuation or a symbol (`.`, `(`, `-`, `@`, `$`), a space or a
+    /// digit: typed with nothing composed, it goes straight in, since there
+    /// is nothing to improve yet.
+    public static func goesStraightIn(_ character: Character) -> Bool {
+        character.isPunctuation || character.isSymbol || character == " "
+            || character.isASCII && character.isNumber
     }
 
     /// The Chinese form of `character`, or nil if it has none.
