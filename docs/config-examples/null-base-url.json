@@ -1,0 +1,5 @@
+{
+  "baseURL": null,
+  "apiKey": "sk-test",
+  "model": "gpt-5-mini"
+}

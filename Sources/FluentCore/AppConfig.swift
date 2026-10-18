@@ -138,7 +138,9 @@ public struct AppConfig: Codable, Equatable {
 }
 
 /// Loads `~/.config/fluent/config.json`, re-reading it whenever the
-/// file's mtime changes (so "Reload Config" is mostly a formality).
+/// file's mtime changes (so "Reload Config" is mostly a formality). The
+/// Settings app (Go, `Settings/`) shares no code with this: the file's keys
+/// and rules are the contract between them, in docs/config.md.
 public final class ConfigStore {
     public let configURL: URL
     private var cached: AppConfig?
@@ -197,6 +199,7 @@ public final class ConfigStore {
         case .keyNotFound(let key, _)?:
             return "\"\(key.stringValue)\" is missing"
         case .typeMismatch(_, let context)?, .valueNotFound(_, let context)?:
+            guard !context.codingPath.isEmpty else { return "not a JSON object" }  // `[…]`, `null`
             return "\"\(context.codingPath.map(\.stringValue).joined(separator: "."))\" has the wrong type"
         default:
             return "not valid JSON"

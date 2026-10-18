@@ -1,0 +1,13 @@
+{
+  "template.json": { "configured": false, "problem": null },
+  "configured.json": { "configured": true, "problem": null },
+  "padded-values.json": { "configured": true, "problem": null },
+  "optional-wrong-types.json": { "configured": true, "problem": null },
+  "blank-model.json": { "configured": false, "problem": null },
+  "missing-api-key.json": { "configured": false, "problem": "\"apiKey\" is missing" },
+  "missing-everything.json": { "configured": false, "problem": "\"baseURL\" is missing" },
+  "model-wrong-type.json": { "configured": false, "problem": "\"model\" has the wrong type" },
+  "null-base-url.json": { "configured": false, "problem": "\"baseURL\" has the wrong type" },
+  "not-json.json": { "configured": false, "problem": "not valid JSON" },
+  "not-an-object.json": { "configured": false, "problem": "not a JSON object" }
+}

@@ -30,6 +30,10 @@ The last mode is remembered.
 make install    # build both apps, ad-hoc sign, register the input method
 ```
 
+Building needs Xcode (or its command-line tools) for the Swift input method
+and Go for the Settings app; any recent Go will do, as `make` fetches the
+version `Settings/go.mod` names.
+
 This installs two apps:
 
 - **`~/Library/Input Methods/Fluent-Input.app`**, the input method. It was
@@ -37,7 +41,8 @@ This installs two apps:
   place, so the input source stays enabled.
 - **`/Applications/Fluent.app`**, the Settings app. Its *Setup* page checks
   each step below, and its other pages edit the config (also IME menu ▸
-  *Open Fluent Settings…*).
+  *Open Fluent Settings…*). It is optional: the input method runs on its
+  own and reads the config file itself.
 
 Then (one-time, macOS requires manual consent for third-party input sources):
 
@@ -67,6 +72,8 @@ copied over):
 }
 ```
 
+Every key, and how the two apps share the file, is in
+[docs/config.md](docs/config.md).
 Any Responses-compatible provider works — point `baseURL` at its `/v1` root.
 `reasoningEffort` (optional, e.g. `"low"` or `"none"`) is sent as
 `reasoning.effort`. For models whose name starts with `gpt` or contains
@@ -188,8 +195,8 @@ The dictionaries come from [rime-ice](https://github.com/iDvel/rime-ice):
 
 ```sh
 make dev        # rebuild + reinstall + restart the IME and re-select it (macOS relaunches it on next keystroke)
-make settings   # build the Settings app and open it from dist/ (its pages are Resources/Settings)
-make test       # unit tests (SSE parser, config, prompts, Chinese engine)
+make settings   # build the Settings app (Go + Wails, Settings/) and open it from dist/
+make test       # unit tests: the Swift core (SSE parser, config, prompts, Chinese engine), then Settings' Go tests
 make logs       # tail the IME's os_log output
 swift run fluent-cli --mode polish "helo wrold how r u"   # test the API path without the IME (--help)
 make dict       # download the pinned rime-ice dictionaries and compile them (bundle/install run it)

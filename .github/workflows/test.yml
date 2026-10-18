@@ -23,8 +23,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The Settings app is Go (Settings/go.mod names the toolchain).
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: Settings/go.mod
+          cache-dependency-path: Settings/go.sum
+
       - name: Toolchain
-        run: swift --version
+        run: swift --version && go version
 
       - name: Build
         run: make build

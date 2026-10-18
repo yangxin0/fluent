@@ -1,7 +1,19 @@
 "use strict";
 
-// Every call to the app: `await fluent(op, args)` (Sources/FluentSettings/Bridge.swift).
-const fluent = (op, args = {}) => window.webkit.messageHandlers.fluent.postMessage({ op, args });
+// Every call to the app: `await fluent(op, args)`, a POST to /api/<op>
+// served next to the pages (Settings/api.go).
+async function fluent(op, args = {}) {
+  const res = await fetch("/api/" + op, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// Wails' runtime drags the window by the header (--wails-draggable).
+import("/wails/runtime.js").catch(() => {});
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];

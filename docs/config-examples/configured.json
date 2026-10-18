@@ -1,0 +1,16 @@
+{
+  "baseURL": "https://api.example.com/v1",
+  "apiKey": "sk-test",
+  "model": "gpt-5-mini",
+  "reasoningEffort": "low",
+  "debounceMs": 350,
+  "timeoutSeconds": 10,
+  "appearance": "dark",
+  "terminalMode": "always",
+  "terminalApps": ["com.example.terminal"],
+  "terminalCellWidth": 9.7,
+  "chinese": "pinyin",
+  "pinyinAbbreviations": false,
+  "fuzzyPinyin": ["zh=z", "an=ang"],
+  "unknownKey": "ignored"
+}

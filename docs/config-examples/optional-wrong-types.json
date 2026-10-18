@@ -1,0 +1,10 @@
+{
+  "baseURL": "https://api.example.com/v1",
+  "apiKey": "sk-test",
+  "model": "gpt-5-mini",
+  "debounceMs": "fast",
+  "timeoutSeconds": [10],
+  "chinese": 1,
+  "pinyinAbbreviations": "yes",
+  "fuzzyPinyin": "zh=z"
+}

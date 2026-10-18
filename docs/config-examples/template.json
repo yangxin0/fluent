@@ -1,0 +1,10 @@
+{
+  "baseURL": "https://api.openai.com/v1",
+  "apiKey": "sk-REPLACE_ME",
+  "model": "gpt-4o-mini",
+  "appearance": "auto",
+  "terminalMode": "auto",
+  "chinese": "xiaohe",
+  "debounceMs": 350,
+  "timeoutSeconds": 10
+}

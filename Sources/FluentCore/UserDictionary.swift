@@ -37,7 +37,7 @@ public final class UserDictionary {
         .appendingPathComponent("Fluent/xiaohe-user.tsv")
 
     /// Posted (distributed) by the Settings app to make the running IME
-    /// forget every learned word.
+    /// forget every learned word (docs/config.md).
     public static let forgetNotification = "com.yangxin.inputmethod.Fluent.forgetLearnedWords"
 
     public init() {}

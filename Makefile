@@ -8,10 +8,18 @@ INSTALLED     = $(INSTALL_DIR)/$(IME_NAME).app
 OLD_INSTALLED = $(INSTALL_DIR)/Fluent.app
 BIN           = .build/debug/Fluent
 
-# The Settings app: Sources/FluentSettings around the pages in Resources/Settings.
+# The Settings app (Fluent.app): Go + Wails in Settings/, the way magpie is
+# built, sharing no code with the input method. Go fetches the toolchain
+# Settings/go.mod names when the one on PATH is older (GOTOOLCHAIN=auto).
+SETTINGS_DIR       = Settings
 SETTINGS_DIST      = dist/Fluent.app
-SETTINGS_BIN       = .build/debug/FluentSettings
+SETTINGS_BIN       = .build/settings/Fluent
 SETTINGS_INSTALLED = /Applications/Fluent.app
+SETTINGS_VERSION   = $(shell /usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' $(SETTINGS_DIR)/build/darwin/Info.plist)
+GO                 = GOTOOLCHAIN=auto go
+# Wails links the webview through cgo: built for the macOS Info.plist names.
+export CGO_CFLAGS  = -O2 -mmacosx-version-min=13.0
+export CGO_LDFLAGS = -mmacosx-version-min=13.0
 
 # 小鹤双拼 dictionaries: rime-ice (GPL-3.0), pinned so builds are
 # reproducible. Bump the revision to pick up dictionary updates.
@@ -21,13 +29,14 @@ RIME_ICE_DIR   = .build/rime-ice-$(RIME_ICE_REV)
 RIME_ICE_FILES = $(addprefix $(RIME_ICE_DIR)/,cn_dicts/8105.dict.yaml cn_dicts/base.dict.yaml en_dicts/en.dict.yaml)
 DICT_DIR       = .build/dict
 
-.PHONY: build bundle bundle-ime bundle-settings settings install register reload logs dev test cli clean icon dict
+.PHONY: build bundle bundle-ime bundle-settings settings settings-icon install register reload logs dev test cli clean icon dict
 
 build:
 	swift build
 
 test:
 	swift test
+	cd $(SETTINGS_DIR) && $(GO) vet ./... && $(GO) test ./...
 
 # API smoke test through the debug CLI, e.g.:
 #   make cli ARGS='--mode polish "helo wrld"'
@@ -36,13 +45,32 @@ test:
 cli:
 	swift run fluent-cli $(ARGS)
 
-icon: Resources/icon.tiff Resources/AppIcon.icns
+# The input method's menu-bar icon.
+icon: Resources/icon.tiff
 
 Resources/icon.tiff: Scripts/make-icon.swift
 	swift Scripts/make-icon.swift Resources/icon.tiff
 
-Resources/AppIcon.icns: Scripts/make-app-icon.swift
-	swift Scripts/make-app-icon.swift Resources/AppIcon.icns
+# The Settings app's icon, drawn by Settings/build/icon. What it makes is
+# kept in the tree, so a build needs neither the generator nor actool.
+ICON_TOOL = .build/settings/icon
+ICONSET   = .build/settings/AppIcon.iconset
+ACTOOL    = .build/settings/actool
+settings-icon:
+	cd $(SETTINGS_DIR) && $(GO) build -o "$(CURDIR)/$(ICON_TOOL)" ./build/icon
+	$(ICON_TOOL) app 256 $(SETTINGS_DIR)/assets/icon.png
+	rm -rf $(ICONSET) && mkdir -p $(ICONSET)
+	for s in 16 32 128 256 512; do \
+		$(ICON_TOOL) app $$s $(ICONSET)/icon_$${s}x$${s}.png && \
+		$(ICON_TOOL) app $$((s * 2)) $(ICONSET)/icon_$${s}x$${s}@2x.png || exit 1; \
+	done
+	iconutil -c icns $(ICONSET) -o $(SETTINGS_DIR)/build/darwin/AppIcon.icns
+	@# macOS 26 draws the Dock icon from AppIcon.icon, light or dark (Xcode 26's actool)
+	$(ICON_TOOL) glyph 1024 $(SETTINGS_DIR)/build/darwin/AppIcon.icon/Assets/glyph.png
+	rm -rf $(ACTOOL) && mkdir -p $(ACTOOL)
+	xcrun actool $(SETTINGS_DIR)/build/darwin/AppIcon.icon --compile $(ACTOOL) --platform macosx \
+		--minimum-deployment-target 13.0 --app-icon AppIcon --output-partial-info-plist $(ACTOOL)/partial.plist >/dev/null
+	mv $(ACTOOL)/Assets.car $(SETTINGS_DIR)/build/darwin/Assets.car
 
 # Download the pinned rime-ice sources and compile them into the compact
 # files the IME loads (not committed: they are build products).
@@ -68,13 +96,16 @@ bundle-ime: build icon dict
 	cp Resources/icon.tiff "$(IME_DIST)/Contents/Resources/icon.tiff"
 	cp "$(DICT_DIR)/xiaohe.lexicon" "$(DICT_DIR)/english.txt" LICENSE NOTICE "$(IME_DIST)/Contents/Resources/"
 
-bundle-settings: build icon
+# The pages are embedded in the binary (Settings/assets).
+bundle-settings:
+	cd $(SETTINGS_DIR) && $(GO) build -tags production -trimpath \
+		-ldflags "-s -w -X main.version=$(SETTINGS_VERSION)" -o "$(CURDIR)/$(SETTINGS_BIN)" .
 	rm -rf "$(SETTINGS_DIST)"
 	mkdir -p "$(SETTINGS_DIST)/Contents/MacOS" "$(SETTINGS_DIST)/Contents/Resources"
-	cp "$(SETTINGS_BIN)" "$(SETTINGS_DIST)/Contents/MacOS/FluentSettings"
-	cp Resources/Settings-Info.plist "$(SETTINGS_DIST)/Contents/Info.plist"
-	cp Resources/AppIcon.icns LICENSE NOTICE "$(SETTINGS_DIST)/Contents/Resources/"
-	cp -R Resources/Settings "$(SETTINGS_DIST)/Contents/Resources/Settings"
+	cp "$(SETTINGS_BIN)" "$(SETTINGS_DIST)/Contents/MacOS/Fluent"
+	cp $(SETTINGS_DIR)/build/darwin/Info.plist "$(SETTINGS_DIST)/Contents/Info.plist"
+	cp $(SETTINGS_DIR)/build/darwin/AppIcon.icns $(SETTINGS_DIR)/build/darwin/Assets.car LICENSE NOTICE \
+		"$(SETTINGS_DIST)/Contents/Resources/"
 
 # Sync bundle contents in place: deleting the installed input method would
 # silently un-register and disable the input source in Text Input Services,

@@ -37,5 +37,7 @@
     </array>
     <key>tsInputMethodIconFileKey</key>
     <string>icon.tiff</string>
+    <key>TISIconIsTemplate</key>
+    <true/>
 </dict>
 </plist>

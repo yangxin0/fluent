@@ -76,23 +76,25 @@ body {
 button, input, select, textarea { font: inherit; color: inherit; }
 button { border: 0; background: none; cursor: default; }
 
-/* The window's own title bar (transparent, 28pt) sits over the top band:
-   it drags the window and holds the traffic lights, so only the name goes
-   there and the tabs sit below it. */
-header.top { flex: none; border-bottom: .5px solid var(--line); }
-.titlebar { height: 28px; display: flex; align-items: center; justify-content: center; }
-.brand { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; color: var(--fg-2); }
-.logo {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 16px; height: 16px; border-radius: 4px;
-  background: var(--accent); color: var(--accent-fg);
-  font-size: 11px; font-weight: 700;
+/* The header is the title bar, as in magpie: the window's traffic lights
+   sit at its left (they centre 25.75pt from the top), the name after them,
+   the tabs in the middle. It drags the window; its buttons stay clicks. */
+header.top {
+  flex: none; position: relative; display: flex; align-items: center;
+  height: 50px; padding: 2px 14px 0 96px;
+  border-bottom: .5px solid var(--line);
+  --wails-draggable: drag;
 }
-.logo.big { width: 64px; height: 64px; border-radius: 15px; font-size: 38px; margin: 0 auto 14px; }
+header.top button { --wails-draggable: no-drag; }
+.brand { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; color: var(--fg-2); }
+.logo { display: block; width: 18px; height: 18px; }
+.logo.big { width: 72px; height: 72px; margin: 0 auto 12px; }
+/* a narrow window keeps the icon and gives the tabs the room */
+@media (max-width: 779px) { .brand .name { display: none; } }
 
 .seg {
-  display: flex; justify-content: center; gap: 2px;
-  width: max-content; margin: 2px auto 10px; padding: 2px;
+  position: absolute; left: 50%; top: calc(50% + 1px); transform: translate(-50%, -50%);
+  display: flex; justify-content: center; gap: 2px; padding: 2px;
   border-radius: 8px; background: var(--seg-track);
 }
 .seg button {
