@@ -116,6 +116,7 @@ install: bundle
 	rsync -a --delete "$(IME_DIST)/" "$(INSTALLED)/"
 	codesign --force --sign - "$(INSTALLED)"
 	swift Scripts/register.swift
+	Scripts/forget-stale-input-caches.sh "$(INSTALLED)"
 	mkdir -p "$(SETTINGS_INSTALLED)"
 	rsync -a --delete "$(SETTINGS_DIST)/" "$(SETTINGS_INSTALLED)/"
 	codesign --force --sign - "$(SETTINGS_INSTALLED)"
