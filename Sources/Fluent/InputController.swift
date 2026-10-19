@@ -320,20 +320,32 @@ class InputController: IMKInputController {
     /// Keys while composing Chinese, like the system shuangpin input method:
     /// Space or 1–6 picks, ←/→ move the highlight, ↑/↓ and -/= turn pages
     /// (↑/↓ move by row in the grid), Tab expands the bar into a grid, Enter
-    /// inserts the keys as typed, Esc cancels (or collapses the grid),
-    /// punctuation commits the highlighted candidate followed by Chinese
-    /// punctuation.
+    /// inserts the keys as typed, Esc cancels (or collapses the grid).
+    /// Punctuation keeps the highlighted candidate and Chinese punctuation in
+    /// the composition, to go on typing the line (`我是，`); it goes in as a
+    /// whole when a pick converts the last keys, or with Space or Enter.
     private func handleChinese(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
         guard var composer = state.chinese else { return false }
+        // Only the text punctuation kept, waiting for the next keys.
+        let held = composer.keys.isEmpty
         // Only plain and shifted keys compose; any other combo ends the
         // composition safely and goes to the app.
         guard flags.subtracting(.function).isSubset(of: [.shift]) else {
             commitRaw()
             return false
         }
+        if held, [Key.left, Key.right, Key.up, Key.down, Key.tab].contains(event.keyCode) {
+            // Nothing to pick: the kept text goes in and the key moves on.
+            commitChinese(state.chinesePrefix)
+            return false
+        }
         switch event.keyCode {
         case Key.enter, Key.keypadEnter:
-            commit(state.chinesePrefix + composer.keys)
+            if held {
+                commitChinese(state.chinesePrefix)
+            } else {
+                commit(state.chinesePrefix + composer.keys)
+            }
             return true
         case Key.escape:
             if state.chineseExpanded {
@@ -344,10 +356,21 @@ class InputController: IMKInputController {
             return true
         case Key.backspace:
             state.chineseExpanded = false
-            if composer.backspace() {
+            if held {
+                // Into the kept text, a character at a time.
+                state.chinesePrefix.removeLast()
+                if state.chinesePrefix.isEmpty {
+                    cancelCurrentComposition()
+                } else {
+                    updateMarkedText()
+                }
+            } else if composer.backspace() {
                 state.chinese = composer
                 updateMarkedText()
                 refreshPanel()
+            } else if state.holdsChinese {
+                // Every key is gone: back to the kept text.
+                holdChinese(state.chinesePrefix)
             } else if state.chinesePrefix.isEmpty {
                 cancelCurrentComposition()
             } else {
@@ -386,6 +409,15 @@ class InputController: IMKInputController {
             commitRaw()
             return false
         }
+        if held, !(key.isASCII && key.isLetter) {
+            if key == " " {
+                commitChinese(state.chinesePrefix)
+            } else {
+                // More punctuation, or a digit, joins the kept text.
+                holdChinese(state.chinesePrefix + (punctuation.convert(key) ?? String(key)))
+            }
+            return true
+        }
         switch key {
         case " ":
             pickChinese(composer.highlighted)
@@ -417,6 +449,11 @@ class InputController: IMKInputController {
                 updateMarkedText()
                 refreshPanel()
             }
+        case "A"..."Z" where key.isASCII && state.holdsChinese:
+            // A capital starts English; the line, picked words too, stays
+            // in the composition.
+            ChineseInput.shared?.learn(composer.pickedWords)
+            switchToEnglish(state.chinesePrefix + composer.interruptedText + String(key))
         case "A"..."Z" where key.isASCII:
             // A capital starts English: picked words stay, the rest is English.
             var english = state.chinesePrefix + composer.keys
@@ -429,9 +466,23 @@ class InputController: IMKInputController {
         default:
             let symbol = punctuation.convert(key) ?? String(key)
             ChineseInput.shared?.learn(composer.highlightedWords)
-            commitChinese(state.chinesePrefix + composer.highlightedText + symbol)
+            holdChinese(state.chinesePrefix + composer.highlightedText + symbol)
         }
         return true
+    }
+
+    /// Keeps `text`, the line so far, in the composition and waits for the
+    /// next keys, rather than inserting it (punctuation in the middle of the
+    /// input).
+    private func holdChinese(_ text: String) {
+        guard !text.isEmpty else { return cancelCurrentComposition() }
+        guard let input = ChineseInput.shared else { return commitChinese(text) }
+        state.holdsChinese = true
+        state.chinesePrefix = text
+        state.chinese = ChineseComposer(keys: "", translator: input.translator, pageSize: chinesePageSize)
+        state.chineseExpanded = false
+        updateMarkedText()
+        refreshPanel()
     }
 
     /// Picks `candidates[index]`, committing (and learning the picks) once
@@ -484,7 +535,8 @@ class InputController: IMKInputController {
         guard let input = ChineseInput.shared, input.apply(Shared.configStore.current()) else {
             return .none
         }
-        let context = ChinesePolicy.context(prefix: prefix, afterChineseCommit: lastCommitWasChinese)
+        let context = ChinesePolicy.context(prefix: prefix,
+                                            afterChineseCommit: lastCommitWasChinese || state.holdsChinese)
         return ChinesePolicy.rank(run: run, context: context, english: input.english,
                                   layout: input.translator.layout)
     }
@@ -558,10 +610,11 @@ class InputController: IMKInputController {
         generation += 1
         state.improved = ""
         state.status = .idle
-        if state.raw.count >= maxCompositionLength {
-            // Stop re-querying huge buffers; Enter still works with the raw
-            // text. Also drop the request for the previous buffer — its
-            // updates would be discarded by the generation guard anyway.
+        // Stop re-querying huge buffers; Enter still works with the raw
+        // text. A line holding Chinese kept by punctuation goes in as typed
+        // too. Also drop the request for the previous buffer — its updates
+        // would be discarded by the generation guard anyway.
+        if state.raw.count >= maxCompositionLength || state.holdsChinese {
             engine.cancel()
             return
         }
@@ -634,6 +687,11 @@ class InputController: IMKInputController {
         let appearance = config?.appearancePreference ?? "auto"
         var content = BarContent()
         if let composer = state.chinese {
+            // Kept text waiting for keys: the underline shows it, nothing to pick.
+            guard !composer.keys.isEmpty else {
+                bar.hide()
+                return
+            }
             let shown = composer.gridRange(rows: state.chineseExpanded ? chineseGridRows : 1)
             content.badge = ChineseInput.shared?.badge ?? "双"
             content.cells = shown.map { index in

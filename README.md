@@ -173,14 +173,18 @@ every reading is offered, best first. Type `'` to split syllables yourself
 | ↑ ↓, - = | Previous / next page (also scrolling); ↑ ↓ move by row in the grid |
 | Tab | Expand the bar into a grid of more candidates (also the chevron), or collapse it |
 | Enter | Insert the keys as typed (when they lead, the bar marks them: `1 make ↵`) |
-| Backspace | Take back the last pick, else delete a key |
+| Backspace | Take back the last pick, else delete a key (after punctuation, a character of the line) |
 | Esc | Cancel (collapse the grid first) |
-| Punctuation | Insert the highlighted candidate and Chinese punctuation (`，。？`); in full pinyin `'` splits syllables instead |
+| Punctuation | Keep the highlighted candidate and Chinese punctuation (`，。？`) in the composition and go on typing the line (`我是，` then `nihc` → `我是，你好`); in full pinyin `'` splits syllables instead |
 | A capital letter | Keep the picked words and continue in English |
 
 Picking a candidate that covers only part of the keys keeps converting the
-rest. Punctuation typed right after Chinese text is Chinese too. Turn the
-whole feature off with IME menu ▸ *Chinese: Off* (or `"chinese": "off"`).
+rest. Punctuation in the middle of the input doesn't insert anything: the
+line stays in the composition until a pick converts its last keys, or until
+Space or Enter with no keys left (an English word inside it goes in as typed,
+not rewritten). Only punctuation typed with nothing composed goes straight
+in, as Chinese right after Chinese text. Turn the whole feature off with IME
+menu ▸ *Chinese: Off* (or `"chinese": "off"`).
 
 Words you pick are learned the way Rime does it: they move ahead of other
 words of the same length, words picked one after another become a new

@@ -27,6 +27,12 @@ struct CompositionState {
     /// before the keys, which is committed with the Chinese text.
     var chinese: ChineseComposer?
     var chinesePrefix = ""
+    /// Punctuation typed while composing Chinese kept the words picked so
+    /// far in the composition (`我是，`) instead of inserting them: the line
+    /// goes in as a whole at the end, as typed, never rewritten, and what
+    /// follows it reads as following Chinese text. A composer with no keys
+    /// then waits for the next ones.
+    var holdsChinese = false
     /// The candidate bar is expanded into a grid (Tab or its chevron).
     var chineseExpanded = false
     /// Chinese readings of the letters at the caret when they are also (the
