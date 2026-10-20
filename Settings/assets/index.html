@@ -13,6 +13,7 @@
   <nav class="seg" id="nav" aria-label="Pages">
     <button data-view="setup" class="on" data-t>Setup</button>
     <button data-view="llm" data-t>LLM</button>
+    <button data-view="lang" data-t>Lang</button>
     <button data-view="chinese" data-t>Chinese</button>
     <button data-view="appearance" data-t>Appearance</button>
     <button data-view="about" data-t>About</button>
@@ -89,6 +90,19 @@
           <button class="pill danger end" id="deleteProvider" data-t>Delete</button></div></div>
     </div>
 
+    <h2 data-t>Timing</h2>
+    <div class="card form">
+      <label class="row"><span class="label" data-t>Wait after typing</span>
+        <span class="unit"><input data-key="debounceMs" type="number" min="0" max="10000" step="50" placeholder="350"><span>ms</span></span></label>
+      <label class="row top"><span class="label" data-t>Timeout</span>
+        <span class="stack"><span class="unit"><input data-key="timeoutSeconds" type="number" min="1" max="300" step="1" placeholder="10"><span>s</span></span>
+          <span class="hint" data-t>The timeout counts how long the reply may stay silent, not its whole length.</span></span></label>
+    </div>
+  </section>
+
+  <section class="view" id="lang">
+    <h1 data-t>Lang</h1>
+    <p class="lede" data-t>How Fluent improves the English you type. Switch modes with Ctrl+Tab or from the input method's menu.</p>
     <h2 data-t>Prompts</h2>
     <div class="card form">
       <div class="row"><div class="choice" id="promptMode">
@@ -99,19 +113,12 @@
       <div class="row top"><div class="stack">
         <textarea id="prompt" rows="4" spellcheck="false"></textarea>
         <span class="hint"><span data-t>Fluent always adds:</span> <span id="outputRule"></span></span></div></div>
-      <div class="row"><span class="field"><input id="tryInput" type="text" spellcheck="false" autocomplete="off">
-        <button class="pill" id="tryPrompt" data-t>Try</button>
-        <button class="pill" id="resetPrompt" data-t>Reset to default</button></span></div>
+      <div class="row top"><div class="stack">
+        <span class="field"><input id="tryInput" type="text" spellcheck="false" autocomplete="off">
+          <button class="pill" id="tryPrompt" data-t>Try</button>
+          <button class="pill" id="resetPrompt" data-t>Reset to default</button></span>
+        <span class="hint" id="tryProvider"></span></div></div>
       <div class="row" id="tryRow" hidden><span class="result" id="tryResult"></span></div>
-    </div>
-
-    <h2 data-t>Timing</h2>
-    <div class="card form">
-      <label class="row"><span class="label" data-t>Wait after typing</span>
-        <span class="unit"><input data-key="debounceMs" type="number" min="0" max="10000" step="50" placeholder="350"><span>ms</span></span></label>
-      <label class="row top"><span class="label" data-t>Timeout</span>
-        <span class="stack"><span class="unit"><input data-key="timeoutSeconds" type="number" min="1" max="300" step="1" placeholder="10"><span>s</span></span>
-          <span class="hint" data-t>The timeout counts how long the reply may stay silent, not its whole length.</span></span></label>
     </div>
   </section>
 

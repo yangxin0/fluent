@@ -6,6 +6,7 @@ const I18N = {
     // Header
     "Setup": "开始",
     "LLM": "大模型",
+    "Lang": "语言",
     "Chinese": "中文",
     "Appearance": "外观",
     "About": "关于",
@@ -65,6 +66,10 @@ const I18N = {
     "Test": "测试",
     "Testing…": "测试中…",
     "Set the provider URL, API key and model first.": "请先填写服务地址、API 密钥和模型。",
+    // Lang
+    "How Fluent improves the English you type. Switch modes with Ctrl+Tab or from the input method's menu.":
+      "Fluent 如何改进你输入的英文。用 Ctrl+Tab 或输入法菜单切换模式。",
+    "Uses {name}, the provider in use.": "使用当前的服务商 {name}。",
     "Prompts": "提示词",
     "Fix": "修正",
     "Polish": "润色",

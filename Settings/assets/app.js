@@ -445,6 +445,10 @@ function fillPrompt() {
   $("#resetPrompt").disabled = !own;
   $("#tryInput").placeholder = samples[promptMode];
   $("#outputRule").textContent = defaults.outputRule ?? "";
+  // Try asks the provider in use, which is on the LLM page.
+  const providers = providerList();
+  $("#tryProvider").textContent = t("Uses {name}, the provider in use.",
+    { name: nameOf(providers[activeIndex(providers)]) || t("Unnamed") });
 }
 
 /** Saves the mode's prompt; blank or the built-in one removes it, so the
