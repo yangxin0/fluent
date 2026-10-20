@@ -1,7 +1,7 @@
 import Cocoa
 
-/// Placement and color scheme for Fluent's floating panel (the candidate
-/// bar): next to the caret, light/dark as configured.
+/// Placement and color scheme for Fluent's floating panels (the candidate
+/// bar and the ⇧⇧ badge): next to the caret, light/dark as configured.
 enum PanelPlacement {
     /// A borderless, non-activating floating panel: it never takes focus from
     /// the client app.
@@ -59,6 +59,17 @@ enum PanelPlacement {
         x = min(max(x, visible.minX), visible.maxX - size.width)
         y = min(max(y, visible.minY), visible.maxY - size.height)
         return NSPoint(x: x, y: y)
+    }
+
+    /// Where a `size` box centred on the caret goes: below the line, or
+    /// above it near the bottom edge, clamped to the screen; with no caret,
+    /// where the bar would go.
+    static func centredFrame(for size: NSSize, caretRect: NSRect) -> NSRect {
+        var caret = caretRect
+        if caret.origin != .zero {
+            caret.origin.x = caretRect.midX - size.width / 2
+        }
+        return NSRect(origin: origin(for: size, caretRect: caret), size: size)
     }
 
     private static func screenContaining(_ rect: NSRect) -> NSScreen? {

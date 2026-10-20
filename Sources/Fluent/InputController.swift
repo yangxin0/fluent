@@ -298,21 +298,7 @@ class InputController: IMKInputController {
             commitRaw()
         }
         let appearance = Shared.configStore.current()?.appearancePreference ?? "auto"
-        // The state word sits on a colored highlight so it reads at a glance:
-        // green for ON, red for OFF (system colors adapt to light and dark),
-        // in bold black for contrast on both. Thin spaces pad the highlight.
-        let message = NSMutableAttributedString(
-            string: "\u{2009}\(Shared.enabled ? "ON" : "OFF")\u{2009}",
-            attributes: [
-                .backgroundColor: Shared.enabled ? NSColor.systemGreen : NSColor.systemRed,
-                .foregroundColor: NSColor.black,
-                .font: NSFont.systemFont(ofSize: 13, weight: .bold),
-            ])
-        message.append(NSAttributedString(string: " Fluent"))
-        if !Shared.enabled {
-            message.append(NSAttributedString(string: "\n⇧⇧ to re-enable"))
-        }
-        CandidateBarController.shared.flash(message: message, appearance: appearance, near: caretRect())
+        CandidateBarController.shared.flash(enabled: Shared.enabled, appearance: appearance, near: caretRect())
     }
 
     // MARK: - 小鹤双拼

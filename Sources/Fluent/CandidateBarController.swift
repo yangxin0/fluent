@@ -39,8 +39,6 @@ struct BarContent {
     var canPageForward = false
     /// Dimmed after the English line (`↵`): Enter inserts that line.
     var enterHint: String?
-    /// A notice (the ⇧⇧ toggle) shown instead of cells.
-    var message: NSAttributedString?
 }
 
 /// The one panel Fluent shows, for English and 小鹤双拼 alike, styled after
@@ -48,7 +46,8 @@ struct BarContent {
 /// candidates with the highlighted one on an accent-color pill, a divider
 /// and a chevron that expands it into a grid. It becomes a rounded card when
 /// it needs more than one line. System colors throughout, so it follows
-/// light and dark. One shared instance; the active controller sets the
+/// light and dark. The ⇧⇧ toggle's notice has a panel of its own; one
+/// shows at a time. One shared instance; the active controller sets the
 /// callbacks when it shows the bar.
 final class CandidateBarController {
     static let shared = CandidateBarController()
@@ -56,6 +55,7 @@ final class CandidateBarController {
     private let panel: NSPanel
     private let background = PanelChromeView()
     private let bar = CandidateBarView()
+    private let notice = ToggleNoticePanel()
     private var flashToken = 0
 
     /// Called with the `index` of a clicked cell.
@@ -78,14 +78,16 @@ final class CandidateBarController {
 
     func show(_ content: BarContent, appearance: String, near caretRect: NSRect) {
         flashToken += 1  // cancel any pending flash auto-hide
+        notice.hide()
         present(content, appearance: appearance, near: caretRect)
     }
 
-    /// A transient notice (the ⇧⇧ on/off toggle) that hides itself.
-    func flash(message: NSAttributedString, appearance: String, near caretRect: NSRect) {
+    /// The ⇧⇧ toggle's notice at the caret, which hides itself.
+    func flash(enabled: Bool, appearance: String, near caretRect: NSRect) {
         flashToken += 1
         let token = flashToken
-        present(BarContent(message: message), appearance: appearance, near: caretRect)
+        panel.orderOut(nil)
+        notice.show(enabled: enabled, appearance: appearance, near: caretRect)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in
             guard let self, self.flashToken == token else { return }
             self.hide()
@@ -94,6 +96,7 @@ final class CandidateBarController {
 
     func hide() {
         panel.orderOut(nil)
+        notice.hide()
     }
 
     private func present(_ content: BarContent, appearance: String, near caretRect: NSRect) {
@@ -141,7 +144,6 @@ private final class CandidateBarView: NSView {
     private var cells: [Cell] = []
     private var badgeFrame: NSRect?
     private var typedFrame: NSRect?
-    private var messageFrame: NSRect?
     private var hintFrame: NSRect?
     private var chevronFrame: NSRect?
     private var size = NSSize.zero
@@ -199,59 +201,48 @@ private final class CandidateBarView: NSView {
             x = frame.maxX + 4
         }
 
-        messageFrame = nil
         cells = []
         var bottom = top + Self.pillHeight
-        if let message = content.message.map(Self.styledMessage) {
-            let bounds = message.boundingRect(with: NSSize(width: Self.maxLineWidth, height: .greatestFiniteMagnitude),
-                                              options: [.usesLineFragmentOrigin])
-            let height = max(Self.pillHeight, ceil(bounds.height) + 10)
-            let frame = NSRect(x: x + Self.cellPadding, y: top, width: ceil(bounds.width), height: height)
-            messageFrame = frame
-            bottom = frame.maxY
-            maxX = max(maxX, frame.maxX + Self.cellPadding)
-        } else {
-            let widths = content.cells.map(Self.cellWidth)
-            let columns = max(content.columns, 1)
-            var columnWidths = [CGFloat](repeating: 0, count: columns)
-            for (offset, width) in widths.enumerated() {
-                columnWidths[offset % columns] = max(columnWidths[offset % columns], width)
-            }
-            var cellX = x
-            for (offset, item) in content.cells.enumerated() {
-                let row = content.expanded ? offset / columns : 0
-                let column = offset % columns
-                var frame: NSRect
-                var wraps = false
-                if content.expanded {
-                    let left = x + columnWidths[..<column].reduce(0, +) + CGFloat(column) * Self.cellSpacing
-                    frame = NSRect(x: left, y: top + CGFloat(row) * (Self.pillHeight + Self.cellSpacing),
-                                   width: columnWidths[column], height: Self.pillHeight)
-                } else if content.cells.count == 1,
-                          widths[offset] > Self.maxLineWidth || item.text.contains(where: \.isNewline) {
-                    // A long English line (or one the model broke into
-                    // lines) wraps into a taller cell.
-                    wraps = true
-                    let width = min(widths[offset], Self.maxLineWidth)
-                    let text = Self.cellString(item, highlighted: false)
-                    let height = ceil(text.boundingRect(with: NSSize(width: width - 2 * Self.cellPadding,
-                                                                     height: .greatestFiniteMagnitude),
-                                                        options: [.usesLineFragmentOrigin]).height)
-                    frame = NSRect(x: cellX, y: top, width: width, height: max(Self.pillHeight, height + 10))
-                } else {
-                    frame = NSRect(x: cellX, y: top, width: widths[offset], height: Self.pillHeight)
-                }
-                cellX = frame.maxX + Self.cellSpacing
-                cells.append(Cell(content: item, row: row, frame: frame, wraps: wraps))
-                bottom = max(bottom, frame.maxY)
-                maxX = max(maxX, frame.maxX)
-            }
-            if cells.isEmpty { maxX = max(maxX, x) }
+        let widths = content.cells.map(Self.cellWidth)
+        let columns = max(content.columns, 1)
+        var columnWidths = [CGFloat](repeating: 0, count: columns)
+        for (offset, width) in widths.enumerated() {
+            columnWidths[offset % columns] = max(columnWidths[offset % columns], width)
         }
+        var cellX = x
+        for (offset, item) in content.cells.enumerated() {
+            let row = content.expanded ? offset / columns : 0
+            let column = offset % columns
+            var frame: NSRect
+            var wraps = false
+            if content.expanded {
+                let left = x + columnWidths[..<column].reduce(0, +) + CGFloat(column) * Self.cellSpacing
+                frame = NSRect(x: left, y: top + CGFloat(row) * (Self.pillHeight + Self.cellSpacing),
+                               width: columnWidths[column], height: Self.pillHeight)
+            } else if content.cells.count == 1,
+                      widths[offset] > Self.maxLineWidth || item.text.contains(where: \.isNewline) {
+                // A long English line (or one the model broke into
+                // lines) wraps into a taller cell.
+                wraps = true
+                let width = min(widths[offset], Self.maxLineWidth)
+                let text = Self.cellString(item, highlighted: false)
+                let height = ceil(text.boundingRect(with: NSSize(width: width - 2 * Self.cellPadding,
+                                                                 height: .greatestFiniteMagnitude),
+                                                    options: [.usesLineFragmentOrigin]).height)
+                frame = NSRect(x: cellX, y: top, width: width, height: max(Self.pillHeight, height + 10))
+            } else {
+                frame = NSRect(x: cellX, y: top, width: widths[offset], height: Self.pillHeight)
+            }
+            cellX = frame.maxX + Self.cellSpacing
+            cells.append(Cell(content: item, row: row, frame: frame, wraps: wraps))
+            bottom = max(bottom, frame.maxY)
+            maxX = max(maxX, frame.maxX)
+        }
+        if cells.isEmpty { maxX = max(maxX, x) }
         maxX = max(maxX, badgeFrame.map { $0.maxX + 4 } ?? inset)
 
         hintFrame = nil
-        if let hint = content.enterHint, content.message == nil {
+        if let hint = content.enterHint {
             let frame = NSRect(x: maxX + 4, y: top, width: ceil(Self.measure(hint, Self.hintFont)) + 4,
                                height: Self.pillHeight)
             hintFrame = frame
@@ -280,16 +271,6 @@ private final class CandidateBarView: NSView {
 
     private static func measure(_ string: String, _ font: NSFont) -> CGFloat {
         (string as NSString).size(withAttributes: [.font: font]).width
-    }
-
-    /// The notice in the bar's text style wherever it sets none, so the
-    /// caller can color a word.
-    private static func styledMessage(_ message: NSAttributedString) -> NSAttributedString {
-        let styled = NSMutableAttributedString(attributedString: message)
-        let all = NSRange(location: 0, length: styled.length)
-        styled.addAttributes([.font: NSFont.systemFont(ofSize: 15), .foregroundColor: NSColor.labelColor], range: all)
-        message.enumerateAttributes(in: all) { attributes, range, _ in styled.addAttributes(attributes, range: range) }
-        return styled
     }
 
     /// Text plus comment, for cells that wrap.
@@ -334,15 +315,6 @@ private final class CandidateBarView: NSView {
             ])
             let textSize = text.size()
             text.draw(at: NSPoint(x: badgeFrame.midX - textSize.width / 2, y: badgeFrame.midY - textSize.height / 2))
-        }
-
-        if let messageFrame, let message = content.message {
-            let styled = Self.styledMessage(message)
-            let height = styled.boundingRect(with: NSSize(width: messageFrame.width, height: .greatestFiniteMagnitude),
-                                             options: [.usesLineFragmentOrigin]).height
-            styled.draw(with: NSRect(x: messageFrame.minX, y: messageFrame.midY - height / 2,
-                                     width: messageFrame.width + 1, height: height + 1),
-                        options: [.usesLineFragmentOrigin])
         }
 
         let highlightedRow = content.highlighted.flatMap { cells.indices.contains($0) ? cells[$0].row : nil }

@@ -125,9 +125,9 @@ you typed.
 
 **Double-tap Shift** turns the IME off: every key then passes straight
 through to the app — handy for terminal commands, code, or anything you
-don't want rewritten. A small notice flashes near the caret; double-tap
-Shift again (or use the IME menu ▸ *Enabled*) to turn it back on. The
-toggle resets to *on* at relaunch.
+don't want rewritten. The FL badge flashes under the caret, indigo for on
+and grey for off; double-tap Shift again (or use the IME menu ▸ *Enabled*)
+to turn it back on. The toggle resets to *on* at relaunch.
 
 ## Chinese (小鹤双拼 or 全拼)
 
