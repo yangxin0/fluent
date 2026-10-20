@@ -77,8 +77,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 button { border: 0; background: none; cursor: default; }
 
 /* The header is the title bar, as in magpie: the window's traffic lights
-   sit at its left (they centre 25.75pt from the top), the name after them,
-   the tabs in the middle. It drags the window; its buttons stay clicks. */
+   sit at its left (they centre 25.75pt from the top), the tabs in the
+   middle. It drags the window; its buttons stay clicks. */
 header.top {
   flex: none; position: relative; display: flex; align-items: center;
   height: 50px; padding: 2px 14px 0 96px;
@@ -86,11 +86,6 @@ header.top {
   --wails-draggable: drag;
 }
 header.top button { --wails-draggable: no-drag; }
-.brand { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; color: var(--fg-2); }
-.logo { display: block; width: 18px; height: 18px; }
-.logo.big { width: 72px; height: 72px; margin: 0 auto 12px; }
-/* a narrow window keeps the icon and gives the tabs the room */
-@media (max-width: 779px) { .brand .name { display: none; } }
 
 .seg {
   position: absolute; left: 50%; top: calc(50% + 1px); transform: translate(-50%, -50%);
@@ -256,6 +251,7 @@ textarea#prompt { font-family: var(--font); font-size: 13px; }
 
 /* About */
 .about { text-align: center; padding: 28px 24px; }
+.about .logo { display: block; width: 72px; height: 72px; margin: 0 auto 12px; }
 .about h1 { margin-bottom: 8px; }
 .about p { color: var(--fg-2); max-width: 46ch; margin: 0 auto 8px; }
 .about .version { color: var(--muted); font-weight: 400; font-size: 14px; }
