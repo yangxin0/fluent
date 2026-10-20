@@ -8,7 +8,7 @@
       "layers" : [
         {
           "image-name" : "glyph.png",
-          "name" : "caret and sparkle",
+          "name" : "FL badge",
           "fill-specializations" : [
             { "value" : { "solid" : "srgb:1.00000,1.00000,1.00000,1.00000" } },
             { "appearance" : "dark", "value" : { "solid" : "srgb:0.64706,0.70588,0.98824,1.00000" } }

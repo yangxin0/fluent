@@ -1,12 +1,12 @@
-// Command icon draws Fluent's app icon: a text caret with a sparkle beside
-// it ("your typing, improved") in white on an indigo tile.
+// Command icon draws Fluent's app icon: the input method's FL badge from
+// the menu bar, white with the letters cut out, on an indigo tile.
 //
 //	go run ./build/icon app N out.png    the whole icon, N pixels square
-//	go run ./build/icon glyph N out.png  the caret and sparkle alone, white on
-//	                                     clear, as big as on the tile: the
-//	                                     layer of build/darwin/AppIcon.icon,
-//	                                     which macOS 26 lays on a tile of its
-//	                                     own, light or dark
+//	go run ./build/icon glyph N out.png  the badge alone, white on clear, as
+//	                                     big as on the tile: the layer of
+//	                                     build/darwin/AppIcon.icon, which
+//	                                     macOS 26 lays on a tile of its own,
+//	                                     light or dark
 //
 // `make settings-icon` runs it for every size the app needs.
 package main
@@ -55,15 +55,19 @@ func main() {
 }
 
 // inGlyph: whether a point of the tile (0–1 across, y down) is in the
-// caret or a sparkle.
+// badge and not in its letters.
 func inGlyph(x, y float64) bool {
-	const caretX, top, bottom = 0.39, 0.255, 0.745
-	// the stem's round ends stay inside the serifs
-	return capsule(x, y, caretX, top+0.006, caretX, bottom-0.006, 0.034) || // stem
-		capsule(x, y, caretX-0.105, top, caretX+0.105, top, 0.036) || // serifs
-		capsule(x, y, caretX-0.105, bottom, caretX+0.105, bottom, 0.036) ||
-		sparkle(x, y, 0.665, 0.37, 0.19) ||
-		sparkle(x, y, 0.735, 0.645, 0.085)
+	if !roundRect(x, y, 0.15, 0.262, 0.85, 0.738, 0.132) {
+		return false
+	}
+	// The letters are strokes with round ends, which round their corners
+	// the way SF Rounded's are in the menu bar.
+	const r, top, bottom, f, l = 0.037, 0.395, 0.605, 0.302, 0.57
+	return !(capsule(x, y, f, bottom, f, top, r) || // F
+		capsule(x, y, f, top, 0.44, top, r) ||
+		capsule(x, y, f, 0.5, 0.418, 0.5, r) ||
+		capsule(x, y, l, top, l, bottom, r) || // L
+		capsule(x, y, l, bottom, 0.708, bottom, r))
 }
 
 // capsule: within r of the segment from (ax, ay) to (bx, by).
@@ -77,19 +81,18 @@ func capsule(x, y, ax, ay, bx, by, r float64) bool {
 	return px*px+py*py <= r*r
 }
 
-// sparkle: a four-pointed star with curved sides, r from its centre to a
-// point.
-func sparkle(x, y, cx, cy, r float64) bool {
-	return math.Sqrt(math.Abs(x-cx)/r)+math.Sqrt(math.Abs(y-cy)/r) <= 1
+// roundRect: within the rectangle from (x0, y0) to (x1, y1) with corners
+// of radius r.
+func roundRect(x, y, x0, y0, x1, y1, r float64) bool {
+	qx := math.Max(math.Abs(x-(x0+x1)/2)-((x1-x0)/2-r), 0)
+	qy := math.Max(math.Abs(y-(y0+y1)/2)-((y1-y0)/2-r), 0)
+	return qx*qx+qy*qy <= r*r
 }
 
 // inTile: whether (x, y), in pixels of a side-pixel tile at (0, 0), is in
 // its rounded square.
 func inTile(x, y, side float64) bool {
-	r := side * 0.225
-	qx := math.Max(math.Abs(x-side/2)-(side/2-r), 0)
-	qy := math.Max(math.Abs(y-side/2)-(side/2-r), 0)
-	return qx*qx+qy*qy <= r*r
+	return roundRect(x, y, 0, 0, side, side, side*0.225)
 }
 
 // samples per pixel side: more for small icons, where an edge is most of
@@ -101,8 +104,7 @@ func samples(n int) int {
 	return 4
 }
 
-// glyph is the caret and sparkle, white on clear, the tile filling the
-// canvas.
+// glyph is the badge, white on clear, the tile filling the canvas.
 func glyph(n int) image.Image {
 	img := image.NewNRGBA(image.Rect(0, 0, n, n))
 	ss := samples(n)
