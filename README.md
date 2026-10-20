@@ -101,7 +101,10 @@ long the stream may stay silent before the rewrite fails, not a cap on the
 whole reply.
 `appearance` controls the candidate bar's color scheme: `"auto"` follows the
 system light/dark setting (and updates live when it changes), or force it with
-`"light"` / `"dark"`.
+`"light"` / `"dark"`. `candidateBarSize` (`"small"`, `"medium"`, `"large"`)
+sizes the bar's padding, number labels and badge, `candidateTextSize` (14–28,
+default 18) the candidates' text, and `candidatePageSize` (5–9, default 6) how
+many Chinese candidates a row holds; Settings ▸ Appearance previews them.
 `toggleNotice` is what double-tapping Shift shows at the caret: `"badge"`
 (the FL badge alone, the default), `"pill"` (the badge and On/Off in a
 capsule, with the ⇧⇧ keys when off), `"bubble"` (the badge and On/Off in a

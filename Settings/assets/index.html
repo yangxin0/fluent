@@ -158,27 +158,46 @@
   <section class="view" id="appearance">
     <h1 data-t>Appearance</h1>
     <p class="lede" data-t>How the candidate bar and the ⇧⇧ notice look, and how Fluent treats terminal apps.</p>
+
+    <h2 data-t>Candidate bar</h2>
     <div class="card form">
-      <div class="row"><span class="label" data-t>Candidate bar</span>
+      <div class="row"><div class="bar-preview" id="barPreview" aria-hidden="true"></div></div>
+      <div class="row"><span class="label" data-t>Theme</span>
         <div class="choice" data-key="appearance" data-default="auto">
           <button data-value="auto" data-t>System</button>
           <button data-value="light" data-t>Light</button>
           <button data-value="dark" data-t>Dark</button>
         </div></div>
-      <div class="row top"><span class="label" data-t>⇧⇧ notice</span>
-        <div class="stack"><div class="choice tiles" data-key="toggleNotice" data-default="badge">
+      <div class="row"><span class="label" data-t>Bar size</span>
+        <div class="choice" data-key="candidateBarSize" data-default="medium">
+          <button data-value="small" data-t>Small</button>
+          <button data-value="medium" data-t>Medium</button>
+          <button data-value="large" data-t>Large</button>
+        </div></div>
+      <label class="row"><span class="label" data-t>Text size</span>
+        <span class="field"><input type="range" data-key="candidateTextSize" min="14" max="28" step="1" data-default="18">
+          <span class="value" id="textSizeValue"></span></span></label>
+      <div class="row"><span class="label" data-t>Candidates per page</span>
+        <div class="choice" data-key="candidatePageSize" data-default="6" data-number>
+          <button data-value="5">5</button>
+          <button data-value="6">6</button>
+          <button data-value="7">7</button>
+          <button data-value="8">8</button>
+          <button data-value="9">9</button>
+        </div></div>
+    </div>
+
+    <h2 data-t>⇧⇧ notice</h2>
+    <div class="card form">
+      <div class="row top"><div class="stack"><div class="choice tiles" data-key="toggleNotice" data-default="badge">
           <button data-value="badge"><span class="preview" data-preview="badge"></span><span data-t>Badge</span></button>
           <button data-value="pill"><span class="preview" data-preview="pill"></span><span data-t>Pill</span></button>
           <button data-value="bubble"><span class="preview" data-preview="bubble"></span><span data-t>Bubble</span></button>
           <button data-value="keys"><span class="preview" data-preview="keys"></span><span data-t>Bubble + keys</span></button>
         </div><span class="hint" data-t>Shown at the caret for a moment when you double-tap Shift: on, then off.</span></div></div>
-      <div class="row"><span class="label" data-t>Settings language</span>
-        <div class="choice" id="language">
-          <button data-value="system" data-t>System</button>
-          <button data-value="en">English</button>
-          <button data-value="zh">简体中文</button>
-        </div></div>
     </div>
+
+    <h2 data-t>Terminals</h2>
     <div class="card form">
       <div class="row top"><span class="label" data-t>Terminal mode</span>
         <div class="stack"><div class="choice" data-key="terminalMode" data-default="auto">
@@ -191,6 +210,16 @@
           <span class="hint" data-t>One bundle identifier per line, on top of the built-in list.</span></span></label>
       <label class="row"><span class="label" data-t>Cell width</span>
         <span class="unit"><input data-key="terminalCellWidth" type="number" min="0" step="0.1" data-t-placeholder="Automatic"><span>pt</span></span></label>
+    </div>
+
+    <h2 data-t>Language</h2>
+    <div class="card form">
+      <div class="row"><span class="label" data-t>Settings window</span>
+        <div class="choice" id="language">
+          <button data-value="system" data-t>System</button>
+          <button data-value="en">English</button>
+          <button data-value="zh">简体中文</button>
+        </div></div>
     </div>
   </section>
 

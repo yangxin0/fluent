@@ -39,8 +39,7 @@ private enum Key {
 
 private let maxCompositionLength = 500
 private let maxChineseKeys = 60
-private let chinesePageSize = 6
-/// Rows of `chinesePageSize` candidates in the expanded bar.
+/// Rows of a page of candidates (Settings ▸ Appearance) in the expanded bar.
 private let chineseGridRows = 5
 /// Chinese readings shown after an English word that is also pinyin; the
 /// word itself is candidate 1 of the bar.
@@ -480,7 +479,7 @@ class InputController: IMKInputController {
         guard let input = ChineseInput.shared else { return commitChinese(text) }
         state.holdsChinese = true
         state.chinesePrefix = text
-        state.chinese = ChineseComposer(keys: "", translator: input.translator, pageSize: chinesePageSize)
+        state.chinese = ChineseComposer(keys: "", translator: input.translator, pageSize: chinesePageSize())
         state.chineseExpanded = false
         updateMarkedText()
         refreshPanel()
@@ -530,6 +529,11 @@ class InputController: IMKInputController {
         afterEdit()
     }
 
+    /// Candidates in one row of the Chinese bar (Settings ▸ Appearance).
+    private func chinesePageSize() -> Int {
+        Shared.configStore.current()?.candidatePageSizeValue ?? AppConfig.defaultCandidatePageSize
+    }
+
     /// `prefix` is what the composition holds before the run. English words
     /// in it make an English sentence, unless one word follows Chinese text.
     private func chineseRank<P: StringProtocol>(for run: Substring, prefix: P) -> ChineseRank {
@@ -562,7 +566,7 @@ class InputController: IMKInputController {
             generation += 1  // drop any rewrite still streaming for the English text
             state.chinesePrefix = String(prefix)
             state.chinese = ChineseComposer(keys: String(run), translator: input.translator,
-                                              pageSize: chinesePageSize)
+                                              pageSize: chinesePageSize())
             state.raw = ""
             state.cursor = 0
             updateMarkedText()
@@ -711,7 +715,7 @@ class InputController: IMKInputController {
             bar.onSelect = { [weak self] index in self?.pickChinese(index) }
             bar.onPage = { [weak self] delta in self?.turnChinesePage(by: delta) }
             bar.onToggleExpanded = { [weak self] in self?.toggleChineseGrid() }
-            bar.show(content, appearance: appearance, near: caretRect())
+            bar.show(content, appearance: appearance, metrics: BarMetrics(config), near: caretRect())
             return
         }
 
@@ -742,7 +746,7 @@ class InputController: IMKInputController {
             content.enterHint = "↵"  // the line itself is what Enter inserts
             bar.onSelect = { [weak self] _ in self?.commitEnglish() }
         }
-        bar.show(content, appearance: appearance, near: caret)
+        bar.show(content, appearance: appearance, metrics: BarMetrics(config), near: caret)
     }
 
     /// The English line shows what Enter inserts right now: the improvement

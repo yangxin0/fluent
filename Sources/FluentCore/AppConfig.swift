@@ -75,6 +75,13 @@ public struct AppConfig: Decodable, Equatable {
     public var prompts: [String: String]
     /// Panel color scheme: "auto" (follow system), "light", or "dark".
     public var appearance: String?
+    /// The candidate bar's chrome: "small", "medium" (the default) or
+    /// "large".
+    public var candidateBarSize: String?
+    /// The candidates' text size in points, clamped to 14–28; default 18.
+    public var candidateTextSize: Double?
+    /// Chinese candidates in one row of the bar, clamped to 5–9; default 6.
+    public var candidatePageSize: Double?
     /// What ⇧⇧ shows: "badge" (the FL badge alone, the default), "pill"
     /// (badge and On/Off in a capsule), "bubble" (badge and On/Off in a
     /// bubble pointing at the caret) or "keys" (that bubble with the badge
@@ -103,6 +110,11 @@ public struct AppConfig: Decodable, Equatable {
 
     public static let placeholderKey = "sk-REPLACE_ME"
 
+    public static let defaultCandidateTextSize = 18.0
+    public static let candidateTextSizeRange = 14.0...28.0
+    public static let defaultCandidatePageSize = 6
+    public static let candidatePageSizeRange = 5...9
+
     public static let defaultDebounceMs = 350
     public static let defaultTimeoutSeconds = 10.0
     /// Accepted ranges; out-of-range values are clamped rather than rejected
@@ -121,7 +133,8 @@ public struct AppConfig: Decodable, Equatable {
 
     public init(baseURL: String = "", apiKey: String = "", model: String = "", reasoningEffort: String? = nil,
                 providers: [Provider] = [], provider: String? = nil, prompts: [String: String] = [:],
-                appearance: String? = nil, toggleNotice: String? = nil, terminalMode: String? = nil,
+                appearance: String? = nil, candidateBarSize: String? = nil, candidateTextSize: Double? = nil,
+                candidatePageSize: Double? = nil, toggleNotice: String? = nil, terminalMode: String? = nil,
                 terminalApps: [String]? = nil, terminalCellWidth: Double? = nil,
                 chinese: String? = nil, pinyinAbbreviations: Bool? = nil, fuzzyPinyin: [String]? = nil,
                 debounceMs: Int = AppConfig.defaultDebounceMs,
@@ -134,6 +147,9 @@ public struct AppConfig: Decodable, Equatable {
         self.provider = provider
         self.prompts = prompts
         self.appearance = appearance
+        self.candidateBarSize = candidateBarSize
+        self.candidateTextSize = candidateTextSize
+        self.candidatePageSize = candidatePageSize
         self.toggleNotice = toggleNotice
         self.terminalMode = terminalMode
         self.terminalApps = terminalApps
@@ -146,7 +162,8 @@ public struct AppConfig: Decodable, Equatable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case baseURL, apiKey, model, reasoningEffort, providers, provider, prompts, appearance, toggleNotice,
+        case baseURL, apiKey, model, reasoningEffort, providers, provider, prompts, appearance,
+             candidateBarSize, candidateTextSize, candidatePageSize, toggleNotice,
              terminalMode, terminalApps, terminalCellWidth, chinese, pinyinAbbreviations, fuzzyPinyin,
              debounceMs, timeoutSeconds
     }
@@ -158,6 +175,29 @@ public struct AppConfig: Decodable, Equatable {
         case "dark": return "dark"
         default: return "auto"
         }
+    }
+
+    /// Normalized bar size; unknown/missing values mean "medium".
+    public var candidateBarSizePreference: String {
+        switch candidateBarSize?.lowercased() {
+        case "small": return "small"
+        case "large": return "large"
+        default: return "medium"
+        }
+    }
+
+    /// The candidates' text size, clamped; missing or not finite means 18.
+    public var candidateTextSizeValue: Double {
+        guard let size = candidateTextSize, size.isFinite else { return AppConfig.defaultCandidateTextSize }
+        let range = AppConfig.candidateTextSizeRange
+        return min(max(size, range.lowerBound), range.upperBound)
+    }
+
+    /// Chinese candidates per row, rounded and clamped; missing means 6.
+    public var candidatePageSizeValue: Int {
+        guard let size = candidatePageSize, size.isFinite else { return AppConfig.defaultCandidatePageSize }
+        let range = AppConfig.candidatePageSizeRange
+        return min(max(Int(size.rounded()), range.lowerBound), range.upperBound)
     }
 
     /// Normalized ⇧⇧ notice; unknown/missing values mean "badge".
@@ -219,6 +259,9 @@ public struct AppConfig: Decodable, Equatable {
         provider = optional(String.self, .provider)
         prompts = optional([String: Lenient<String>].self, .prompts)?.compactMapValues(\.value) ?? [:]
         appearance = optional(String.self, .appearance)
+        candidateBarSize = optional(String.self, .candidateBarSize)
+        candidateTextSize = optional(Double.self, .candidateTextSize)
+        candidatePageSize = optional(Double.self, .candidatePageSize)
         toggleNotice = optional(String.self, .toggleNotice)
         terminalMode = optional(String.self, .terminalMode)
         terminalApps = optional([String].self, .terminalApps)

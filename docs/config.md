@@ -24,6 +24,9 @@ repository; a writer writes the file the link points at and keeps the link.
 | `debounceMs` | number | `350` | Wait after typing, clamped to 0–10000 |
 | `timeoutSeconds` | number | `10` | How long a reply may stay silent, clamped to 1–300 |
 | `appearance` | string | `"auto"` | Candidate bar: `"auto"`, `"light"` or `"dark"` |
+| `candidateBarSize` | string | `"medium"` | The bar's padding, number labels and badge: `"small"`, `"medium"` or `"large"` |
+| `candidateTextSize` | number | `18` | The candidates' text size in points, clamped to 14–28; the bar grows to fit it |
+| `candidatePageSize` | number | `6` | Chinese candidates in one row of the bar, rounded and clamped to 5–9 |
 | `toggleNotice` | string | `"badge"` | What ⇧⇧ shows: `"badge"`, `"pill"`, `"bubble"` or `"keys"` |
 | `terminalMode` | string | `"auto"` | `"auto"`, `"always"` or `"never"` |
 | `terminalApps` | array of strings | `[]` | More terminals, as bundle identifiers |

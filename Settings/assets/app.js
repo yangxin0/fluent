@@ -90,13 +90,13 @@ function fill() {
     if (el === document.activeElement) continue;  // don't clobber what is being typed
     const value = config[el.dataset.key];
     if (el.classList.contains("choice")) {
-      markChoice(el, value ?? el.dataset.default);
+      markChoice(el, String(value ?? el.dataset.default));
     } else if (el.type === "checkbox") {
       el.checked = value ?? el.dataset.default === "true";
     } else if (el.tagName === "TEXTAREA") {
       el.value = Array.isArray(value) ? value.join("\n") : "";
     } else {
-      el.value = value ?? "";
+      el.value = value ?? el.dataset.default ?? "";
     }
   }
   const fuzzy = new Set(config.fuzzyPinyin || []);
@@ -104,6 +104,7 @@ function fill() {
   $("#pinyinOptions").classList.toggle("disabled", (config.chinese || "pinyin") !== "pinyin");
   fillProviders();
   fillPrompt();
+  fillBarPreview();
 }
 
 /** The field's value as the config wants it; null removes the key. */
@@ -115,7 +116,7 @@ function valueOf(el) {
   }
   const text = el.value.trim();
   if (text === "") return null;
-  return el.type === "number" ? Number(text) : text;
+  return el.type === "number" || el.type === "range" ? Number(text) : text;
 }
 
 // One save at a time, in order: two quick edits of a key never land the
@@ -155,7 +156,9 @@ for (const el of $$("input[data-key], select[data-key], textarea[data-key]")) {
 for (const choice of $$(".choice[data-key]")) {
   choice.addEventListener("click", (event) => {
     const button = event.target.closest("button");
-    if (button && !button.classList.contains("on")) save(choice.dataset.key, button.dataset.value);
+    if (!button || button.classList.contains("on")) return;
+    const value = button.dataset.value;
+    save(choice.dataset.key, "number" in choice.dataset ? Number(value) : value);
   });
 }
 $("#fuzzy").addEventListener("change", () => {
@@ -416,6 +419,72 @@ function noticePreview(style) {
 }
 
 for (const el of $$(".preview[data-preview]")) el.innerHTML = noticePreview(el.dataset.preview);
+
+// MARK: - Candidate bar preview
+
+// The candidate bar as the input method draws it (Sources/Fluent/
+// CandidateBarController.swift, BarMetrics), in its points: the bar size
+// scales the padding, labels and badge, the text size the candidates.
+const sampleCandidates = ["你好", "拟好", "你", "尼", "泥", "拟", "逆", "腻", "妮"];
+
+function barSettings() {
+  const size = { small: 0.85, large: 1.2 }[String(config.candidateBarSize).toLowerCase()] ?? 1;
+  const slider = $("[data-key=candidateTextSize]");
+  const text = Math.min(Math.max(Number(slider.value) || 18, 14), 28);
+  const pageValue = Number(config.candidatePageSize);
+  const page = Number.isFinite(pageValue) ? Math.min(Math.max(Math.round(pageValue), 5), 9) : 6;
+  return { s: size, text, page };
+}
+
+function fillBarPreview() {
+  const { s, text, page } = barSettings();
+  $("#textSizeValue").textContent = `${text} pt`;
+  const preview = $("#barPreview");
+  preview.classList.toggle("light", config.appearance === "light");
+  preview.classList.toggle("dark", config.appearance === "dark");
+  const height = Math.max(30 * s, Math.ceil(text * 1.193) + 8 * s);
+  const px = (n) => `${Math.round(n * 100) / 100}px`;
+  preview.style.cssText = [
+    ["--h", px(height)], ["--inset", px(4 * s)], ["--pad", px(9 * s)], ["--gap", px(2 * s)],
+    ["--text", px(text)], ["--num", px(11 * s)], ["--badge", px(12 * s)], ["--badge-h", px(20 * s)],
+    ["--badge-w", px(22 * s)], ["--badge-r", px(6 * s)], ["--hint", px(13 * s)], ["--chev", px(30 * s)],
+    ["--chev-size", px(12 * s)],
+  ].map(([name, value]) => `${name}:${value}`).join(";");
+
+  const bar = (badge, ...items) => {
+    const el = document.createElement("div");
+    el.className = "pbar";
+    const tag = document.createElement("span");
+    tag.className = "pbadge";
+    tag.textContent = badge;
+    el.append(tag, ...items);
+    return el;
+  };
+  const cell = (label, number, on) => {
+    const el = document.createElement("span");
+    el.className = on ? "pcell on" : "pcell";
+    if (number !== undefined) {
+      const n = document.createElement("span");
+      n.className = "pnum";
+      n.textContent = number;
+      el.append(n);
+    }
+    el.append(label);
+    return el;
+  };
+  const chevron = document.createElement("span");
+  chevron.className = "pchev";
+  chevron.textContent = "⌄";
+  const hint = document.createElement("span");
+  hint.className = "phint";
+  hint.textContent = "↵";
+  preview.replaceChildren(
+    bar("拼", ...sampleCandidates.slice(0, page).map((word, index) => cell(word, index + 1, index === 0)), chevron),
+    bar("P", cell("We should figure out a way."), hint),
+  );
+}
+
+$("[data-key=candidateTextSize]").addEventListener("input", fillBarPreview);
 
 // MARK: - Prompts
 

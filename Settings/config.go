@@ -22,6 +22,7 @@ var editableKeys = map[string]bool{
 	"baseURL": true, "apiKey": true, "model": true, "reasoningEffort": true,
 	"providers": true, "provider": true, "prompts": true,
 	"debounceMs": true, "timeoutSeconds": true, "appearance": true, "toggleNotice": true,
+	"candidateBarSize": true, "candidateTextSize": true, "candidatePageSize": true,
 	"terminalMode": true, "terminalApps": true, "terminalCellWidth": true,
 	"chinese": true, "pinyinAbbreviations": true, "fuzzyPinyin": true,
 }

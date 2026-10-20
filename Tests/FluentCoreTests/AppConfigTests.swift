@@ -35,6 +35,31 @@ final class AppConfigTests: XCTestCase {
         XCTAssertEqual(try pref("{\(base),\"appearance\":\"nonsense\"}"), "auto")
     }
 
+    func testCandidateBarSettings() throws {
+        func decode(_ extra: String) throws -> AppConfig {
+            try JSONDecoder().decode(AppConfig.self, from: Data(#"{"baseURL":"u","apiKey":"k","model":"m"\#(extra)}"#.utf8))
+        }
+        let plain = try decode("")
+        XCTAssertEqual(plain.candidateBarSizePreference, "medium")
+        XCTAssertEqual(plain.candidateTextSizeValue, 18)
+        XCTAssertEqual(plain.candidatePageSizeValue, 6)
+        let set = try decode(#","candidateBarSize":"Large","candidateTextSize":22.5,"candidatePageSize":8"#)
+        XCTAssertEqual(set.candidateBarSizePreference, "large")
+        XCTAssertEqual(set.candidateTextSizeValue, 22.5)
+        XCTAssertEqual(set.candidatePageSizeValue, 8)
+        let clamped = try decode(#","candidateBarSize":"huge","candidateTextSize":3,"candidatePageSize":12.4"#)
+        XCTAssertEqual(clamped.candidateBarSizePreference, "medium")
+        XCTAssertEqual(clamped.candidateTextSizeValue, 14)
+        XCTAssertEqual(clamped.candidatePageSizeValue, 9)
+        XCTAssertEqual(try decode(#","candidateTextSize":99,"candidatePageSize":4.6"#).candidateTextSizeValue, 28)
+        XCTAssertEqual(try decode(#","candidatePageSize":4.6"#).candidatePageSizeValue, 5)
+        // A wrong type leaves the default.
+        let wrong = try decode(#","candidateBarSize":2,"candidateTextSize":"big","candidatePageSize":[7]"#)
+        XCTAssertEqual(wrong.candidateBarSizePreference, "medium")
+        XCTAssertEqual(wrong.candidateTextSizeValue, 18)
+        XCTAssertEqual(wrong.candidatePageSizeValue, 6)
+    }
+
     func testTerminalModeNormalization() throws {
         func pref(_ json: String) throws -> String {
             try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8)).terminalModePreference
