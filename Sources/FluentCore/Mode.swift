@@ -41,27 +41,26 @@ public enum Mode: String, CaseIterable, Codable {
 
     /// Follows every prompt, the built-in ones and the user's own, so that
     /// whatever the model replies can be inserted as is.
-    public static let outputRule =
-        "Output ONLY the resulting text. No quotes, no explanations. Preserve the author's meaning."
+    public static let outputRule = "Only reply the result and nothing else."
 
-    /// The built-in prompt, which the config's `prompts` may replace. The
-    /// Settings app has the same text (docs/default-prompts.json).
+    /// The built-in prompt, which the config's `prompts` may replace. Polish
+    /// and Translate are nextai-translator's prompts, Fix one in their style.
+    /// The Settings app has the same text (docs/default-prompts.json).
     public var defaultPrompt: String {
         switch self {
         case .fix:
-            return "You correct English text. Fix grammar, spelling, and punctuation only. "
-                + "Change nothing else; keep the author's wording and tone. "
-                + "If the text is already correct, return it unchanged."
+            return "You are an expert proofreader. Please correct the grammar, spelling and punctuation "
+                + "of the following sentences in English, changing nothing else."
         case .polish:
-            return "You improve English text. Rewrite it as a fluent native English speaker would: "
-                + "natural word choice, idiomatic phrasing, same meaning and register."
+            return "You are an expert translator, translate directly without explanation. "
+                + "Please edit the following sentences in English to improve clarity, conciseness, "
+                + "and coherence, making them match the expression of native speakers."
         case .interpret:
-            return "You turn rough input into clear English. The input may be fragmentary, ungrammatical, "
-                + "or mix Chinese and English. Infer the intended message and write it as clear, natural English."
+            return "You are a professional translator. Please translate to English"
         }
     }
 
-    /// System instructions sent to the model: `prompt` (the built-in one
+    /// What the model is told before the text: `prompt` (the built-in one
     /// when it is nil or blank), a blank line, then the output rule.
     public func instructions(prompt: String? = nil) -> String {
         let own = prompt?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""

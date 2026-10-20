@@ -124,15 +124,18 @@ func rewrite(ctx context.Context, e endpoint, instructions, input string) (strin
 	base := strings.TrimRight(e.baseURL, "/")
 	path := "/responses"
 	body := map[string]any{"model": e.model, "stream": true}
+	// As nextai-translator asks: the instructions right before the text, in
+	// one user message, and no system prompt. Text that reads like a request
+	// is then translated or rewritten, not answered.
+	message := instructions + "\n\n" + input
 	if e.api == "chat" {
 		path = "/chat/completions"
-		body["messages"] = []map[string]string{
-			{"role": "system", "content": instructions}, {"role": "user", "content": input}}
+		body["messages"] = []map[string]string{{"role": "user", "content": message}}
 		if e.effort != "" {
 			body["reasoning_effort"] = e.effort
 		}
 	} else {
-		body["instructions"], body["input"] = instructions, input
+		body["input"] = message
 		if e.effort != "" {
 			body["reasoning"] = map[string]any{"effort": e.effort}
 		}

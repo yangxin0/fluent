@@ -5,8 +5,7 @@ final class ModeTests: XCTestCase {
     func testAllModesHaveInstructionsWithOutputRule() {
         for mode in Mode.allCases {
             XCTAssertEqual(mode.instructions(), mode.defaultPrompt + "\n\n" + Mode.outputRule)
-            XCTAssertTrue(mode.instructions().hasSuffix("Output ONLY the resulting text. No quotes, "
-                                                        + "no explanations. Preserve the author's meaning."))
+            XCTAssertTrue(mode.instructions().hasSuffix("\n\nOnly reply the result and nothing else."))
         }
     }
 

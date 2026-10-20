@@ -109,8 +109,9 @@ final class AppConfigTests: XCTestCase {
         let body = try XCTUnwrap(request.httpBody)
         let obj = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
         XCTAssertEqual(obj["model"] as? String, "m")
-        XCTAssertEqual(obj["input"] as? String, "hi")
-        XCTAssertEqual(obj["instructions"] as? String, "inst")
+        // The instructions go right before the text, with no system prompt.
+        XCTAssertEqual(obj["input"] as? String, "inst\n\nhi")
+        XCTAssertNil(obj["instructions"])
         XCTAssertEqual(obj["stream"] as? Bool, true)
         XCTAssertNil(request.value(forHTTPHeaderField: "originator"))
     }
@@ -145,8 +146,7 @@ final class AppConfigTests: XCTestCase {
         XCTAssertEqual(obj["stream"] as? Bool, true)
         XCTAssertEqual(obj["reasoning_effort"] as? String, "low")
         XCTAssertNil(obj["input"])
-        XCTAssertEqual(obj["messages"] as? [[String: String]],
-                       [["role": "system", "content": "inst"], ["role": "user", "content": "hi"]])
+        XCTAssertEqual(obj["messages"] as? [[String: String]], [["role": "user", "content": "inst\n\nhi"]])
         // A GPT model behind a chat API is not a Codex client.
         let gpt = AppConfig(providers: [Provider(api: .chat, baseURL: "https://x/v1", apiKey: "k", model: "gpt-5")])
         XCTAssertNil(try ResponsesClient.makeRequest(config: gpt, instructions: "i", input: "hi")

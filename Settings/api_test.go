@@ -88,12 +88,12 @@ func TestTryAndTestOverTheAPI(t *testing.T) {
 
 	_, reply := call(t, h, "try", map[string]any{"mode": "polish", "input": " hi ", "prompt": "Be nice."})
 	messages, _ := got["messages"].([]any)
-	if reply["ok"] != true || reply["text"] != "Hello there." || reply["input"] != "hi" || len(messages) != 2 ||
-		messages[0].(map[string]any)["content"] != "Be nice.\n\n"+outputRule {
+	if reply["ok"] != true || reply["text"] != "Hello there." || reply["input"] != "hi" || len(messages) != 1 ||
+		messages[0].(map[string]any)["content"] != "Be nice.\n\n"+outputRule+"\n\nhi" {
 		t.Errorf("try: %v, sent %v", reply, got)
 	}
 	call(t, h, "try", map[string]any{"mode": "translate", "input": "hi"})
-	if messages, _ := got["messages"].([]any); messages[0].(map[string]any)["content"] != instructions("translate", "") {
+	if messages, _ := got["messages"].([]any); messages[0].(map[string]any)["content"] != instructions("translate", "")+"\n\nhi" {
 		t.Errorf("built-in prompt: sent %v", got)
 	}
 	if _, reply := call(t, h, "try", map[string]any{"mode": "shout", "input": "hi"}); reply["ok"] != false {

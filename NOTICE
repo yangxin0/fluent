@@ -59,6 +59,15 @@ librime is licensed under the BSD 3-Clause License:
     (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+nextai-translator — https://github.com/nextai-translator/nextai-translator
+-------------------------------------------------------------------------
+The built-in Polish and Translate prompts (Sources/FluentCore/Mode.swift,
+Settings/prompts.go, docs/default-prompts.json), the rule after them and
+the way the request lays them out before the text are taken from
+nextai-translator's src/common/translate.ts and src/common/lang/index.ts.
+nextai-translator is licensed under the GNU Affero General Public License,
+version 3.
+
 Wails and the Go libraries in Fluent.app
 ----------------------------------------
 The Settings app (Fluent.app, Settings/) is built with Wails

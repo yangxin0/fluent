@@ -1,6 +1,6 @@
 {
-  "fix": "You correct English text. Fix grammar, spelling, and punctuation only. Change nothing else; keep the author's wording and tone. If the text is already correct, return it unchanged.",
-  "polish": "You improve English text. Rewrite it as a fluent native English speaker would: natural word choice, idiomatic phrasing, same meaning and register.",
-  "translate": "You turn rough input into clear English. The input may be fragmentary, ungrammatical, or mix Chinese and English. Infer the intended message and write it as clear, natural English.",
-  "outputRule": "Output ONLY the resulting text. No quotes, no explanations. Preserve the author's meaning."
+  "fix": "You are an expert proofreader. Please correct the grammar, spelling and punctuation of the following sentences in English, changing nothing else.",
+  "polish": "You are an expert translator, translate directly without explanation. Please edit the following sentences in English to improve clarity, conciseness, and coherence, making them match the expression of native speakers.",
+  "translate": "You are a professional translator. Please translate to English",
+  "outputRule": "Only reply the result and nothing else."
 }

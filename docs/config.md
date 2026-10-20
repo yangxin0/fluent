@@ -61,20 +61,25 @@ after the URL's host) the first time you save a provider, and removes them.
 The input method can rewrite once the provider in use has a non-empty
 `baseURL`, `apiKey` and `model` and its `apiKey` isn't `sk-REPLACE_ME`.
 
-**Requests.** Both apps stream (`"stream": true`). For the Responses API the
-system prompt goes in `instructions` and the text in `input`; a model whose
-name starts with `gpt` or contains `codex` is sent as the Codex CLI
-(`originator: codex_cli_rs`). For Chat Completions they go as a `system` and
-a `user` message, and the reply is the `choices[0].delta.content` chunks
-until a chunk with a `finish_reason` (`length` or `content_filter` mean it
-was cut short) or `data: [DONE]`.
+**Requests.** Both apps stream (`"stream": true`) one message, as
+nextai-translator does: the mode's prompt, a blank line (`\n\n`), the
+output rule, a blank line, then the text. There is no system prompt, so
+text that reads like a request (帮我写一封邮件) is translated or rewritten,
+not answered. For the Responses API the message is the `input` (no
+`instructions`); a model whose name starts with `gpt` or contains `codex`
+is sent as the Codex CLI (`originator: codex_cli_rs`). For Chat Completions
+it is the one `user` message, and the reply is the
+`choices[0].delta.content` chunks until a chunk with a `finish_reason`
+(`length` or `content_filter` mean it was cut short) or `data: [DONE]`.
 
 **Prompts.** `prompts` maps `fix`, `polish` and `translate` to your own
 prompt for that mode; a mode that is missing, blank or not a string uses
-the built-in prompt. The model is told the prompt, a blank line (`\n\n`),
-then the output rule, which no prompt replaces: the reply is inserted as
-it comes. [`default-prompts.json`](default-prompts.json) holds the built-in
-prompts and the rule; both apps' tests check theirs against it.
+the built-in prompt (Polish and Translate are nextai-translator's, Fix one
+in their style). The output rule, `Only reply the result and nothing
+else.`, follows every prompt and no prompt replaces it: the reply is
+inserted as it comes. [`default-prompts.json`](default-prompts.json) holds
+the built-in prompts and the rule; both apps' tests check theirs against
+it.
 
 When the file can't be used at all, both apps say why in the same words:
 

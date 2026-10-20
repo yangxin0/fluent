@@ -49,8 +49,9 @@ func TestRewriteSendsTheRequestTheInputMethodSends(t *testing.T) {
 		!strings.HasPrefix(header.Get("User-Agent"), "codex_cli_rs/") {
 		t.Errorf("headers %v", header)
 	}
-	if got["model"] != "gpt-5-mini" || got["input"] != "helo" || got["stream"] != true ||
-		got["reasoning"].(map[string]any)["effort"] != "low" {
+	// The instructions go right before the text, with no system prompt.
+	if got["model"] != "gpt-5-mini" || got["input"] != testInstructions+"\n\nhelo" || got["instructions"] != nil ||
+		got["stream"] != true || got["reasoning"].(map[string]any)["effort"] != "low" {
 		t.Errorf("body %v", got)
 	}
 
@@ -192,7 +193,7 @@ func TestChatProvidersGetChatCompletions(t *testing.T) {
 		t.Errorf("path %q, headers %v", path, header)
 	}
 	messages, _ := json.Marshal(got["messages"])
-	if string(messages) != `[{"content":"inst","role":"system"},{"content":"helo","role":"user"}]` ||
+	if string(messages) != `[{"content":"inst\n\nhelo","role":"user"}]` ||
 		got["reasoning_effort"] != "low" || got["stream"] != true || got["input"] != nil {
 		t.Errorf("body %v", got)
 	}

@@ -3,24 +3,24 @@ package main
 import "strings"
 
 // The modes' built-in prompts, as the input method has them
-// (Sources/FluentCore/Mode.swift). Both apps' tests check them against
-// docs/default-prompts.json. The config's `prompts` may replace one; the
-// output rule always follows.
+// (Sources/FluentCore/Mode.swift): Polish and Translate are
+// nextai-translator's, Fix one in their style. Both apps' tests check them
+// against docs/default-prompts.json. The config's `prompts` may replace one;
+// the output rule always follows.
 
 var defaultPrompts = map[string]string{
-	"fix": "You correct English text. Fix grammar, spelling, and punctuation only. " +
-		"Change nothing else; keep the author's wording and tone. " +
-		"If the text is already correct, return it unchanged.",
-	"polish": "You improve English text. Rewrite it as a fluent native English speaker would: " +
-		"natural word choice, idiomatic phrasing, same meaning and register.",
-	"translate": "You turn rough input into clear English. The input may be fragmentary, ungrammatical, " +
-		"or mix Chinese and English. Infer the intended message and write it as clear, natural English.",
+	"fix": "You are an expert proofreader. Please correct the grammar, spelling and punctuation " +
+		"of the following sentences in English, changing nothing else.",
+	"polish": "You are an expert translator, translate directly without explanation. " +
+		"Please edit the following sentences in English to improve clarity, conciseness, " +
+		"and coherence, making them match the expression of native speakers.",
+	"translate": "You are a professional translator. Please translate to English",
 }
 
-const outputRule = "Output ONLY the resulting text. No quotes, no explanations. Preserve the author's meaning."
+const outputRule = "Only reply the result and nothing else."
 
-// instructions are what the model is told for mode: prompt (the built-in
-// one when it is blank), a blank line, then the output rule.
+// instructions are what the model is told for mode before the text: prompt
+// (the built-in one when it is blank), a blank line, then the output rule.
 func instructions(mode, prompt string) string {
 	prompt = strings.TrimSpace(prompt)
 	if prompt == "" {

@@ -93,8 +93,10 @@ list when you first save a provider.
 whose name starts with `gpt` or contains `codex`, Responses requests
 identify as the Codex CLI (`originator: codex_cli_rs`), which some gateways
 require. `prompts` replaces a mode's built-in prompt (`fix`, `polish`,
-`translate`); a rule asking for only the resulting text always follows it,
-so the reply can be inserted as is. `timeoutSeconds` is how
+`translate`); the rule "Only reply the result and nothing else." always
+follows it, so the reply can be inserted as is. Prompt and rule go right
+before your text in one message, as nextai-translator sends them, so text
+that reads like a request is translated or rewritten rather than answered. `timeoutSeconds` is how
 long the stream may stay silent before the rewrite fails, not a cap on the
 whole reply.
 `appearance` controls the candidate bar's color scheme: `"auto"` follows the

@@ -149,6 +149,10 @@ public final class ResponsesClient {
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         request.setValue("Bearer \(provider.apiKey)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = config.timeoutSeconds
+        // As nextai-translator asks: the instructions right before the text,
+        // in one user message, and no system prompt. Text that reads like a
+        // request (帮我写一封邮件) is then translated or rewritten, not answered.
+        let message = instructions + "\n\n" + input
         let effort = provider.reasoningEffort.flatMap { $0.isEmpty ? nil : $0 }
         var body: [String: Any] = ["model": provider.model, "stream": true]
         switch provider.api {
@@ -161,11 +165,10 @@ public final class ResponsesClient {
                 request.setValue("codex_cli_rs", forHTTPHeaderField: "originator")
                 request.setValue("codex_cli_rs/\(codexVersion)", forHTTPHeaderField: "User-Agent")
             }
-            body["instructions"] = instructions
-            body["input"] = input
+            body["input"] = message
             if let effort { body["reasoning"] = ["effort": effort] }
         case .chat:
-            body["messages"] = [["role": "system", "content": instructions], ["role": "user", "content": input]]
+            body["messages"] = [["role": "user", "content": message]]
             if let effort { body["reasoning_effort"] = effort }
         }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
