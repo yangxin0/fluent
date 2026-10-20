@@ -1,9 +1,13 @@
 import Foundation
 
 /// Lowercase English words (rime-ice's English dictionary, compiled by
-/// `make dict`), for telling English apart from shuangpin keys.
+/// `make dict`), for telling English apart from shuangpin keys, plus your
+/// own: words the dictionary lacks, such as product names.
 public struct EnglishWords {
     private let words: [String]
+    /// Your words, sorted: added in Settings ▸ English, or inserted as typed
+    /// from the Chinese bar. Kept apart from the dictionary.
+    public private(set) var yours: [String] = []
 
     /// Words in any order and case; only all-lowercase a–z words are kept,
     /// since a run typed with capitals is English anyway and lowercasing
@@ -24,22 +28,67 @@ public struct EnglishWords {
 
     public var count: Int { words.count }
 
+    /// Where your words are kept (docs/config.md); Settings edits the file
+    /// too.
+    public static let yoursFileURL = FileManager.default
+        .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("Fluent/english-words.txt")
+
     public func contains<S: StringProtocol>(_ word: S) -> Bool {
-        let index = lowerBound(word)
-        return index < words.count && words[index] == word
+        Self.contains(word, in: words) || Self.contains(word, in: yours)
     }
 
     /// Whether some word starts with `prefix` (or is it).
     public func hasWord<S: StringProtocol>(withPrefix prefix: S) -> Bool {
-        let index = lowerBound(prefix)
-        return index < words.count && words[index].hasPrefix(prefix)
+        Self.hasWord(withPrefix: prefix, in: words) || Self.hasWord(withPrefix: prefix, in: yours)
     }
 
-    private func lowerBound<S: StringProtocol>(_ key: S) -> Int {
-        var lo = 0, hi = words.count
+    /// Adds `word` to yours, lowercased. False when it is no word (letters
+    /// a–z, two or more) or one already known.
+    @discardableResult
+    public mutating func add<S: StringProtocol>(_ word: S) -> Bool {
+        guard let word = Self.normalized(word), !contains(word) else { return false }
+        yours.insert(word, at: Self.lowerBound(word, in: yours))
+        return true
+    }
+
+    /// Replaces your words with `list`, keeping only words.
+    public mutating func setYours<S: Sequence>(_ list: S) where S.Element: StringProtocol {
+        yours = Array(Set(list.compactMap(Self.normalized))).sorted()
+    }
+
+    /// A word as kept: lowercased, and only letters a–z, two or more.
+    public static func normalized<S: StringProtocol>(_ word: S) -> String? {
+        let lower = word.trimmingCharacters(in: .whitespaces).lowercased()
+        guard lower.count >= 2,
+              lower.utf8.allSatisfy({ $0 >= UInt8(ascii: "a") && $0 <= UInt8(ascii: "z") }) else { return nil }
+        return lower
+    }
+
+    /// Your words file (docs/config.md): one word per line.
+    public static func yours(from text: String) -> [String] {
+        Array(Set(text.split(whereSeparator: \.isNewline).compactMap(normalized))).sorted()
+    }
+
+    public static func serialized(_ yours: [String]) -> String {
+        yours.map { $0 + "\n" }.joined()
+    }
+
+    private static func contains<S: StringProtocol>(_ word: S, in list: [String]) -> Bool {
+        let index = lowerBound(word, in: list)
+        return index < list.count && list[index] == word
+    }
+
+    private static func hasWord<S: StringProtocol>(withPrefix prefix: S, in list: [String]) -> Bool {
+        let index = lowerBound(prefix, in: list)
+        return index < list.count && list[index].hasPrefix(prefix)
+    }
+
+    private static func lowerBound<S: StringProtocol>(_ key: S, in list: [String]) -> Int {
+        var lo = 0, hi = list.count
         while lo < hi {
             let mid = (lo + hi) / 2
-            if words[mid] < key { lo = mid + 1 } else { hi = mid }
+            if list[mid] < key { lo = mid + 1 } else { hi = mid }
         }
         return lo
     }

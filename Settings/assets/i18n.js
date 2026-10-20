@@ -80,6 +80,9 @@ const I18N = {
     "Try": "试一试",
     "Trying…": "正在试…",
     "Reset to default": "恢复默认",
+    "Your words": "你的词",
+    "Words Fluent keeps in English instead of reading them as pinyin, one per line: product names, jargon. Pressing Enter in the Chinese bar adds the letters you typed.":
+      "Fluent 当作英文、不按拼音读的词，每行一个：产品名、术语等。在中文候选栏里按回车，会把你敲的字母加进来。",
     "Timing": "时间",
 
     // Chinese
@@ -145,5 +148,6 @@ const I18N = {
     // Toasts
     "Saved": "已保存",
     "Couldn't save: the config file isn't valid JSON.": "无法保存：配置文件不是有效的 JSON。",
+    "Couldn't save the words.": "无法保存这些词。",
   },
 };

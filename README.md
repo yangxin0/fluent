@@ -176,6 +176,11 @@ the same way with whole syllables (`nihao`, `zhongguo`).
   candidate bar shows the word first, then its Chinese readings
   (`1 make  2 马克  3 马克思`). Press 2–6 to pick one, 1 or Enter to insert
   the word as typed, or just keep typing English.
+- A word the dictionary lacks (a product name like `copatent`) reads as
+  pinyin at first. Press Enter in the Chinese bar to insert it as typed:
+  Fluent remembers it, and from then on it stays English. Settings ▸ English
+  ▸ *Your words* lists them, to add names up front or remove one; they are
+  kept in `~/Library/Application Support/Fluent/english-words.txt`.
 - Inside an English sentence there are no Chinese candidates at all, so a
   typo like `rela` never turns into 热辣. One English word inside Chinese text
   (`这个 bug 修好了`) doesn't count: the Chinese after it still converts. Two

@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -53,4 +54,56 @@ func learnedCount(home string) int {
 		return 0
 	}
 	return countLearned(string(data))
+}
+
+// Your English words (docs/config.md): words the input method keeps in
+// English instead of reading them as pinyin, one per line. It adds the keys
+// you insert as typed from the Chinese bar, and rereads the file when it
+// changes.
+
+func englishWordsPath(home string) string {
+	return filepath.Join(home, "Library", "Application Support", "Fluent", "english-words.txt")
+}
+
+// normalizeWords keeps what the input method keeps: lowercased words of two
+// or more letters a–z, each once, sorted.
+func normalizeWords(list []string) []string {
+	seen := map[string]bool{}
+	out := []string{}
+	for _, w := range list {
+		w = strings.ToLower(strings.TrimSpace(w))
+		if len(w) < 2 || strings.Trim(w, "abcdefghijklmnopqrstuvwxyz") != "" || seen[w] {
+			continue
+		}
+		seen[w] = true
+		out = append(out, w)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func readEnglishWords(home string) []string {
+	data, _ := os.ReadFile(englishWordsPath(home))
+	return normalizeWords(strings.FieldsFunc(string(data), func(r rune) bool { return r == '\n' || r == '\r' }))
+}
+
+func writeEnglishWords(home string, list []string) error {
+	path := englishWordsPath(home)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	text := ""
+	for _, w := range normalizeWords(list) {
+		text += w + "\n"
+	}
+	return writePrivate(path, []byte(text))
+}
+
+// englishWordsStamp changes whenever the file is written, by either app.
+func englishWordsStamp(home string) float64 {
+	info, err := os.Stat(englishWordsPath(home))
+	if err != nil {
+		return 0
+	}
+	return float64(info.ModTime().UnixNano()) / 1e9
 }

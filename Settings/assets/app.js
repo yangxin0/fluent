@@ -420,6 +420,24 @@ function noticePreview(style) {
 
 for (const el of $$(".preview[data-preview]")) el.innerHTML = noticePreview(el.dataset.preview);
 
+// MARK: - Your English words
+
+let wordsStamp = -1;
+
+async function loadWords() {
+  const reply = await fluent("words.get");
+  const box = $("#yourWords");
+  if (box !== document.activeElement) box.value = reply.words.join("\n");
+}
+
+$("#yourWords").addEventListener("change", async () => {
+  const words = $("#yourWords").value.split("\n").map((line) => line.trim()).filter(Boolean);
+  const reply = await fluent("words.set", { words });
+  if (!reply.ok) return toast(t("Couldn't save the words."), true);
+  $("#yourWords").value = reply.words.join("\n");
+  toast(t("Saved"));
+});
+
 // MARK: - Candidate bar preview
 
 // The candidate bar as the input method draws it (Sources/Fluent/
@@ -565,6 +583,11 @@ async function refreshStatus(force = false) {
   $("#learned").textContent = t("{n} words", { n: status.learned });
   $("#version").textContent = status.version;
   $("#configPath").textContent = status.configPath;
+  // The input method adds words too (Enter in the Chinese bar).
+  if (force || status.wordsStamp !== wordsStamp) {
+    wordsStamp = status.wordsStamp;
+    loadWords();
+  }
   if (force || status.configStamp !== configStamp) {
     configStamp = status.configStamp;
     config = await fluent("config.get");

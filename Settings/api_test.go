@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -114,5 +115,24 @@ func TestTryAndTestOverTheAPI(t *testing.T) {
 	_, defaults := call(t, h, "prompts.defaults", nil)
 	if defaults["fix"] != defaultPrompts["fix"] || defaults["outputRule"] != outputRule {
 		t.Errorf("defaults: %v", defaults)
+	}
+}
+
+func TestYourEnglishWordsOverTheAPI(t *testing.T) {
+	home := t.TempDir()
+	h := newHost(home, "test").handler(fstest.MapFS{})
+	if _, reply := call(t, h, "words.get", nil); len(reply["words"].([]any)) != 0 {
+		t.Fatalf("none yet: %v", reply)
+	}
+	_, reply := call(t, h, "words.set", map[string]any{"words": []any{"Copatent", " fluent ", "x", "not a word", "copatent", 3}})
+	if reply["ok"] != true || fmt.Sprint(reply["words"]) != "[copatent fluent]" {
+		t.Fatalf("set: %v", reply)
+	}
+	data, _ := os.ReadFile(englishWordsPath(home))
+	if string(data) != "copatent\nfluent\n" {
+		t.Errorf("file: %q", data)
+	}
+	if englishWordsStamp(home) == 0 {
+		t.Error("no stamp for the written file")
 	}
 }

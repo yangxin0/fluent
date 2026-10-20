@@ -12,8 +12,10 @@ final class ChineseInput {
     private(set) static var shared: ChineseInput?
 
     let translator: ChineseTranslator
-    let english: EnglishWords
+    private(set) var english: EnglishWords
     private let userDictionary: UserDictionary
+    /// When your English words file was last read (or written here).
+    private var englishWordsStamp: Date?
     private var pendingSave: DispatchWorkItem?
     /// One save at a time, so an older snapshot never replaces a newer one.
     private static let saveQueue = DispatchQueue(label: "com.yangxin.inputmethod.Fluent.save", qos: .utility)
@@ -77,6 +79,32 @@ final class ChineseInput {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: item)
     }
 
+    /// Rereads your English words when the file changed: Settings edits it.
+    func refreshEnglishWords() {
+        let url = EnglishWords.yoursFileURL
+        let stamp = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date
+        guard stamp != englishWordsStamp else { return }
+        englishWordsStamp = stamp
+        english.setYours(EnglishWords.yours(from: (try? String(contentsOf: url, encoding: .utf8)) ?? ""))
+    }
+
+    /// Keys inserted as typed from the Chinese bar are a word Fluent didn't
+    /// know (a product name): remembered as English from now on (#24).
+    func learnEnglish(_ keys: String) {
+        refreshEnglishWords()
+        guard english.add(keys) else { return }
+        let url = EnglishWords.yoursFileURL
+        do {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
+                                                    withIntermediateDirectories: true)
+            try EnglishWords.serialized(english.yours).write(to: url, atomically: true, encoding: .utf8)
+            englishWordsStamp = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date
+            spLog.notice("learned an English word (\(self.english.yours.count, privacy: .public) of yours)")
+        } catch {
+            spLog.error("saving English words failed: \(String(describing: error), privacy: .public)")
+        }
+    }
+
     /// Fluent Settings ▸ Chinese ▸ Forget learned words.
     func forgetLearned() {
         pendingSave?.cancel()
@@ -118,6 +146,7 @@ final class ChineseInput {
                 let learned = loadLearned()
                 let engine = ChineseInput(lexicon: try Lexicon(contentsOf: lexiconURL),
                                        english: try EnglishWords(contentsOf: englishURL), userDictionary: learned)
+                engine.refreshEnglishWords()
                 let ms = Int(Date().timeIntervalSince(start) * 1000)
                 spLog.notice("shuangpin dictionary loaded: \(engine.translator.lexicon.count, privacy: .public) entries, \(engine.english.count, privacy: .public) English words, \(learned.count, privacy: .public) learned, in \(ms, privacy: .public) ms")
                 DispatchQueue.main.async { shared = engine }

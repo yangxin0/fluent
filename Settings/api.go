@@ -88,6 +88,17 @@ func (h *host) call(ctx context.Context, op string, args object) (any, error) {
 		return object{"ok": h.ask(args, "Are you sure?", "OK")}, nil
 	case "learned.forget":
 		return object{"ok": h.forgetLearned(args)}, nil
+	case "words.get":
+		return object{"words": readEnglishWords(h.home)}, nil
+	case "words.set":
+		raw, _ := args["words"].([]any)
+		list := make([]string, 0, len(raw))
+		for _, w := range raw {
+			if s, ok := w.(string); ok {
+				list = append(list, s)
+			}
+		}
+		return object{"ok": writeEnglishWords(h.home, list) == nil, "words": readEnglishWords(h.home)}, nil
 	case "prefs.get":
 		return object{"language": h.prefs.load().Language, "system": preferredLanguage()}, nil
 	case "prefs.set":
@@ -143,6 +154,7 @@ func (h *host) status() object {
 		"configProblem": problem,
 		"dictionaries":  exists(filepath.Join(resources, "xiaohe.lexicon")) && exists(filepath.Join(resources, "english.txt")),
 		"learned":       learnedCount(h.home),
+		"wordsStamp":    englishWordsStamp(h.home),
 		"configStamp":   h.config.stamp(),
 		"configPath":    "~" + strings.TrimPrefix(h.config.path, h.home),
 		"version":       h.version,

@@ -344,6 +344,8 @@ class InputController: IMKInputController {
             if held {
                 commitChinese(state.chinesePrefix)
             } else {
+                // The keys as typed, not pinyin: a word Fluent didn't know.
+                if composer.segments.isEmpty { ChineseInput.shared?.learnEnglish(composer.keys) }
                 commit(state.chinesePrefix + composer.keys)
             }
             return true
@@ -540,6 +542,7 @@ class InputController: IMKInputController {
         guard let input = ChineseInput.shared, input.apply(Shared.configStore.current()) else {
             return .none
         }
+        input.refreshEnglishWords()
         let context = ChinesePolicy.context(prefix: prefix,
                                             afterChineseCommit: lastCommitWasChinese || state.holdsChinese)
         return ChinesePolicy.rank(run: run, context: context, english: input.english,

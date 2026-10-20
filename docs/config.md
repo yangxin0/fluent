@@ -124,6 +124,18 @@ notification `com.yangxin.inputmethod.Fluent.forgetLearnedWords`. A running
 input method drops the words it holds in memory, which it would otherwise
 save back.
 
+## Your English words
+
+`~/Library/Application Support/Fluent/english-words.txt`: words the input
+method keeps in English instead of reading them as pinyin, such as product
+names the dictionary lacks, one per line. Both apps keep only lowercased
+words of two or more letters a–z, each once; other lines are dropped.
+
+The input method adds a word when you press Enter in the Chinese bar to
+insert the keys as typed, unless you picked a candidate first. Settings ▸
+English shows and edits the list. Each app writes the whole file at once,
+and the input method rereads it when its modification time changes.
+
 ## Settings' own preferences
 
 `~/Library/Application Support/Fluent/Settings.json` keeps the Settings
