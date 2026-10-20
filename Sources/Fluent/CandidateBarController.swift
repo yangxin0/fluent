@@ -129,7 +129,7 @@ private final class CandidateBarView: NSView {
     private static let textFont = NSFont.systemFont(ofSize: 18)
     private static let commentFont = NSFont.systemFont(ofSize: 12)
     private static let badgeFont = NSFont.systemFont(ofSize: 12, weight: .bold)
-    private static let typedFont = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
+    private static let typedFont = NSFont.monospacedSystemFont(ofSize: 14, weight: .regular)
     private static let hintFont = NSFont.systemFont(ofSize: 13)
 
     private struct Cell {
@@ -287,14 +287,16 @@ private final class CandidateBarView: NSView {
         return result
     }
 
-    /// The typed text in the preedit color, with a caret bar at the cursor.
+    /// The typed text with a caret bar at the cursor. It is read as much as
+    /// the line below it, so it takes the full label color: the secondary
+    /// one washed out on the panel's material over a dark terminal (#20).
     private static func typedString(_ typed: TypedText) -> NSAttributedString {
-        let base: [NSAttributedString.Key: Any] = [.font: typedFont, .foregroundColor: NSColor.secondaryLabelColor]
+        let base: [NSAttributedString.Key: Any] = [.font: typedFont, .foregroundColor: NSColor.labelColor]
         let cursor = max(0, min(typed.cursor, typed.raw.count))
         let index = typed.raw.index(typed.raw.startIndex, offsetBy: cursor)
         let result = NSMutableAttributedString(string: String(typed.raw[..<index]), attributes: base)
         result.append(NSAttributedString(string: "|", attributes: [
-            .font: NSFont.monospacedSystemFont(ofSize: 13, weight: .bold), .foregroundColor: NSColor.labelColor,
+            .font: NSFont.monospacedSystemFont(ofSize: 14, weight: .bold), .foregroundColor: NSColor.controlAccentColor,
         ]))
         result.append(NSAttributedString(string: String(typed.raw[index...]), attributes: base))
         return result
