@@ -1,13 +1,15 @@
 // Generates the input source's menu-bar icon: "FL" in SF Rounded, cut out of
-// a rounded rectangle a little wider than tall, the shape of Apple's ABC
-// badge. It is a template image (TISIconIsTemplate in Info.plist): only its
-// shape counts, and macOS tints it for light and dark menu bars like its own
-// sources. 21×15 pt, with 1x and 2x reps.
+// a rounded rectangle the size of Apple's ABC badge (22×16 pt, corner radius
+// 5 pt, letters 8.5 pt tall, measured from the menu bar). It is a template image
+// (TISIconIsTemplate in Info.plist): only its shape counts, and macOS tints it
+// for light and dark menu bars like its own sources. 1x and 2x reps.
 // Usage: swift Scripts/make-icon.swift Resources/icon.tiff
 import AppKit
 
 let outPath = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "Resources/icon.tiff"
-let points = NSSize(width: 21, height: 15)
+let points = NSSize(width: 22, height: 16)
+let radius: CGFloat = 5
+let capHeight: CGFloat = 8.5
 
 func makeRep(scale: CGFloat) -> NSBitmapImageRep {
     let rep = NSBitmapImageRep(bitmapDataPlanes: nil,
@@ -18,19 +20,22 @@ func makeRep(scale: CGFloat) -> NSBitmapImageRep {
     NSGraphicsContext.saveGraphicsState()
     let context = NSGraphicsContext(bitmapImageRep: rep)!
     NSGraphicsContext.current = context
-    context.cgContext.scaleBy(x: scale, y: scale)
-    let rect = NSRect(origin: .zero, size: points)
+    let cg = context.cgContext
+    cg.scaleBy(x: scale, y: scale)
     NSColor.black.setFill()
-    NSBezierPath(roundedRect: rect.insetBy(dx: 0.5, dy: 0.5), xRadius: 4.5, yRadius: 4.5).fill()
-    // The letters are holes in the badge.
-    let base = NSFont.systemFont(ofSize: 10.5, weight: .bold)
-    let font = NSFont(descriptor: base.fontDescriptor.withDesign(.rounded) ?? base.fontDescriptor, size: 10.5)!
-    let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.black]
-    let text = "FL" as NSString
-    let textSize = text.size(withAttributes: attrs)
-    context.compositingOperation = .destinationOut
-    text.draw(at: NSPoint(x: (points.width - textSize.width) / 2, y: (points.height - textSize.height) / 2),
-              withAttributes: attrs)
+    NSBezierPath(roundedRect: NSRect(origin: .zero, size: points), xRadius: radius, yRadius: radius).fill()
+    // The letters are holes in the badge, centred on their ink rather than
+    // their line box, so the caps sit in the middle like ABC's "A".
+    let base = NSFont.systemFont(ofSize: 10, weight: .bold)
+    let rounded = base.fontDescriptor.withDesign(.rounded) ?? base.fontDescriptor
+    let unit = NSFont(descriptor: rounded, size: 10)!
+    let font = NSFont(descriptor: rounded, size: 10 * capHeight / unit.capHeight)!
+    let line = CTLineCreateWithAttributedString(NSAttributedString(string: "FL", attributes: [.font: font]))
+    let ink = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+    cg.setBlendMode(.destinationOut)
+    cg.textPosition = CGPoint(x: (points.width - ink.width) / 2 - ink.minX,
+                              y: (points.height - ink.height) / 2 - ink.minY)
+    CTLineDraw(line, cg)
     NSGraphicsContext.restoreGraphicsState()
     // Set after drawing: a sized rep scales its context itself.
     rep.size = points
