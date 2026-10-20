@@ -331,6 +331,8 @@ $("#showKey").addEventListener("click", () => {
 function noticePreview(style) {
   const css = (property, value) => `style="${property}:var(--n-${value})"`;
   const fill = (value) => css("fill", value);
+  // One style attribute: a second one on the element would be dropped.
+  const fillAndEdge = (value) => `style="fill:var(--n-${value});stroke:var(--n-edge)"`;
 
   // The menu bar's FL badge: 22×16 with a corner radius of 5, at height h.
   // "on" and "off" have white letters (the badge style); "cut" is indigo with
@@ -360,13 +362,13 @@ function noticePreview(style) {
     d += `L${x + w - r},${top}A${r},${r} 0 0 1 ${x + w},${top + r}L${x + w},${top + h - r}`
       + `A${r},${r} 0 0 1 ${x + w - r},${top + h}L${x + r},${top + h}A${r},${r} 0 0 1 ${x},${top + h - r}`
       + `L${x},${top + r}A${r},${r} 0 0 1 ${x + r},${top}Z`;
-    return { svg: `<path d="${d}" ${fill("panel")} ${css("stroke", "edge")} stroke-width=".5" filter="url(#shadow-${style})"/>`, top };
+    return { svg: `<path d="${d}" ${fillAndEdge("panel")} stroke-width=".5" filter="url(#shadow-${style})"/>`, top };
   }
 
   const word = (x, midY, on) => `<text x="${x}" y="${midY + 5.3}" font-size="15" font-weight="600" `
     + `${fill(on ? "label" : "second")}>${on ? "On" : "Off"}</text>`;
   const keys = (x, midY) => [0, 21].map((dx) => `<rect x="${x + dx + .3}" y="${midY - 8.7}" width="17.4" height="17.4" rx="4.5" `
-    + `${fill("key")} ${css("stroke", "edge")} stroke-width=".6"/><text x="${x + dx + 9}" y="${midY + 4.3}" font-size="12" `
+    + `${fillAndEdge("key")} stroke-width=".6"/><text x="${x + dx + 9}" y="${midY + 4.3}" font-size="12" `
     + `font-weight="500" text-anchor="middle" ${fill("second")}>⇧</text>`).join("");
 
   const metrics = {
