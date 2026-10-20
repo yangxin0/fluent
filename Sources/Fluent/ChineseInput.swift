@@ -36,7 +36,7 @@ final class ChineseInput {
     /// Points the translator at the configured layout, rebuilding it only when
     /// the settings change. False when Chinese is off.
     func apply(_ config: AppConfig?) -> Bool {
-        let settings = LayoutSettings(layout: config?.chinesePreference ?? "xiaohe",
+        let settings = LayoutSettings(layout: config?.chinesePreference ?? "pinyin",
                                       abbreviations: config?.pinyinAbbreviations ?? true,
                                       fuzzy: config?.fuzzyPinyin ?? [])
         guard settings.layout != "off" else { return false }

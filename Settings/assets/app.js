@@ -101,7 +101,7 @@ function fill() {
   }
   const fuzzy = new Set(config.fuzzyPinyin || []);
   for (const box of $$("#fuzzy input")) box.checked = fuzzy.has(box.value);
-  $("#pinyinOptions").classList.toggle("disabled", (config.chinese || "xiaohe") !== "pinyin");
+  $("#pinyinOptions").classList.toggle("disabled", (config.chinese || "pinyin") !== "pinyin");
   fillProviders();
   fillPrompt();
 }

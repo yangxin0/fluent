@@ -50,10 +50,12 @@ final class AppConfigTests: XCTestCase {
         func decode(_ extra: String) throws -> AppConfig {
             try JSONDecoder().decode(AppConfig.self, from: Data(#"{"baseURL":"https://x/v1","apiKey":"sk-x","model":"m"\#(extra)}"#.utf8))
         }
-        XCTAssertEqual(try decode("").chinesePreference, "xiaohe")
+        XCTAssertEqual(try decode("").chinesePreference, "pinyin")
         XCTAssertEqual(try decode(#","chinese":"Pinyin""#).chinesePreference, "pinyin")
+        XCTAssertEqual(try decode(#","chinese":"quanpin""#).chinesePreference, "pinyin")
+        XCTAssertEqual(try decode(#","chinese":"Xiaohe""#).chinesePreference, "xiaohe")
         XCTAssertEqual(try decode(#","chinese":"off""#).chinesePreference, "off")
-        XCTAssertEqual(try decode(#","chinese":"nonsense""#).chinesePreference, "xiaohe")
+        XCTAssertEqual(try decode(#","chinese":"nonsense""#).chinesePreference, "pinyin")
         let full = try decode(#","chinese":"pinyin","pinyinAbbreviations":false,"fuzzyPinyin":["zh=z"]"#)
         XCTAssertEqual(full.pinyinAbbreviations, false)
         XCTAssertEqual(full.fuzzyPinyin, ["zh=z"])

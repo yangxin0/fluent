@@ -5,7 +5,7 @@ text appears inline as underlined composition text in any app; an LLM
 rewrites it, and a candidate bar next to the caret shows what Enter will
 insert (`P  We should figure out a way.  ↵`): **Enter inserts the improved
 text**, Shift+Enter inserts exactly what you typed, Esc cancels. The same bar
-is used for Chinese, 小鹤双拼 or 全拼 (see below).
+is used for Chinese, 全拼 or 小鹤双拼 (see below).
 
 Powered by any **OpenAI-compatible endpoint** that streams: the Responses
 API (OpenAI, or any provider exposing `/v1/responses`) or Chat Completions
@@ -20,8 +20,8 @@ switch between them.
 | **P** | **Polish** | Rewrites into natural, native-speaker English |
 | **T** | **Translate** | Turns rough / fragmentary / Chinese-mixed input into the intended English (`"interpret"` in the CLI) |
 
-The bar starts with the mode's badge (`双` while typing 小鹤双拼, `拼` for
-全拼). Switch modes
+The bar starts with the mode's badge (`拼` while typing 全拼, `双` for
+小鹤双拼). Switch modes
 from the input-method menu in the menu bar, or **Ctrl+Tab** while composing
 English.
 The last mode is remembered. Each mode's prompt can be replaced with your
@@ -74,7 +74,7 @@ copied over):
   },
   "appearance": "auto",
   "terminalMode": "auto",
-  "chinese": "xiaohe",
+  "chinese": "pinyin",
   "debounceMs": 350,
   "timeoutSeconds": 10
 }
@@ -117,8 +117,8 @@ Add more apps to the whitelist with `"terminalApps": ["com.example.term"]`
 (bundle identifiers). Edge detection measures the terminal's cell width from
 what the app reports; if it triggers too early or late, set the exact width in
 points with `"terminalCellWidth": 9.7`.
-`chinese` picks the one Chinese input method (see below): `"xiaohe"`
-(小鹤双拼, the default), `"pinyin"` (full pinyin) or `"off"`; the IME menu
+`chinese` picks the one Chinese input method (see below): `"pinyin"`
+(full pinyin, the default), `"xiaohe"` (小鹤双拼) or `"off"`; the IME menu
 offers the same choice and writes it here. For full pinyin,
 `"pinyinAbbreviations"` (default `true`) lets an initial alone spell a
 syllable (`zg` → 中国), and `"fuzzyPinyin"` lists pairs to treat as the same,
@@ -153,11 +153,12 @@ and grey for off (Settings ▸ Appearance has other styles); double-tap Shift
 again (or use the IME menu ▸ *Enabled*) to turn it back on. The toggle
 resets to *on* at relaunch.
 
-## Chinese (小鹤双拼 or 全拼)
+## Chinese (全拼 or 小鹤双拼)
 
 You can also type Chinese without switching input sources, with one Chinese
-input method at a time: the 小鹤双拼 (Xiaohe shuangpin) layout by default, or
-full pinyin (全拼) with `"chinese": "pinyin"` or IME menu ▸ *Chinese: 全拼*.
+input method at a time: full pinyin (全拼) by default, or the 小鹤双拼
+(Xiaohe shuangpin) layout with `"chinese": "xiaohe"` or IME menu ▸
+*Chinese: 小鹤双拼*.
 English always comes first: Chinese conversion starts only when the letters
 you type can't be English. The examples below are 小鹤双拼; full pinyin works
 the same way with whole syllables (`nihao`, `zhongguo`).

@@ -90,8 +90,8 @@ public struct AppConfig: Decodable, Equatable {
     /// Exact terminal cell width in points, for clients that report neither
     /// a cell-sized caret rect nor a font. Omit/0 to estimate automatically.
     public var terminalCellWidth: Double?
-    /// Chinese input: "xiaohe" (小鹤双拼, the default), "pinyin" (full
-    /// pinyin) or "off". One layout at a time.
+    /// Chinese input: "pinyin" (full pinyin, the default), "xiaohe"
+    /// (小鹤双拼) or "off". One layout at a time.
     public var chinese: String?
     /// Full pinyin: an initial alone spells a syllable (`zg` → 中国).
     /// Default on.
@@ -179,12 +179,12 @@ public struct AppConfig: Decodable, Equatable {
         }
     }
 
-    /// Normalized Chinese input; unknown/missing values mean "xiaohe".
+    /// Normalized Chinese input; unknown/missing values mean "pinyin".
     public var chinesePreference: String {
         switch chinese?.lowercased() {
-        case "pinyin", "quanpin": return "pinyin"
+        case "xiaohe": return "xiaohe"
         case "off": return "off"
-        default: return "xiaohe"
+        default: return "pinyin"
         }
     }
 
@@ -365,7 +365,7 @@ public final class ConfigStore {
           "model": "gpt-4o-mini",
           "appearance": "auto",
           "terminalMode": "auto",
-          "chinese": "xiaohe",
+          "chinese": "pinyin",
           "debounceMs": 350,
           "timeoutSeconds": 10
         }

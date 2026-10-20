@@ -103,8 +103,8 @@ class InputController: IMKInputController {
         menu.addItem(enabledItem)
         menu.addItem(.separator())
         // One Chinese input at a time; the choice is the config's "chinese".
-        let chinese = Shared.configStore.current()?.chinesePreference ?? "xiaohe"
-        for (value, title) in [("xiaohe", "Chinese: 小鹤双拼"), ("pinyin", "Chinese: 全拼 (full pinyin)"),
+        let chinese = Shared.configStore.current()?.chinesePreference ?? "pinyin"
+        for (value, title) in [("pinyin", "Chinese: 全拼(Pinyin)"), ("xiaohe", "Chinese: 小鹤双拼"),
                                ("off", "Chinese: Off")] {
             let item = NSMenuItem(title: title, action: #selector(selectChinese(_:)), keyEquivalent: "")
             item.target = self

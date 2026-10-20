@@ -36,7 +36,7 @@ const template = `{
   "model": "gpt-4o-mini",
   "appearance": "auto",
   "terminalMode": "auto",
-  "chinese": "xiaohe",
+  "chinese": "pinyin",
   "debounceMs": 350,
   "timeoutSeconds": 10
 }`

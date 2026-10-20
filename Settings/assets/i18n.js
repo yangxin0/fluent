@@ -86,7 +86,7 @@ const I18N = {
     "English always comes first: Chinese converts only when the letters you type can't be English.":
       "英文永远优先：只有你输入的字母不可能是英文时，才会转换成中文。",
     "Input method": "输入方案",
-    "全拼 (full pinyin)": "全拼",
+    "全拼(Pinyin)": "全拼",
     "Off": "关闭",
     "Initials only": "简拼",
     "zg → 中国, bj → 北京": "zg → 中国，bj → 北京",
@@ -128,7 +128,7 @@ const I18N = {
     "Cell width": "字符宽度",
 
     // About
-    "Improves the English you type, and types Chinese with 小鹤双拼 or 全拼.": "改进你输入的英文，并用小鹤双拼或全拼打中文。",
+    "Improves the English you type, and types Chinese with 全拼 or 小鹤双拼.": "改进你输入的英文，并用全拼或小鹤双拼打中文。",
     "Free software under the GPL-3.0. The dictionaries come from rime-ice (GPL-3.0); the Chinese engine ports algorithms from librime (BSD-3-Clause).":
       "以 GPL-3.0 许可发布的自由软件。词库来自 rime-ice（GPL-3.0）；中文引擎移植了 librime 的算法（BSD-3-Clause）。",
     "Open the config file": "打开配置文件",

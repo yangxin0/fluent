@@ -28,7 +28,7 @@ repository; a writer writes the file the link points at and keeps the link.
 | `terminalMode` | string | `"auto"` | `"auto"`, `"always"` or `"never"` |
 | `terminalApps` | array of strings | `[]` | More terminals, as bundle identifiers |
 | `terminalCellWidth` | number | measured | A terminal cell's width in points |
-| `chinese` | string | `"xiaohe"` | `"xiaohe"` (小鹤双拼), `"pinyin"` (全拼) or `"off"` |
+| `chinese` | string | `"pinyin"` | `"pinyin"` (全拼), `"xiaohe"` (小鹤双拼) or `"off"` |
 | `pinyinAbbreviations` | boolean | `true` | Full pinyin: an initial alone spells a syllable |
 | `fuzzyPinyin` | array of strings | `[]` | Full pinyin: pairs read alike, e.g. `"zh=z"` |
 
