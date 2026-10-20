@@ -5,7 +5,7 @@ const I18N = {
   zh: {
     // Header
     "Setup": "开始",
-    "Rewrite": "改写",
+    "LLM": "大模型",
     "Chinese": "中文",
     "Appearance": "外观",
     "About": "关于",
@@ -34,9 +34,23 @@ const I18N = {
     "Enter": "回车",
     "inserts the improved text; Shift+Enter inserts it as typed.": "输入改进后的文字；Shift+回车按原样输入。",
 
-    // Rewrite
-    "Fluent sends what you type to an OpenAI Responses-compatible API and shows the improved text in the bar.":
-      "Fluent 把你输入的内容发给兼容 OpenAI Responses 的接口，并在候选栏里显示改进后的文字。",
+    // LLM
+    "Fluent sends what you type to a language model and shows the improved text in the bar. Keep several providers and switch between them here or in the input method's menu.":
+      "Fluent 把你输入的内容发给大模型，并在候选栏里显示改进后的文字。可以保存多个服务商，在这里或输入法菜单里切换。",
+    "Providers": "服务商",
+    "Add provider": "添加服务商",
+    "Provider {n}": "服务商 {n}",
+    "In use": "使用中",
+    "Use": "使用",
+    "Unnamed": "未命名",
+    "No model": "未设模型",
+    "Name": "名称",
+    "API": "接口",
+    "Delete": "删除",
+    "Delete {name}?": "删除“{name}”？",
+    "Its URL, API key and model go with it.": "它的服务地址、API 密钥和模型会一起删除。",
+    "A provider needs a name.": "服务商需要一个名称。",
+    "Another provider has that name.": "已经有同名的服务商。",
     "Provider URL": "服务地址",
     "API key": "API 密钥",
     "Show": "显示",
@@ -51,6 +65,17 @@ const I18N = {
     "Test": "测试",
     "Testing…": "测试中…",
     "Set the provider URL, API key and model first.": "请先填写服务地址、API 密钥和模型。",
+    "Prompts": "提示词",
+    "Fix": "修正",
+    "Polish": "润色",
+    "Translate": "翻译",
+    "Built-in prompt": "内置提示词",
+    "Your own prompt": "自定义提示词",
+    "Fluent always adds:": "Fluent 总会在后面加上：",
+    "Try": "试一试",
+    "Trying…": "正在试…",
+    "Reset to default": "恢复默认",
+    "Timing": "时间",
 
     // Chinese
     "English always comes first: Chinese converts only when the letters you type can't be English.":

@@ -12,7 +12,7 @@
   <span class="brand"><img class="logo" src="icon.png" alt="" draggable="false"><span class="name">Fluent</span></span>
   <nav class="seg" id="nav" aria-label="Pages">
     <button data-view="setup" class="on" data-t>Setup</button>
-    <button data-view="rewrite" data-t>Rewrite</button>
+    <button data-view="llm" data-t>LLM</button>
     <button data-view="chinese" data-t>Chinese</button>
     <button data-view="appearance" data-t>Appearance</button>
     <button data-view="about" data-t>About</button>
@@ -40,7 +40,7 @@
       <li id="chk-configured">
         <span class="mark"></span>
         <div class="text"><b data-t>API key set</b><span class="sub" id="configured-sub" data-t>Needed to improve English. Chinese works without it.</span></div>
-        <button class="pill" data-go="rewrite" data-t>Set up</button>
+        <button class="pill" data-go="llm" data-t>Set up</button>
       </li>
       <li id="chk-dictionaries">
         <span class="mark"></span>
@@ -53,18 +53,30 @@
     </div>
   </section>
 
-  <section class="view" id="rewrite">
-    <h1 data-t>Rewrite</h1>
-    <p class="lede" data-t>Fluent sends what you type to an OpenAI Responses-compatible API and shows the improved text in the bar.</p>
-    <div class="card form">
+  <section class="view" id="llm">
+    <h1 data-t>LLM</h1>
+    <p class="lede" data-t>Fluent sends what you type to a language model and shows the improved text in the bar. Keep several providers and switch between them here or in the input method's menu.</p>
+    <h2 data-t>Providers</h2>
+    <div class="card">
+      <ul class="providers" id="providers"></ul>
+      <div class="add"><button class="pill" id="addProvider" data-t>Add provider</button></div>
+    </div>
+    <div class="card form" id="provider">
+      <label class="row"><span class="label" data-t>Name</span>
+        <input data-field="name" type="text" spellcheck="false" autocomplete="off"></label>
+      <div class="row"><span class="label" data-t>API</span>
+        <div class="choice" data-field="api">
+          <button data-value="responses">Responses</button>
+          <button data-value="chat">Chat Completions</button>
+        </div></div>
       <label class="row"><span class="label" data-t>Provider URL</span>
-        <input data-key="baseURL" type="url" placeholder="https://api.openai.com/v1" spellcheck="false" autocomplete="off"></label>
+        <input data-field="baseURL" type="url" placeholder="https://api.openai.com/v1" spellcheck="false" autocomplete="off"></label>
       <label class="row"><span class="label" data-t>API key</span>
-        <span class="field"><input data-key="apiKey" id="apiKey" type="password" spellcheck="false" autocomplete="off"><button type="button" class="pill" id="showKey" data-t>Show</button></span></label>
+        <span class="field"><input data-field="apiKey" id="apiKey" type="password" spellcheck="false" autocomplete="off"><button type="button" class="pill" id="showKey" data-t>Show</button></span></label>
       <label class="row"><span class="label" data-t>Model</span>
-        <input data-key="model" type="text" placeholder="gpt-4o-mini" spellcheck="false" autocomplete="off"></label>
+        <input data-field="model" type="text" placeholder="gpt-4o-mini" spellcheck="false" autocomplete="off"></label>
       <label class="row"><span class="label" data-t>Reasoning effort</span>
-        <select data-key="reasoningEffort">
+        <select data-field="reasoningEffort">
           <option value="" data-t>Model default</option>
           <option value="none">none</option>
           <option value="minimal">minimal</option>
@@ -72,17 +84,34 @@
           <option value="medium">medium</option>
           <option value="high">high</option>
         </select></label>
+      <div class="row"><span class="label"></span>
+        <div class="field"><button class="primary" id="test" data-t>Test</button><span class="result" id="testResult"></span>
+          <button class="pill danger end" id="deleteProvider" data-t>Delete</button></div></div>
     </div>
+
+    <h2 data-t>Prompts</h2>
+    <div class="card form">
+      <div class="row"><div class="choice" id="promptMode">
+          <button data-value="fix" data-t>Fix</button>
+          <button data-value="polish" data-t>Polish</button>
+          <button data-value="translate" data-t>Translate</button>
+        </div><span class="hint end" id="promptState"></span></div>
+      <div class="row top"><div class="stack">
+        <textarea id="prompt" rows="4" spellcheck="false"></textarea>
+        <span class="hint"><span data-t>Fluent always adds:</span> <span id="outputRule"></span></span></div></div>
+      <div class="row"><span class="field"><input id="tryInput" type="text" spellcheck="false" autocomplete="off">
+        <button class="pill" id="tryPrompt" data-t>Try</button>
+        <button class="pill" id="resetPrompt" data-t>Reset to default</button></span></div>
+      <div class="row" id="tryRow" hidden><span class="result" id="tryResult"></span></div>
+    </div>
+
+    <h2 data-t>Timing</h2>
     <div class="card form">
       <label class="row"><span class="label" data-t>Wait after typing</span>
         <span class="unit"><input data-key="debounceMs" type="number" min="0" max="10000" step="50" placeholder="350"><span>ms</span></span></label>
       <label class="row top"><span class="label" data-t>Timeout</span>
         <span class="stack"><span class="unit"><input data-key="timeoutSeconds" type="number" min="1" max="300" step="1" placeholder="10"><span>s</span></span>
           <span class="hint" data-t>The timeout counts how long the reply may stay silent, not its whole length.</span></span></label>
-    </div>
-    <div class="test">
-      <button class="primary" id="test" data-t>Test</button>
-      <span class="result" id="testResult"></span>
     </div>
   </section>
 

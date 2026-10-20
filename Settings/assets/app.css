@@ -112,6 +112,8 @@ main { flex: 1; overflow-y: auto; padding: 22px 24px 40px; }
 
 h1 { font-size: 20px; font-weight: 650; letter-spacing: -.01em; margin-bottom: 4px; }
 .lede { color: var(--fg-2); margin-bottom: 18px; max-width: 54ch; }
+h2 { font-size: 13px; font-weight: 600; color: var(--fg-2); margin: 22px 2px 8px; }
+.lede + h2 { margin-top: 0; }
 
 .card {
   background: var(--card); border-radius: 12px;
@@ -148,6 +150,7 @@ li.warn .sub { color: var(--amber); }
 .form .row + .row { border-top: .5px solid var(--line-2); }
 .form .row.top { align-items: flex-start; }
 .form .row.top .label { padding-top: 4px; }
+.form .row[hidden] { display: none; }
 /* A control with its hint below it. */
 .stack { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 1px 0 2px; }
 .stack > textarea, .stack > .checks, .stack > .field { align-self: stretch; }
@@ -227,12 +230,26 @@ select { cursor: default; -webkit-appearance: none; appearance: none; padding-ri
 .pill { flex: none; height: 26px; padding: 0 12px; border-radius: 7px; background: var(--pill); color: var(--fg); white-space: nowrap; }
 .pill:hover { background: var(--pill-hover); }
 .pill.danger { color: var(--red); }
+.pill:disabled { opacity: .45; }
+.pill:disabled:hover { background: var(--pill); }
+/* pushed to the row's far end */
+.end { margin-left: auto; }
 .primary { height: 30px; padding: 0 18px; border-radius: 8px; background: var(--accent); color: var(--accent-fg); font-weight: 600; }
 .primary:disabled { opacity: .5; }
 .link { color: var(--accent); }
 .link:hover { text-decoration: underline; }
 
-.test { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+/* LLM providers: one row each, the one in the form highlighted */
+.providers { list-style: none; padding: 6px 0; }
+.providers li { display: flex; align-items: center; gap: 12px; margin: 0 -10px; padding: 7px 10px; border-radius: 8px; }
+.providers li + li { margin-top: 2px; }
+.providers li:hover:not(.on) { background: var(--pill); }
+.providers li.on { background: var(--accent-soft); }
+.providers .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.providers .sub { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag { flex: none; padding: 0 4px; font-size: 12px; font-weight: 600; color: var(--green); }
+.card > .add { padding: 8px 0 10px; border-top: .5px solid var(--line-2); }
+textarea#prompt { font-family: var(--font); font-size: 13px; }
 .result { color: var(--fg-2); -webkit-user-select: text; user-select: text; }
 .result.ok { color: var(--green); }
 .result.bad { color: var(--red); }

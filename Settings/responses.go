@@ -17,8 +17,8 @@ import (
 	"time"
 )
 
-// The Test button: one small request with the saved settings, the way the
-// input method makes its own (an OpenAI Responses-compatible endpoint,
+// The Test and Try buttons: one small request, the way the input method
+// makes its own (an OpenAI Responses or Chat Completions endpoint,
 // streamed), so a working test means a working input method.
 
 const (
@@ -29,32 +29,85 @@ const (
 	codexVersion = "0.152.1"
 )
 
-// endpoint is what a request needs from the config.
+// endpoint is one LLM provider (docs/config.md) and how long its reply
+// may stay silent.
 type endpoint struct {
+	name                           string
+	api                            string // "responses" or "chat"
 	baseURL, apiKey, model, effort string
-	timeout                        time.Duration // how long the reply may stay silent
+	timeout                        time.Duration
 }
 
+// configured: the provider has a real API key.
+func (e endpoint) configured() bool {
+	return e.baseURL != "" && e.model != "" && e.apiKey != "" && e.apiKey != placeholderKey
+}
+
+// endpointOf reads one entry of `providers`, or the top level of a config
+// from before them (which has no name and speaks the Responses API). Pasted
+// values often bring a stray space or newline along; a wrong type reads as
+// empty.
+func endpointOf(m map[string]any, entry bool) endpoint {
+	text := func(key string) string {
+		s, _ := m[key].(string)
+		return strings.TrimSpace(s)
+	}
+	e := endpoint{api: "responses", baseURL: text("baseURL"), apiKey: text("apiKey"), model: text("model"),
+		timeout: 10 * time.Second}
+	e.effort, _ = m["reasoningEffort"].(string)
+	if entry {
+		e.name = text("name")
+		if strings.ToLower(text("api")) == "chat" {
+			e.api = "chat"
+		}
+	}
+	return e
+}
+
+// providers are the entries of `providers` that are objects.
+func providers(object map[string]any) []endpoint {
+	list, _ := object["providers"].([]any)
+	var out []endpoint
+	for _, v := range list {
+		if m, ok := v.(map[string]any); ok {
+			out = append(out, endpointOf(m, true))
+		}
+	}
+	return out
+}
+
+// activeEndpoint is the provider in use: the one `provider` names, else the
+// first; with no providers, the top-level keys.
+func activeEndpoint(object map[string]any) endpoint {
+	list := providers(object)
+	if len(list) == 0 {
+		return endpointOf(object, false)
+	}
+	if name, ok := object["provider"].(string); ok {
+		for _, e := range list {
+			if e.name == strings.TrimSpace(name) {
+				return e
+			}
+		}
+	}
+	return list[0]
+}
+
+// timeoutOf is the config's timeoutSeconds, clamped; a wrong type leaves
+// the default.
+func timeoutOf(object map[string]any) time.Duration {
+	if f, ok := object["timeoutSeconds"].(float64); ok && !math.IsInf(f, 0) {
+		return time.Duration(min(max(f, 1), 300) * float64(time.Second))
+	}
+	return 10 * time.Second
+}
+
+// endpointFrom is the provider in use in the config file.
 func endpointFrom(data []byte) endpoint {
-	var c struct {
-		BaseURL, APIKey, Model string
-		ReasoningEffort        any
-		TimeoutSeconds         any
-	}
-	json.Unmarshal(data, &c)
-	e := endpoint{
-		baseURL: strings.TrimSpace(c.BaseURL),
-		apiKey:  strings.TrimSpace(c.APIKey),
-		model:   strings.TrimSpace(c.Model),
-		timeout: 10 * time.Second,
-	}
-	// a wrong type for an optional key leaves it unset
-	if s, ok := c.ReasoningEffort.(string); ok {
-		e.effort = s
-	}
-	if f, ok := c.TimeoutSeconds.(float64); ok && !math.IsInf(f, 0) {
-		e.timeout = time.Duration(min(max(f, 1), 300) * float64(time.Second))
-	}
+	var object map[string]any
+	json.Unmarshal(data, &object)
+	e := activeEndpoint(object)
+	e.timeout = timeoutOf(object)
 	return e
 }
 
@@ -65,16 +118,27 @@ func identifiesAsCodex(model string) bool {
 	return strings.HasPrefix(m, "gpt") || strings.Contains(m, "codex")
 }
 
-// rewrite sends input and returns the reply's text, or the error worded as
-// the candidate bar would put it.
-func rewrite(ctx context.Context, e endpoint, input string) (string, error) {
+// rewrite sends input with instructions and returns the reply's text, or
+// the error worded as the candidate bar would put it.
+func rewrite(ctx context.Context, e endpoint, instructions, input string) (string, error) {
 	base := strings.TrimRight(e.baseURL, "/")
-	if u, err := url.Parse(base + "/responses"); err != nil || u.Scheme == "" || u.Host == "" {
-		return "", fmt.Errorf("Invalid base URL: %s", e.baseURL)
+	path := "/responses"
+	body := map[string]any{"model": e.model, "stream": true}
+	if e.api == "chat" {
+		path = "/chat/completions"
+		body["messages"] = []map[string]string{
+			{"role": "system", "content": instructions}, {"role": "user", "content": input}}
+		if e.effort != "" {
+			body["reasoning_effort"] = e.effort
+		}
+	} else {
+		body["instructions"], body["input"] = instructions, input
+		if e.effort != "" {
+			body["reasoning"] = map[string]any{"effort": e.effort}
+		}
 	}
-	body := map[string]any{"model": e.model, "instructions": testInstructions, "input": input, "stream": true}
-	if e.effort != "" {
-		body["reasoning"] = map[string]any{"effort": e.effort}
+	if u, err := url.Parse(base + path); err != nil || u.Scheme == "" || u.Host == "" {
+		return "", fmt.Errorf("Invalid base URL: %s", e.baseURL)
 	}
 	payload, _ := json.Marshal(body)
 
@@ -86,11 +150,11 @@ func rewrite(ctx context.Context, e endpoint, input string) (string, error) {
 	defer watchdog.Stop()
 	heard := func() { watchdog.Reset(e.timeout) }
 
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, base+"/responses", bytes.NewReader(payload))
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, base+path, bytes.NewReader(payload))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("Authorization", "Bearer "+e.apiKey)
-	if identifiesAsCodex(e.model) {
+	if e.api != "chat" && identifiesAsCodex(e.model) {
 		req.Header.Set("originator", "codex_cli_rs")
 		req.Header.Set("User-Agent", "codex_cli_rs/"+codexVersion)
 	}
@@ -111,17 +175,18 @@ func rewrite(ctx context.Context, e endpoint, input string) (string, error) {
 		}
 		return "", fmt.Errorf("HTTP %d: %s", res.StatusCode, message)
 	}
-	text, err := readStream(res.Body, heard)
+	text, err := readStream(res.Body, heard, e.api)
 	if err != nil {
 		return "", humanize(err, silent.Load())
 	}
 	return text, nil
 }
 
-// readStream reads a Responses event stream to its end: the output text, or
-// the error it reports. A stream that stops before saying it is finished (a
-// proxy's timeout, a dropped connection) is an error, never half a reply.
-func readStream(r io.Reader, heard func()) (string, error) {
+// readStream reads a Responses or Chat Completions event stream to its end:
+// the output text, or the error it reports. A stream that stops before
+// saying it is finished (a proxy's timeout, a dropped connection) is an
+// error, never half a reply.
+func readStream(r io.Reader, heard func(), api string) (string, error) {
 	lines := bufio.NewScanner(r)
 	lines.Buffer(make([]byte, 64*1024), 4*1024*1024)
 	lines.Split(scanSSELines)
@@ -154,6 +219,12 @@ func readStream(r io.Reader, heard func()) (string, error) {
 		}
 		var obj map[string]any
 		if json.Unmarshal([]byte(payload), &obj) != nil {
+			continue
+		}
+		if api == "chat" {
+			if done, err := chatChunk(obj, &text); done || err != nil {
+				return text.String(), err
+			}
 			continue
 		}
 		kind, _ := obj["type"].(string)
@@ -189,6 +260,30 @@ func readStream(r io.Reader, heard func()) (string, error) {
 		return "", err
 	}
 	return "", errors.New("reply cut off")
+}
+
+// chatChunk adds a Chat Completions chunk's `choices[0].delta.content` to
+// text; done once a chunk has a `finish_reason`. Reasoning text
+// (`reasoning_content`) is not part of the reply.
+func chatChunk(obj map[string]any, text *strings.Builder) (done bool, err error) {
+	if _, ok := obj["error"]; ok {
+		return false, errors.New(eventError(obj))
+	}
+	choices, _ := obj["choices"].([]any)
+	if len(choices) == 0 {
+		return false, nil
+	}
+	choice, _ := choices[0].(map[string]any)
+	delta, _ := choice["delta"].(map[string]any)
+	content, _ := delta["content"].(string)
+	text.WriteString(content)
+	switch reason, _ := choice["finish_reason"].(string); reason {
+	case "":
+		return false, nil
+	case "length", "content_filter":
+		return false, errors.New("reply incomplete: " + reason)
+	}
+	return true, nil
 }
 
 // scanSSELines splits at LF, CRLF or a lone CR, as server-sent events allow.

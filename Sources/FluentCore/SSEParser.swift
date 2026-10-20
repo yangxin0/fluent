@@ -46,9 +46,13 @@ public struct SSEParser {
     }
 }
 
-/// What an SSE event from a Responses-compatible endpoint means for us.
+/// What an SSE event from a Responses or Chat Completions endpoint means
+/// for us.
 public enum ResponsesStreamItem: Equatable {
     case delta(String)
+    /// A chat stream's last chunk (its `finish_reason` is set): its text, if
+    /// any, ends the reply.
+    case lastDelta(String)
     /// `response.output_text.done`: the stream is finished and this is the
     /// complete text. Providers that skip deltas deliver everything here.
     case completed(String)
@@ -86,12 +90,36 @@ public enum ResponsesEventInterpreter {
         }
     }
 
-    private static func errorMessage(_ obj: [String: Any]) -> String {
+    static func errorMessage(_ obj: [String: Any]) -> String {
         if let err = obj["error"] as? [String: Any], let msg = err["message"] as? String { return msg }
         if let msg = obj["message"] as? String { return msg }
         if let resp = obj["response"] as? [String: Any],
            let err = resp["error"] as? [String: Any],
            let msg = err["message"] as? String { return msg }
         return "API error"
+    }
+}
+
+public enum ChatEventInterpreter {
+    /// A Chat Completions stream: `choices[0].delta.content` chunks until one
+    /// with a `finish_reason`, then `[DONE]`. Reasoning text
+    /// (`reasoning_content`) is not part of the reply.
+    public static func interpret(_ event: SSEEvent) -> ResponsesStreamItem {
+        let data = event.data.trimmingCharacters(in: .whitespaces)
+        if data == "[DONE]" { return .done }
+        guard let obj = (try? JSONSerialization.jsonObject(with: Data(data.utf8))) as? [String: Any] else {
+            return .ignore
+        }
+        if obj["error"] != nil { return .error(ResponsesEventInterpreter.errorMessage(obj)) }
+        guard let choice = (obj["choices"] as? [[String: Any]])?.first else { return .ignore }
+        let content = (choice["delta"] as? [String: Any])?["content"] as? String ?? ""
+        guard let reason = choice["finish_reason"] as? String else { return .delta(content) }
+        switch reason {
+        case "length", "content_filter":
+            // Cut short: not a rewrite.
+            return .error("reply incomplete: \(reason)")
+        default:
+            return .lastDelta(content)
+        }
     }
 }

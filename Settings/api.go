@@ -75,7 +75,17 @@ func (h *host) call(ctx context.Context, op string, args object) (any, error) {
 		}
 		return object{"ok": h.config.set(key, args["value"]) == nil}, nil
 	case "test":
-		return h.test(ctx), nil
+		return h.test(ctx, args), nil
+	case "try":
+		return h.try(ctx, args), nil
+	case "prompts.defaults":
+		defaults := object{"outputRule": outputRule}
+		for mode, prompt := range defaultPrompts {
+			defaults[mode] = prompt
+		}
+		return defaults, nil
+	case "confirm":
+		return object{"ok": h.ask(args, "Are you sure?", "OK")}, nil
 	case "learned.forget":
 		return object{"ok": h.forgetLearned(args)}, nil
 	case "prefs.get":
@@ -139,32 +149,66 @@ func (h *host) status() object {
 	}
 }
 
-// test makes one request with the saved settings.
-func (h *host) test(ctx context.Context) object {
+// endpointInUse is the config's provider in use, or the reply that says
+// why there is none to ask.
+func (h *host) endpointInUse() (endpoint, object) {
 	data, err := h.config.read()
-	state := health{}
-	if err == nil {
-		state = check(data)
+	if err != nil {
+		return endpoint{}, object{"ok": false, "code": "notConfigured", "error": ""}
 	}
-	switch {
-	case state.problem != "":
-		return object{"ok": false, "code": "configError", "error": state.problem}
-	case !state.configured:
+	if problem := check(data).problem; problem != "" {
+		return endpoint{}, object{"ok": false, "code": "configError", "error": problem}
+	}
+	return endpointFrom(data), nil
+}
+
+// test makes one small request: with the provider the page sends (the one
+// being edited, saved or not), else the one in use.
+func (h *host) test(ctx context.Context, args object) object {
+	e, failed := h.endpointInUse()
+	if failed != nil {
+		return failed
+	}
+	if m, ok := args["provider"].(map[string]any); ok {
+		timeout := e.timeout
+		e = endpointOf(m, true)
+		e.timeout = timeout
+	}
+	return run(ctx, e, testInstructions, testInput)
+}
+
+// try runs the page's sample through a mode's prompt (the text in the
+// page's editor, else the built-in one) with the provider in use.
+func (h *host) try(ctx context.Context, args object) object {
+	mode, _ := args["mode"].(string)
+	if _, ok := defaultPrompts[mode]; !ok {
+		return object{"ok": false, "error": "unknown mode"}
+	}
+	e, failed := h.endpointInUse()
+	if failed != nil {
+		return failed
+	}
+	prompt, _ := args["prompt"].(string)
+	input, _ := args["input"].(string)
+	return run(ctx, e, instructions(mode, prompt), strings.TrimSpace(input))
+}
+
+func run(ctx context.Context, e endpoint, instructions, input string) object {
+	if !e.configured() {
 		return object{"ok": false, "code": "notConfigured", "error": ""}
 	}
 	started := time.Now()
-	text, err := rewrite(ctx, endpointFrom(data), testInput)
+	text, err := rewrite(ctx, e, instructions, input)
 	if err != nil {
 		return object{"ok": false, "error": err.Error()}
 	}
-	return object{"ok": true, "input": testInput, "text": strings.TrimSpace(text),
+	return object{"ok": true, "input": input, "text": strings.TrimSpace(text),
 		"ms": time.Since(started).Milliseconds()}
 }
 
-// forgetLearned asks first, in the pages' language (they send the
-// wording), then deletes the file and tells a running input method to drop
-// its copy.
-func (h *host) forgetLearned(args object) bool {
+// ask puts a question to the user in the pages' language (they send the
+// wording) and says whether they confirmed.
+func (h *host) ask(args object, title, confirm string) bool {
 	text := func(key, fallback string) string {
 		if s, ok := args[key].(string); ok && s != "" {
 			return s
@@ -173,16 +217,22 @@ func (h *host) forgetLearned(args object) bool {
 	}
 	answer := make(chan bool, 1)
 	dialog := application.Get().Dialog.Question().
-		SetTitle(text("title", "Forget learned words?")).
+		SetTitle(text("title", title)).
 		SetMessage(text("detail", ""))
-	forget := dialog.AddButton(text("confirm", "Forget")).OnClick(func() { answer <- true })
-	cancel := dialog.AddButton(text("cancel", "Cancel")).OnClick(func() { answer <- false })
-	dialog.SetDefaultButton(forget).SetCancelButton(cancel)
+	yes := dialog.AddButton(text("confirm", confirm)).OnClick(func() { answer <- true })
+	no := dialog.AddButton(text("cancel", "Cancel")).OnClick(func() { answer <- false })
+	dialog.SetDefaultButton(yes).SetCancelButton(no)
 	if h.window != nil {
 		dialog.AttachToWindow(h.window)
 	}
 	dialog.Show()
-	if !<-answer {
+	return <-answer
+}
+
+// forgetLearned asks first, then deletes the file and tells a running input
+// method to drop its copy.
+func (h *host) forgetLearned(args object) bool {
+	if !h.ask(args, "Forget learned words?", "Forget") {
 		return false
 	}
 	if err := os.Remove(learnedPath(h.home)); err != nil && !errors.Is(err, fs.ErrNotExist) {

@@ -102,6 +102,8 @@ function fill() {
   const fuzzy = new Set(config.fuzzyPinyin || []);
   for (const box of $$("#fuzzy input")) box.checked = fuzzy.has(box.value);
   $("#pinyinOptions").classList.toggle("disabled", (config.chinese || "xiaohe") !== "pinyin");
+  fillProviders();
+  fillPrompt();
 }
 
 /** The field's value as the config wants it; null removes the key. */
@@ -116,14 +118,33 @@ function valueOf(el) {
   return el.type === "number" ? Number(text) : text;
 }
 
-async function save(key, value) {
-  const reply = await fluent("config.set", { key, value });
-  if (!reply.ok) return toast(t("Couldn't save: the config file isn't valid JSON."), true);
-  if (value === null) delete config[key]; else config[key] = value;
+// One save at a time, in order: two quick edits of a key never land the
+// wrong way round.
+let saving = Promise.resolve();
+
+/** Sets keys in order (null removes one). The page shows the new values at
+ *  once, so a Test right after an edit already uses them. */
+function saveAll(changes) {
+  for (const [key, value] of changes) {
+    config = { ...config };
+    if (value === null) delete config[key]; else config[key] = value;
+  }
   fill();
-  toast(t("Saved"));
-  refreshStatus();
+  saving = saving.then(async () => {
+    for (const [key, value] of changes) {
+      const reply = await fluent("config.set", { key, value });
+      if (!reply.ok) {
+        toast(t("Couldn't save: the config file isn't valid JSON."), true);
+        return refreshStatus(true);
+      }
+    }
+    toast(t("Saved"));
+    refreshStatus();
+  });
+  return saving;
 }
+
+const save = (key, value) => saveAll([[key, value]]);
 
 for (const el of $$("input[data-key], select[data-key], textarea[data-key]")) {
   el.addEventListener("change", () => {
@@ -140,6 +161,160 @@ for (const choice of $$(".choice[data-key]")) {
 $("#fuzzy").addEventListener("change", () => {
   const pairs = $$("#fuzzy input").filter((box) => box.checked).map((box) => box.value);
   save("fuzzyPinyin", pairs.length ? pairs : null);
+});
+
+// MARK: - Providers
+
+// The provider in the form, by its place in the list.
+let selected = 0;
+
+const isObject = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+const nameOf = (provider) => (typeof provider.name === "string" ? provider.name.trim() : "");
+const apiOf = (provider) => (String(provider.api ?? "").trim().toLowerCase() === "chat" ? "chat" : "responses");
+const endpointKeys = ["baseURL", "apiKey", "model", "reasoningEffort"];
+const hasList = () => Array.isArray(config.providers) && config.providers.some(isObject);
+
+function hostOf(url) {
+  try { return new URL(String(url).trim()).hostname; } catch { return ""; }
+}
+
+/** The saved providers (docs/config.md). A config from before them has its
+ *  one endpoint at the top level: that is the list's only provider. */
+function providerList() {
+  if (hasList()) return config.providers.filter(isObject);
+  const one = { name: hostOf(config.baseURL) || t("Provider {n}", { n: 1 }), api: "responses" };
+  for (const key of endpointKeys) {
+    if (typeof config[key] === "string" && config[key] !== "") one[key] = config[key];
+  }
+  return [one];
+}
+
+/** The provider in use: the one `provider` names, else the first. */
+function activeIndex(list) {
+  if (typeof config.provider !== "string") return 0;
+  const index = list.findIndex((provider) => nameOf(provider) === config.provider.trim());
+  return index < 0 ? 0 : index;
+}
+
+/** Saves the list, and the name of the one in use when it changes. The
+ *  first list saved takes over from the top-level endpoint keys. */
+function saveProviders(list, inUse) {
+  const changes = [["providers", list]];
+  if (!hasList()) {
+    changes.push(["provider", inUse ?? nameOf(list[0])]);
+    for (const key of endpointKeys) if (key in config) changes.push([key, null]);
+  } else if (inUse !== undefined) {
+    changes.push(["provider", inUse]);
+  }
+  return saveAll(changes);
+}
+
+function fillProviders() {
+  const list = providerList();
+  selected = Math.max(0, Math.min(selected, list.length - 1));
+  const active = activeIndex(list);
+  $("#providers").replaceChildren(...list.map((provider, index) => {
+    const row = document.createElement("li");
+    row.dataset.index = index;
+    row.classList.toggle("on", index === selected);
+    const text = document.createElement("div");
+    text.className = "text";
+    const name = document.createElement("b");
+    name.textContent = nameOf(provider) || t("Unnamed");
+    const sub = document.createElement("span");
+    sub.className = "sub";
+    const model = typeof provider.model === "string" && provider.model.trim() ? provider.model.trim() : t("No model");
+    sub.textContent = `${model} · ${apiOf(provider) === "chat" ? "Chat Completions" : "Responses"}`;
+    text.append(name, sub);
+    row.append(text);
+    if (index === active) {
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = t("In use");
+      row.append(tag);
+    } else {
+      const use = document.createElement("button");
+      use.className = "pill";
+      use.dataset.use = index;
+      use.textContent = t("Use");
+      row.append(use);
+    }
+    return row;
+  }));
+  const provider = list[selected];
+  for (const el of $$("#provider [data-field]")) {
+    if (el === document.activeElement) continue;  // don't clobber what is being typed
+    const value = provider[el.dataset.field];
+    if (el.classList.contains("choice")) markChoice(el, apiOf(provider));
+    else el.value = typeof value === "string" ? value.trim() : "";
+  }
+  $("#deleteProvider").disabled = list.length < 2;
+}
+
+/** One field of the provider in the form; null removes it. */
+function editProvider(field, value) {
+  const list = providerList().map((provider) => ({ ...provider }));
+  const provider = list[selected];
+  const inUse = selected === activeIndex(list);
+  if (field === "name") {
+    const taken = list.some((other, index) => index !== selected && nameOf(other) === value);
+    if (!value || taken) {
+      toast(t(value ? "Another provider has that name." : "A provider needs a name."), true);
+      $("#provider [data-field=name]").value = nameOf(provider);
+      return;
+    }
+  }
+  if (value === null) delete provider[field]; else provider[field] = value;
+  if (JSON.stringify(list) === JSON.stringify(providerList())) return;
+  // Renaming the one in use renames it in `provider` too.
+  saveProviders(list, field === "name" && inUse ? value : undefined);
+}
+
+for (const el of $$("#provider input[data-field], #provider select[data-field]")) {
+  el.addEventListener("change", () => editProvider(el.dataset.field, el.value.trim() || null));
+}
+$("#provider .choice[data-field]").addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  if (button && !button.classList.contains("on")) editProvider("api", button.dataset.value);
+});
+
+$("#providers").addEventListener("click", (event) => {
+  const use = event.target.closest("button[data-use]");
+  if (use) return save("provider", nameOf(providerList()[Number(use.dataset.use)]));
+  const row = event.target.closest("li[data-index]");
+  if (!row || Number(row.dataset.index) === selected) return;
+  selected = Number(row.dataset.index);
+  $("#testResult").textContent = "";
+  fillProviders();
+});
+
+$("#addProvider").addEventListener("click", () => {
+  const list = providerList().map((provider) => ({ ...provider }));
+  let n = list.length + 1;
+  while (list.some((provider) => nameOf(provider) === t("Provider {n}", { n }))) n++;
+  list.push({ name: t("Provider {n}", { n }), api: "responses" });
+  selected = list.length - 1;
+  $("#testResult").textContent = "";
+  saveProviders(list);
+  $("#provider [data-field=name]").select();
+});
+
+$("#deleteProvider").addEventListener("click", async () => {
+  const list = providerList();
+  if (list.length < 2) return;
+  const reply = await fluent("confirm", {
+    title: t("Delete {name}?", { name: nameOf(list[selected]) || t("Unnamed") }),
+    detail: t("Its URL, API key and model go with it."),
+    confirm: t("Delete"),
+    cancel: t("Cancel"),
+  });
+  if (!reply.ok) return;
+  const rest = list.filter((_, index) => index !== selected);
+  // Deleting the one in use puts the first one left in use.
+  const inUse = selected === activeIndex(list) ? nameOf(rest[0]) : undefined;
+  selected = Math.min(selected, rest.length - 1);
+  $("#testResult").textContent = "";
+  saveProviders(rest, inUse);
 });
 
 $("#showKey").addEventListener("click", () => {
@@ -238,6 +413,60 @@ function noticePreview(style) {
 
 for (const el of $$(".preview[data-preview]")) el.innerHTML = noticePreview(el.dataset.preview);
 
+// MARK: - Prompts
+
+// The built-in prompts, and the rule Fluent puts after every prompt.
+let defaults = {};
+let promptMode = "fix";
+// What Try sends when its field is empty.
+const samples = {
+  fix: "helo wrld, how r u",
+  polish: "i want know if this way can work good",
+  translate: "这个 bug 我明天 fix，你先 review 一下",
+};
+
+const ownPrompts = () => (isObject(config.prompts) ? config.prompts : {});
+
+function ownPrompt(mode) {
+  const text = ownPrompts()[mode];
+  return typeof text === "string" && text.trim() ? text : null;
+}
+
+function fillPrompt() {
+  markChoice($("#promptMode"), promptMode);
+  const own = ownPrompt(promptMode);
+  const editor = $("#prompt");
+  if (editor !== document.activeElement) editor.value = own ?? defaults[promptMode] ?? "";
+  $("#promptState").textContent = t(own ? "Your own prompt" : "Built-in prompt");
+  $("#resetPrompt").disabled = !own;
+  $("#tryInput").placeholder = samples[promptMode];
+  $("#outputRule").textContent = defaults.outputRule ?? "";
+}
+
+/** Saves the mode's prompt; blank or the built-in one removes it, so the
+ *  built-in prompt (which may improve) is used. */
+function savePrompt(text) {
+  const prompts = { ...ownPrompts() };
+  text = (text ?? "").trim();
+  if (!text || text === defaults[promptMode]) delete prompts[promptMode]; else prompts[promptMode] = text;
+  if (JSON.stringify(prompts) === JSON.stringify(ownPrompts())) return fillPrompt();
+  save("prompts", Object.keys(prompts).length ? prompts : null);
+}
+
+$("#prompt").addEventListener("change", () => savePrompt($("#prompt").value));
+$("#resetPrompt").addEventListener("click", () => {
+  $("#prompt").value = defaults[promptMode] ?? "";
+  savePrompt(null);
+});
+$("#promptMode").addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-value]");
+  if (!button || button.dataset.value === promptMode) return;
+  promptMode = button.dataset.value;
+  $("#tryInput").value = "";
+  $("#tryRow").hidden = true;
+  fillPrompt();
+});
+
 // MARK: - Status
 
 function check(id, state) {
@@ -268,14 +497,8 @@ async function refreshStatus(force = false) {
 
 // MARK: - Actions
 
-$("#test").addEventListener("click", async () => {
-  const button = $("#test");
-  const result = $("#testResult");
-  button.disabled = true;
-  result.className = "result";
-  result.textContent = t("Testing…");
-  const reply = await fluent("test");
-  button.disabled = false;
+/** A Test or Try reply: what went in and came out, or what went wrong. */
+function showReply(result, reply) {
   if (reply.ok) {
     result.className = "result ok";
     result.textContent = `✓ “${reply.input}” → “${reply.text}” · ${(reply.ms / 1000).toFixed(1)} s`;
@@ -285,7 +508,33 @@ $("#test").addEventListener("click", async () => {
       : reply.code === "configError" ? t("Config error: {problem}", { problem: reply.error })
       : `⚠ ${reply.error}`;
   }
-});
+}
+
+/** Runs one request from button and shows its reply in result. */
+async function ask(button, result, waiting, op, args) {
+  button.disabled = true;
+  result.className = "result";
+  result.textContent = t(waiting);
+  const reply = await fluent(op, args());
+  button.disabled = false;
+  showReply(result, reply);
+}
+
+// The provider in the form, as edited: it may not be the one in use.
+$("#test").addEventListener("click", () =>
+  ask($("#test"), $("#testResult"), "Testing…", "test", () => ({ provider: providerList()[selected] })));
+
+// The mode's prompt as it is in the editor, with the provider in use.
+function tryPrompt() {
+  $("#tryRow").hidden = false;
+  ask($("#tryPrompt"), $("#tryResult"), "Trying…", "try", () => ({
+    mode: promptMode,
+    input: $("#tryInput").value.trim() || samples[promptMode],
+    prompt: $("#prompt").value,
+  }));
+}
+$("#tryPrompt").addEventListener("click", tryPrompt);
+$("#tryInput").addEventListener("keydown", (event) => { if (event.key === "Enter") tryPrompt(); });
 
 $("#forget").addEventListener("click", async () => {
   const reply = await fluent("learned.forget", {
@@ -301,6 +550,7 @@ $("#forget").addEventListener("click", async () => {
 
 (async () => {
   await loadLanguage();
+  defaults = await fluent("prompts.defaults");
   try { const view = localStorage.getItem("view"); if (view && $(`#${view}`)) show(view); } catch {}
   await refreshStatus(true);
   // Live: the input method, Input Sources and the file can change elsewhere.

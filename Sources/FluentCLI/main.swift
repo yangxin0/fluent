@@ -97,7 +97,7 @@ guard let config = store.current(), config.isConfigured else {
 FileHandle.standardError.write(Data("[\(mode.badge)] \(input)\n→ ".utf8))
 do {
     let client = ResponsesClient()
-    for try await delta in client.stream(config: config, instructions: mode.instructions, input: input) {
+    for try await delta in client.stream(config: config, instructions: config.instructions(for: mode), input: input) {
         print(delta, terminator: "")
         fflush(stdout)
     }

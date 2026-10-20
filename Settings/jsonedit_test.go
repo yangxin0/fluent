@@ -82,12 +82,48 @@ func TestValuesAreWrittenAsTheFileWouldHaveThem(t *testing.T) {
 		{"中文", `"中文"`},
 		{[]any{"zh=z", "an=ang"}, `["zh=z", "an=ang"]`},
 		{[]any{}, `[]`},
-		{map[string]any{"b": 1.0, "a": "x"}, `{"a":"x","b":1}`},
+		{map[string]any{"b": 1.0, "a": "x"}, `{"a": "x", "b": 1}`},
+		{map[string]any{"model": "m", "x": true, "name": "N", "apiKey": "k"}, `{"name": "N", "apiKey": "k", "model": "m", "x": true}`},
+		{[]any{map[string]any{"name": "A"}, "B"}, `[{"name": "A"}, "B"]`},
 	}
 	for _, c := range cases {
-		if got, err := encodeValue(c.value); err != nil || got != c.want {
+		if got, err := encodeValue(c.value, ""); err != nil || got != c.want {
 			t.Errorf("encodeValue(%#v) = %s, %v; want %s", c.value, got, err, c.want)
 		}
+	}
+}
+
+// Providers and prompts: a line per provider and per prompt, where the file
+// puts its keys on lines of their own.
+func TestListsOfObjectsAndObjectsGetLinesOfTheirOwn(t *testing.T) {
+	providers := []any{map[string]any{"name": "A", "api": "chat"}, map[string]any{"name": "B"}}
+	prompts := map[string]any{"polish": "P", "fix": "F"}
+	got := edit(t, "{\n  \"a\": 1\n}\n", "providers", providers)
+	got = edit(t, got, "prompts", prompts)
+	want := `{
+  "a": 1,
+  "providers": [
+    {"name": "A", "api": "chat"},
+    {"name": "B"}
+  ],
+  "prompts": {
+    "fix": "F",
+    "polish": "P"
+  }
+}
+`
+	if got != want {
+		t.Errorf("got\n%s", got)
+	}
+	if got := edit(t, "{}", "providers", providers); got != "{\n  \"providers\": [\n    {\"name\": \"A\", \"api\": \"chat\"},\n    {\"name\": \"B\"}\n  ]\n}" {
+		t.Errorf("empty file: %q", got)
+	}
+	if got := edit(t, `{"a": 1}`, "prompts", prompts); got != `{"a": 1, "prompts": {"fix": "F", "polish": "P"}}` {
+		t.Errorf("one line: %q", got)
+	}
+	crlf := edit(t, "{\r\n  \"a\": 1\r\n}\r\n", "prompts", map[string]any{"fix": "F"})
+	if crlf != "{\r\n  \"a\": 1,\r\n  \"prompts\": {\r\n    \"fix\": \"F\"\r\n  }\r\n}\r\n" {
+		t.Errorf("CRLF: %q", crlf)
 	}
 }
 

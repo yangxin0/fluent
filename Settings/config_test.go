@@ -136,3 +136,30 @@ func TestPrivatizeTakesAwayOthersAccess(t *testing.T) {
 		t.Errorf("mode %v, want 0600", info.Mode().Perm())
 	}
 }
+
+// The input method has the same built-in prompts; both apps' tests check
+// them against docs/default-prompts.json.
+func TestDefaultPromptsMatchTheSharedFile(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "docs", "default-prompts.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var shared map[string]string
+	if err := json.Unmarshal(raw, &shared); err != nil {
+		t.Fatal(err)
+	}
+	if len(shared) != len(defaultPrompts)+1 || shared["outputRule"] != outputRule {
+		t.Errorf("shared file: %v", shared)
+	}
+	for mode, prompt := range defaultPrompts {
+		if shared[mode] != prompt {
+			t.Errorf("%s:\n%q\nwant\n%q", mode, prompt, shared[mode])
+		}
+	}
+	if got := instructions("fix", " \n"); got != defaultPrompts["fix"]+"\n\n"+outputRule {
+		t.Errorf("built-in: %q", got)
+	}
+	if got := instructions("polish", " Friendly.\n"); got != "Friendly.\n\n"+outputRule {
+		t.Errorf("your own: %q", got)
+	}
+}

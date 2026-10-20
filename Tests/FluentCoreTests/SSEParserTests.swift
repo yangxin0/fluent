@@ -121,6 +121,31 @@ final class SSEParserTests: XCTestCase {
         XCTAssertEqual(ResponsesEventInterpreter.interpret(events[0]), .error("reply incomplete: max_output_tokens"))
     }
 
+    func testChatStreams() throws {
+        func decode(_ lines: [String]) throws -> (text: String, finished: Bool) {
+            var decoder = ResponsesStreamDecoder(api: .chat)
+            var text = ""
+            for byte in (lines.joined(separator: "\n") + "\n").utf8 {
+                text += try decoder.feed(byte) ?? ""
+            }
+            return (text, decoder.isFinished)
+        }
+        let chunk = { (json: String) in "data: \(json)\n" }
+        let reply = try decode([
+            chunk(#"{"choices":[{"delta":{"role":"assistant","content":""},"finish_reason":null}]}"#),
+            chunk(#"{"choices":[{"delta":{"reasoning_content":"Hmm"},"finish_reason":null}]}"#),
+            chunk(#"{"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}"#),
+            chunk(#"{"choices":[{"delta":{"content":" world"},"finish_reason":"stop"}]}"#),
+        ])
+        XCTAssertEqual(reply.text, "Hello world")
+        XCTAssertTrue(reply.finished)
+        XCTAssertTrue(try decode([chunk(#"{"choices":[{"delta":{"content":"Hi"}}]}"#), "data: [DONE]\n"]).finished)
+        XCTAssertFalse(try decode([chunk(#"{"choices":[{"delta":{"content":"Hi"}}]}"#)]).finished)
+        XCTAssertThrowsError(try decode([chunk(#"{"choices":[{"delta":{},"finish_reason":"length"}]}"#)]))
+        XCTAssertEqual(ChatEventInterpreter.interpret(SSEEvent(data: #"{"error":{"message":"bad key"}}"#)),
+                       .error("bad key"))
+    }
+
     func testErrorBodiesShowTheirMessage() {
         XCTAssertEqual(ResponsesClient.errorMessage(fromBody: #"{  "error": {    "message": "Invalid API key",    "type": "auth"  }}"#),
                        "Invalid API key")

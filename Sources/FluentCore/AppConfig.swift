@@ -1,10 +1,78 @@
 import Foundation
 
-public struct AppConfig: Codable, Equatable {
+/// One saved LLM endpoint: an OpenAI Responses API, or a Chat Completions
+/// API (DeepSeek, Ollama, …).
+public struct Provider: Decodable, Equatable {
+    public enum API: String {
+        case responses
+        case chat
+    }
+
+    public var name: String
+    public var api: API
     public var baseURL: String
     public var apiKey: String
     public var model: String
     public var reasoningEffort: String?
+
+    public init(name: String = "", api: API = .responses, baseURL: String, apiKey: String, model: String,
+                reasoningEffort: String? = nil) {
+        self.name = name
+        self.api = api
+        self.baseURL = baseURL
+        self.apiKey = apiKey
+        self.model = model
+        self.reasoningEffort = reasoningEffort
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case name, api, baseURL, apiKey, model, reasoningEffort
+    }
+
+    /// Any field may be missing or of the wrong type: it then reads as empty,
+    /// and the provider as not set up, rather than the whole file as broken.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        func text(_ key: CodingKeys) -> String {
+            (try? c.decodeIfPresent(String.self, forKey: key))?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        }
+        name = text(.name)
+        api = API(rawValue: text(.api).lowercased()) ?? .responses
+        baseURL = text(.baseURL)
+        apiKey = text(.apiKey)
+        model = text(.model)
+        reasoningEffort = try? c.decodeIfPresent(String.self, forKey: .reasoningEffort)
+    }
+
+    /// Usable once it has a real API key.
+    public var isConfigured: Bool {
+        !apiKey.isEmpty && apiKey != AppConfig.placeholderKey && !model.isEmpty && !baseURL.isEmpty
+    }
+}
+
+/// An array element that may not decode; it is then skipped.
+private struct Lenient<T: Decodable>: Decodable {
+    let value: T?
+
+    init(from decoder: Decoder) throws {
+        value = try? T(from: decoder)
+    }
+}
+
+public struct AppConfig: Decodable, Equatable {
+    /// The endpoint of a config from before `providers`: used only while
+    /// that list is empty.
+    public var baseURL: String
+    public var apiKey: String
+    public var model: String
+    public var reasoningEffort: String?
+    /// Saved endpoints; `provider` names the one in use, else it is the first.
+    public var providers: [Provider]
+    public var provider: String?
+    /// The user's own prompt per mode, by `Mode.promptKey`, in place of the
+    /// built-in one.
+    public var prompts: [String: String]
     /// Panel color scheme: "auto" (follow system), "light", or "dark".
     public var appearance: String?
     /// What ⇧⇧ shows: "badge" (the FL badge alone, the default), "pill"
@@ -51,7 +119,8 @@ public struct AppConfig: Codable, Equatable {
         return min(max(seconds, timeoutSecondsRange.lowerBound), timeoutSecondsRange.upperBound)
     }
 
-    public init(baseURL: String, apiKey: String, model: String, reasoningEffort: String? = nil,
+    public init(baseURL: String = "", apiKey: String = "", model: String = "", reasoningEffort: String? = nil,
+                providers: [Provider] = [], provider: String? = nil, prompts: [String: String] = [:],
                 appearance: String? = nil, toggleNotice: String? = nil, terminalMode: String? = nil,
                 terminalApps: [String]? = nil, terminalCellWidth: Double? = nil,
                 chinese: String? = nil, pinyinAbbreviations: Bool? = nil, fuzzyPinyin: [String]? = nil,
@@ -61,6 +130,9 @@ public struct AppConfig: Codable, Equatable {
         self.apiKey = apiKey
         self.model = model
         self.reasoningEffort = reasoningEffort
+        self.providers = providers
+        self.provider = provider
+        self.prompts = prompts
         self.appearance = appearance
         self.toggleNotice = toggleNotice
         self.terminalMode = terminalMode
@@ -74,8 +146,9 @@ public struct AppConfig: Codable, Equatable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case baseURL, apiKey, model, reasoningEffort, appearance, toggleNotice, terminalMode, terminalApps,
-             terminalCellWidth, chinese, pinyinAbbreviations, fuzzyPinyin, debounceMs, timeoutSeconds
+        case baseURL, apiKey, model, reasoningEffort, providers, provider, prompts, appearance, toggleNotice,
+             terminalMode, terminalApps, terminalCellWidth, chinese, pinyinAbbreviations, fuzzyPinyin,
+             debounceMs, timeoutSeconds
     }
 
     /// Normalized appearance preference; unknown/missing values mean "auto".
@@ -127,10 +200,24 @@ public struct AppConfig: Codable, Equatable {
         func optional<T: Decodable>(_ type: T.Type, _ key: CodingKeys) -> T? {
             try? c.decodeIfPresent(type, forKey: key)
         }
-        baseURL = try required(.baseURL)
-        apiKey = try required(.apiKey)
-        model = try required(.model)
+        // Only objects count as providers; with none, the top-level keys are
+        // the endpoint, as before there was a list.
+        providers = optional([Lenient<Provider>].self, .providers)?.compactMap(\.value) ?? []
+        if providers.isEmpty {
+            baseURL = try required(.baseURL)
+            apiKey = try required(.apiKey)
+            model = try required(.model)
+        } else {
+            func text(_ key: CodingKeys) -> String {
+                optional(String.self, key)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            }
+            baseURL = text(.baseURL)
+            apiKey = text(.apiKey)
+            model = text(.model)
+        }
         reasoningEffort = optional(String.self, .reasoningEffort)
+        provider = optional(String.self, .provider)
+        prompts = optional([String: Lenient<String>].self, .prompts)?.compactMapValues(\.value) ?? [:]
         appearance = optional(String.self, .appearance)
         toggleNotice = optional(String.self, .toggleNotice)
         terminalMode = optional(String.self, .terminalMode)
@@ -148,9 +235,28 @@ public struct AppConfig: Codable, Equatable {
             optional(Double.self, .timeoutSeconds) ?? AppConfig.defaultTimeoutSeconds)
     }
 
-    /// A config is usable once the user has filled in a real API key.
-    public var isConfigured: Bool {
-        !apiKey.isEmpty && apiKey != AppConfig.placeholderKey && !model.isEmpty && !baseURL.isEmpty
+    /// Which of `providers` is in use: the one `provider` names, else the
+    /// first; nil when the top-level keys are the endpoint.
+    public var activeProviderIndex: Int? {
+        guard !providers.isEmpty else { return nil }
+        let name = provider?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return providers.firstIndex { $0.name == name } ?? 0
+    }
+
+    /// The endpoint requests go to.
+    public var activeProvider: Provider {
+        guard let index = activeProviderIndex else {
+            return Provider(baseURL: baseURL, apiKey: apiKey, model: model, reasoningEffort: reasoningEffort)
+        }
+        return providers[index]
+    }
+
+    /// A config is usable once the provider in use has a real API key.
+    public var isConfigured: Bool { activeProvider.isConfigured }
+
+    /// The system instructions for `mode`: the user's own prompt, if any.
+    public func instructions(for mode: Mode) -> String {
+        mode.instructions(prompt: prompts[mode.promptKey])
     }
 }
 

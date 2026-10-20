@@ -45,7 +45,7 @@ public final class RewriteEngine {
             self?.emit(.began(generation: generation))
             // Persisted at default level so `log show` can compare models:
             // time to first token and total time per request.
-            let model = config.model
+            let model = config.activeProvider.model
             let started = Date()
             var firstTokenMs: Int?
             func ms(since date: Date) -> Int { Int(Date().timeIntervalSince(date) * 1000) }

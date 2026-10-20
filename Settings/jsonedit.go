@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"slices"
 	"strings"
 )
 
@@ -42,7 +43,11 @@ func setKey(text []byte, key string, value any) ([]byte, error) {
 			return splice(open+1, close, ""), nil
 		}
 	}
-	encoded, err := encodeValue(value)
+	indent := "\n  "
+	if len(members) > 0 {
+		indent = string(text[open+1 : members[0].keyStart])
+	}
+	encoded, err := encodeValue(value, indent)
 	if err != nil {
 		return nil, err
 	}
@@ -50,12 +55,11 @@ func setKey(text []byte, key string, value any) ([]byte, error) {
 		m := members[index]
 		return splice(m.valueStart, m.valueEnd, encoded), nil
 	}
-	name, _ := encodeValue(key)
+	name, _ := encodeValue(key, "")
 	entry := name + ": " + encoded
 	if len(members) == 0 {
-		return splice(open+1, open+1, "\n  "+entry+"\n"), nil
+		return splice(open+1, open+1, indent+entry+"\n"), nil
 	}
-	indent := string(text[open+1 : members[0].keyStart])
 	if indent == "" {
 		indent = " "
 	}
@@ -63,20 +67,71 @@ func setKey(text []byte, key string, value any) ([]byte, error) {
 	return splice(last.valueEnd, last.valueEnd, ","+indent+entry), nil
 }
 
-// encodeValue is value as JSON on one line: strings with only what JSON
-// needs escaped, arrays as `[a, b]`, numbers in their shortest form.
-func encodeValue(value any) (string, error) {
-	if items, ok := value.([]any); ok {
-		parts := make([]string, len(items))
-		for i, item := range items {
-			s, err := encodeValue(item)
+// firstKeys come first in an object (a provider), in the order the pages
+// show them; the other keys follow sorted.
+var firstKeys = []string{"name", "api", "baseURL", "apiKey", "model"}
+
+// encodeValue is value as JSON: strings with only what JSON needs escaped,
+// arrays as `[a, b]`, objects as `{"a": 1}`, numbers in their shortest form.
+// It takes one line, except where the file gives its keys lines of their
+// own (indent, the text before a key, holds a line break): there an object gets
+// a line per key, and a list of objects a line per object.
+func encodeValue(value any, indent string) (string, error) {
+	var parts []string
+	var objects bool
+	switch v := value.(type) {
+	case []any:
+		objects = len(v) > 0
+		for _, item := range v {
+			_, isObject := item.(map[string]any)
+			objects = objects && isObject
+			s, err := encodeValue(item, "")
 			if err != nil {
 				return "", err
 			}
-			parts[i] = s
+			parts = append(parts, s)
 		}
-		return "[" + strings.Join(parts, ", ") + "]", nil
+	case map[string]any:
+		keys := make([]string, 0, len(v))
+		for key := range v {
+			keys = append(keys, key)
+		}
+		slices.SortFunc(keys, func(a, b string) int {
+			i, j := slices.Index(firstKeys, a), slices.Index(firstKeys, b)
+			switch {
+			case i >= 0 && j >= 0:
+				return i - j
+			case i >= 0:
+				return -1
+			case j >= 0:
+				return 1
+			}
+			return strings.Compare(a, b)
+		})
+		for _, key := range keys {
+			name, _ := encodeValue(key, "")
+			s, err := encodeValue(v[key], "")
+			if err != nil {
+				return "", err
+			}
+			parts = append(parts, name+": "+s)
+		}
+	default:
+		return encodeScalar(value)
 	}
+	open, close := "[", "]"
+	if _, ok := value.(map[string]any); ok {
+		open, close = "{", "}"
+	}
+	if len(parts) > 0 && strings.Contains(indent, "\n") && (open == "{" || objects) {
+		inner := indent + "  "
+		return open + inner + strings.Join(parts, ","+inner) + indent + close, nil
+	}
+	return open + strings.Join(parts, ", ") + close, nil
+}
+
+// encodeScalar is a string, number, bool or null as JSON.
+func encodeScalar(value any) (string, error) {
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)

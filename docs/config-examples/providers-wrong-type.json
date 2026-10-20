@@ -1,0 +1,5 @@
+{
+  "providers": {"name": "Work"},
+  "apiKey": "sk-test",
+  "model": "gpt-5-mini"
+}

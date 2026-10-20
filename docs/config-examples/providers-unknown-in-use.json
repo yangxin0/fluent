@@ -1,0 +1,10 @@
+{
+  "baseURL": 1,
+  "providers": [
+    "not a provider",
+    {"name": "Local", "api": "chat", "baseURL": " http://localhost:11434/v1 ", "apiKey": "ollama", "model": "qwen3"},
+    {"name": 2, "baseURL": ["wrong"], "apiKey": null}
+  ],
+  "provider": "Gone",
+  "prompts": "wrong type"
+}

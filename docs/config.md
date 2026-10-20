@@ -14,10 +14,13 @@ repository; a writer writes the file the link points at and keeps the link.
 
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `baseURL` | string, **required** | | The Responses API root, e.g. `https://api.openai.com/v1` |
-| `apiKey` | string, **required** | | Sent as `Authorization: Bearer …`; `sk-REPLACE_ME` means not set |
-| `model` | string, **required** | | |
+| `providers` | array of objects | `[]` | Saved LLM endpoints (below) |
+| `provider` | string | the first | The `name` of the provider in use |
+| `baseURL` | string, **required** without `providers` | | The Responses API root, e.g. `https://api.openai.com/v1` |
+| `apiKey` | string, **required** without `providers` | | Sent as `Authorization: Bearer …`; `sk-REPLACE_ME` means not set |
+| `model` | string, **required** without `providers` | | |
 | `reasoningEffort` | string | not sent | Sent as `reasoning.effort` |
+| `prompts` | object of strings | `{}` | Your own prompt per mode (below) |
 | `debounceMs` | number | `350` | Wait after typing, clamped to 0–10000 |
 | `timeoutSeconds` | number | `10` | How long a reply may stay silent, clamped to 1–300 |
 | `appearance` | string | `"auto"` | Candidate bar: `"auto"`, `"light"` or `"dark"` |
@@ -31,8 +34,47 @@ repository; a writer writes the file the link points at and keeps the link.
 
 Required strings are trimmed of surrounding whitespace. An optional key
 with the wrong type is ignored, as if it were missing; an unknown key is
-ignored. The input method can rewrite once `baseURL`, `apiKey` and `model`
-are non-empty and `apiKey` isn't `sk-REPLACE_ME`.
+ignored.
+
+**Providers.** Each object in `providers` is one endpoint:
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | string | `""` | What the pages and the IME menu call it, and what `provider` names |
+| `api` | string | `"responses"` | `"responses"` (`POST <baseURL>/responses`) or `"chat"` (`POST <baseURL>/chat/completions`), either case |
+| `baseURL` | string | `""` | The API root, e.g. `https://api.deepseek.com` |
+| `apiKey` | string | `""` | As above |
+| `model` | string | `""` | |
+| `reasoningEffort` | string | not sent | `reasoning.effort` for Responses, `reasoning_effort` for Chat Completions |
+
+Every value but `reasoningEffort` is trimmed; a missing value, or one of the
+wrong type, reads as empty, so a provider is never a problem, only not set
+up. An element that isn't an object doesn't count. The provider in use is
+the first one whose `name` equals `provider` (trimmed), else the first one;
+when `provider` isn't a string, the first one. While `providers` holds no
+object (missing, empty, or of the wrong type), the top-level `baseURL`,
+`apiKey`, `model` and `reasoningEffort` are the one provider (no name,
+Responses API), as before there were providers; once it holds one, those
+keys are ignored and not required. Settings moves them into the list (named
+after the URL's host) the first time you save a provider, and removes them.
+
+The input method can rewrite once the provider in use has a non-empty
+`baseURL`, `apiKey` and `model` and its `apiKey` isn't `sk-REPLACE_ME`.
+
+**Requests.** Both apps stream (`"stream": true`). For the Responses API the
+system prompt goes in `instructions` and the text in `input`; a model whose
+name starts with `gpt` or contains `codex` is sent as the Codex CLI
+(`originator: codex_cli_rs`). For Chat Completions they go as a `system` and
+a `user` message, and the reply is the `choices[0].delta.content` chunks
+until a chunk with a `finish_reason` (`length` or `content_filter` mean it
+was cut short) or `data: [DONE]`.
+
+**Prompts.** `prompts` maps `fix`, `polish` and `translate` to your own
+prompt for that mode; a mode that is missing, blank or not a string uses
+the built-in prompt. The model is told the prompt, a blank line (`\n\n`),
+then the output rule, which no prompt replaces: the reply is inserted as
+it comes. [`default-prompts.json`](default-prompts.json) holds the built-in
+prompts and the rule; both apps' tests check theirs against it.
 
 When the file can't be used at all, both apps say why in the same words:
 
@@ -40,15 +82,18 @@ When the file can't be used at all, both apps say why in the same words:
 |---|---|
 | isn't JSON | `not valid JSON` |
 | is JSON but not an object | `not a JSON object` |
-| has no `baseURL`, `apiKey` or `model` (checked in that order) | `"apiKey" is missing` |
-| has one of them as anything but a string, `null` included | `"apiKey" has the wrong type` |
+| has no providers, and no `baseURL`, `apiKey` or `model` (checked in that order) | `"apiKey" is missing` |
+| has no providers, and one of those as anything but a string, `null` included | `"apiKey" has the wrong type` |
 
 `docs/config-examples/` holds sample files and, in `expected.json`, what
 each one makes: both apps' tests read them (`ConfigExamplesTests` in Swift,
 `TestConfigExamples` in Go).
 
 **Writing.** Both apps change one key at a time, editing only that key's
-text, so the other keys keep their order, spacing and number formatting. A
+text, so the other keys keep their order, spacing and number formatting.
+Where the file puts its keys on lines of their own, Settings writes an
+object a line per key and a list of objects (`providers`) a line per
+object, `name`, `api`, `baseURL`, `apiKey` and `model` first. A
 missing file is created from the starter template; when it is missing but
 `~/.config/english-input/config.json` (Fluent's name before) exists, that
 one is copied instead.

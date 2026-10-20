@@ -16,14 +16,20 @@ public enum ResponsesClientError: LocalizedError {
     }
 }
 
-/// The bytes of a Responses stream as output text. Lines end in LF, CRLF or
-/// a bare CR, as SSE allows; `isFinished` turns true at the terminal event.
+/// The bytes of a Responses or Chat Completions stream as output text. Lines
+/// end in LF, CRLF or a bare CR, as SSE allows; `isFinished` turns true at
+/// the terminal event.
 struct ResponsesStreamDecoder {
+    private let api: Provider.API
     private var parser = SSEParser()
     private var line: [UInt8] = []
     private var afterCR = false
     private var yieldedAnyDelta = false
     private(set) var isFinished = false
+
+    init(api: Provider.API = .responses) {
+        self.api = api
+    }
 
     /// Feeds one byte; returns text to yield, if any. Throws API errors.
     mutating func feed(_ byte: UInt8) throws -> String? {
@@ -39,11 +45,15 @@ struct ResponsesStreamDecoder {
         let text = String(decoding: line, as: UTF8.self)
         line.removeAll(keepingCapacity: true)
         guard let event = parser.feed(line: text) else { return nil }
-        switch ResponsesEventInterpreter.interpret(event) {
+        let item = api == .chat ? ChatEventInterpreter.interpret(event) : ResponsesEventInterpreter.interpret(event)
+        switch item {
         case .delta(let delta):
             guard !delta.isEmpty else { return nil }
             yieldedAnyDelta = true
             return delta
+        case .lastDelta(let delta):
+            isFinished = true
+            return delta.isEmpty ? nil : delta
         case .completed(let full):
             isFinished = true
             // Only when no deltas arrived; otherwise it repeats them.
@@ -59,7 +69,8 @@ struct ResponsesStreamDecoder {
     }
 }
 
-/// Streams output text from an OpenAI Responses-API-compatible endpoint.
+/// Streams output text from the provider in use: an OpenAI Responses API,
+/// or a Chat Completions API.
 public final class ResponsesClient {
     private let session: URLSession
 
@@ -87,7 +98,7 @@ public final class ResponsesClient {
                         }
                         throw ResponsesClientError.http(http.statusCode, Self.errorMessage(fromBody: body))
                     }
-                    var decoder = ResponsesStreamDecoder()
+                    var decoder = ResponsesStreamDecoder(api: config.activeProvider.api)
                     for try await byte in bytes {
                         if byte == 0x0A || byte == 0x0D { try Task.checkCancellation() }
                         if let text = try decoder.feed(byte) { continuation.yield(text) }
@@ -126,33 +137,36 @@ public final class ResponsesClient {
     }
 
     static func makeRequest(config: AppConfig, instructions: String, input: String) throws -> URLRequest {
-        var base = config.baseURL
+        let provider = config.activeProvider
+        var base = provider.baseURL
         while base.hasSuffix("/") { base.removeLast() }
-        guard let url = URL(string: base + "/responses") else {
-            throw ResponsesClientError.invalidBaseURL(config.baseURL)
+        guard let url = URL(string: base + (provider.api == .chat ? "/chat/completions" : "/responses")) else {
+            throw ResponsesClientError.invalidBaseURL(provider.baseURL)
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
-        request.setValue("Bearer \(config.apiKey)", forHTTPHeaderField: "Authorization")
-        // Some gateways gate the Responses API for GPT models to recognized
-        // coding-agent clients; identify as Codex for those. Other providers
-        // must not see it: DeepSeek treats a Codex client differently and
-        // ignores `reasoning.effort: none`, thinking anyway.
-        if identifiesAsCodex(model: config.model) {
-            request.setValue("codex_cli_rs", forHTTPHeaderField: "originator")
-            request.setValue("codex_cli_rs/\(codexVersion)", forHTTPHeaderField: "User-Agent")
-        }
+        request.setValue("Bearer \(provider.apiKey)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = config.timeoutSeconds
-        var body: [String: Any] = [
-            "model": config.model,
-            "instructions": instructions,
-            "input": input,
-            "stream": true,
-        ]
-        if let effort = config.reasoningEffort, !effort.isEmpty {
-            body["reasoning"] = ["effort": effort]
+        let effort = provider.reasoningEffort.flatMap { $0.isEmpty ? nil : $0 }
+        var body: [String: Any] = ["model": provider.model, "stream": true]
+        switch provider.api {
+        case .responses:
+            // Some gateways gate the Responses API for GPT models to
+            // recognized coding-agent clients; identify as Codex for those.
+            // Other providers must not see it: DeepSeek treats a Codex client
+            // differently and ignores `reasoning.effort: none`, thinking anyway.
+            if identifiesAsCodex(model: provider.model) {
+                request.setValue("codex_cli_rs", forHTTPHeaderField: "originator")
+                request.setValue("codex_cli_rs/\(codexVersion)", forHTTPHeaderField: "User-Agent")
+            }
+            body["instructions"] = instructions
+            body["input"] = input
+            if let effort { body["reasoning"] = ["effort": effort] }
+        case .chat:
+            body["messages"] = [["role": "system", "content": instructions], ["role": "user", "content": input]]
+            if let effort { body["reasoning_effort"] = effort }
         }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         return request

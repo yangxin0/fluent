@@ -1,0 +1,7 @@
+{
+  "providers": [
+    {"name": "Work", "baseURL": "https://gateway.example.com/v1", "apiKey": "sk-REPLACE_ME", "model": "gpt-5-mini"},
+    {"name": "DeepSeek", "api": "chat", "baseURL": "https://api.deepseek.com", "apiKey": "sk-test", "model": "deepseek-chat"}
+  ],
+  "provider": " Work "
+}

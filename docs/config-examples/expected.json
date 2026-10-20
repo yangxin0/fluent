@@ -9,5 +9,9 @@
   "model-wrong-type.json": { "configured": false, "problem": "\"model\" has the wrong type" },
   "null-base-url.json": { "configured": false, "problem": "\"baseURL\" has the wrong type" },
   "not-json.json": { "configured": false, "problem": "not valid JSON" },
-  "not-an-object.json": { "configured": false, "problem": "not a JSON object" }
+  "not-an-object.json": { "configured": false, "problem": "not a JSON object" },
+  "providers.json": { "configured": true, "problem": null },
+  "providers-incomplete-in-use.json": { "configured": false, "problem": null },
+  "providers-unknown-in-use.json": { "configured": true, "problem": null },
+  "providers-wrong-type.json": { "configured": false, "problem": "\"baseURL\" is missing" }
 }

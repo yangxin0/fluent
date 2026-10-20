@@ -16,15 +16,18 @@ import (
 
 const placeholderKey = "sk-REPLACE_ME"
 
-// editableKeys are the keys the pages may set.
+// editableKeys are the keys the pages may set. The top-level endpoint keys
+// are only ever removed, once `providers` takes over from them.
 var editableKeys = map[string]bool{
 	"baseURL": true, "apiKey": true, "model": true, "reasoningEffort": true,
+	"providers": true, "provider": true, "prompts": true,
 	"debounceMs": true, "timeoutSeconds": true, "appearance": true, "toggleNotice": true,
 	"terminalMode": true, "terminalApps": true, "terminalCellWidth": true,
 	"chinese": true, "pinyinAbbreviations": true, "fuzzyPinyin": true,
 }
 
-// requiredKeys, in the order a problem names the first one wrong.
+// requiredKeys, in the order a problem names the first one wrong. Only a
+// config without providers needs them.
 var requiredKeys = []string{"baseURL", "apiKey", "model"}
 
 const template = `{
@@ -154,6 +157,9 @@ func check(data []byte) health {
 	object, ok := top.(map[string]any)
 	if !ok {
 		return health{problem: "not a JSON object"}
+	}
+	if len(providers(object)) > 0 {
+		return health{configured: activeEndpoint(object).configured()}
 	}
 	values := map[string]string{}
 	for _, key := range requiredKeys {

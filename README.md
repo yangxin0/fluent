@@ -7,8 +7,10 @@ insert (`P  We should figure out a way.  ↵`): **Enter inserts the improved
 text**, Shift+Enter inserts exactly what you typed, Esc cancels. The same bar
 is used for Chinese, 小鹤双拼 or 全拼 (see below).
 
-Powered by any **OpenAI Responses-API-compatible endpoint** (OpenAI, or any
-provider exposing `/v1/responses` with SSE streaming).
+Powered by any **OpenAI-compatible endpoint** that streams: the Responses
+API (OpenAI, or any provider exposing `/v1/responses`) or Chat Completions
+(DeepSeek, Ollama, LM Studio, OpenRouter…). Save several providers and
+switch between them.
 
 ## Modes
 
@@ -22,7 +24,8 @@ The bar starts with the mode's badge (`双` while typing 小鹤双拼, `拼` for
 全拼). Switch modes
 from the input-method menu in the menu bar, or **Ctrl+Tab** while composing
 English.
-The last mode is remembered.
+The last mode is remembered. Each mode's prompt can be replaced with your
+own in Settings ▸ LLM, where *Try* runs a sample through it.
 
 ## Install
 
@@ -61,9 +64,14 @@ copied over):
 
 ```json
 {
-  "baseURL": "https://api.openai.com/v1",
-  "apiKey": "sk-...",
-  "model": "gpt-4o-mini",
+  "providers": [
+    {"name": "OpenAI", "api": "responses", "baseURL": "https://api.openai.com/v1", "apiKey": "sk-...", "model": "gpt-4o-mini"},
+    {"name": "DeepSeek", "api": "chat", "baseURL": "https://api.deepseek.com", "apiKey": "sk-...", "model": "deepseek-chat"}
+  ],
+  "provider": "OpenAI",
+  "prompts": {
+    "polish": "Rewrite it as a friendly native speaker would, keeping it short."
+  },
   "appearance": "auto",
   "terminalMode": "auto",
   "chinese": "xiaohe",
@@ -74,11 +82,19 @@ copied over):
 
 Every key, and how the two apps share the file, is in
 [docs/config.md](docs/config.md).
-Any Responses-compatible provider works — point `baseURL` at its `/v1` root.
+Each provider speaks the Responses API (`"api": "responses"`, the default)
+or Chat Completions (`"chat"`); point `baseURL` at its `/v1` root.
+`provider` is the one in use, also picked from Settings ▸ LLM or the IME
+menu. A config from before providers, with `baseURL`, `apiKey` and `model`
+at the top level, still works as one provider; Settings moves them into the
+list when you first save a provider.
 `reasoningEffort` (optional, e.g. `"low"` or `"none"`) is sent as
-`reasoning.effort`. For models whose name starts with `gpt` or contains
-`codex`, requests identify as the Codex CLI (`originator: codex_cli_rs`),
-which some gateways require for the Responses API. `timeoutSeconds` is how
+`reasoning.effort` (`reasoning_effort` for Chat Completions). For models
+whose name starts with `gpt` or contains `codex`, Responses requests
+identify as the Codex CLI (`originator: codex_cli_rs`), which some gateways
+require. `prompts` replaces a mode's built-in prompt (`fix`, `polish`,
+`translate`); a rule asking for only the resulting text always follows it,
+so the reply can be inserted as is. `timeoutSeconds` is how
 long the stream may stay silent before the rewrite fails, not a cap on the
 whole reply.
 `appearance` controls the candidate bar's color scheme: `"auto"` follows the

@@ -123,6 +123,19 @@ class InputController: IMKInputController {
             menu.addItem(item)
         }
         menu.addItem(.separator())
+        // With more than one saved provider, the one in use (the config's
+        // "provider").
+        if let config = Shared.configStore.current(), config.providers.count > 1 {
+            for (index, provider) in config.providers.enumerated() {
+                let item = NSMenuItem(title: "Provider: \(provider.name)",
+                                      action: #selector(selectProvider(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = provider.name
+                item.state = index == config.activeProviderIndex ? .on : .off
+                menu.addItem(item)
+            }
+            menu.addItem(.separator())
+        }
         let open = NSMenuItem(title: "Open Fluent Settings…",
                               action: #selector(openSettings(_:)), keyEquivalent: "")
         open.target = self
@@ -606,10 +619,11 @@ class InputController: IMKInputController {
             engine.cancel()
             return
         }
+        let config = Shared.configStore.current()
         engine.textChanged(raw: state.raw,
-                           instructions: Shared.mode.instructions,
+                           instructions: config?.instructions(for: Shared.mode) ?? Shared.mode.instructions(),
                            generation: generation,
-                           config: Shared.configStore.current(),
+                           config: config,
                            configProblem: Shared.configStore.problem)
     }
 
@@ -927,6 +941,15 @@ class InputController: IMKInputController {
             commitRaw()
         } else if state.isComposing {
             afterEdit()
+        }
+    }
+
+    @objc func selectProvider(_ sender: Any?) {
+        guard let name = menuItem(from: sender)?.representedObject as? String else { return }
+        Shared.configStore.set("provider", to: name)
+        if state.isComposing && state.chinese == nil {
+            requestRewrite()
+            refreshPanel()
         }
     }
 

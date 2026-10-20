@@ -131,6 +131,72 @@ final class AppConfigTests: XCTestCase {
         XCTAssertEqual((obj["reasoning"] as? [String: String])?["effort"], "none")
     }
 
+    func testChatRequestBuilding() throws {
+        let config = AppConfig(providers: [
+            Provider(name: "DeepSeek", api: .chat, baseURL: "https://api.deepseek.com/", apiKey: "k",
+                     model: "deepseek-chat", reasoningEffort: "low"),
+        ])
+        let request = try ResponsesClient.makeRequest(config: config, instructions: "inst", input: "hi")
+        XCTAssertEqual(request.url?.absoluteString, "https://api.deepseek.com/chat/completions")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer k")
+        XCTAssertNil(request.value(forHTTPHeaderField: "originator"))
+        let obj = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any])
+        XCTAssertEqual(obj["model"] as? String, "deepseek-chat")
+        XCTAssertEqual(obj["stream"] as? Bool, true)
+        XCTAssertEqual(obj["reasoning_effort"] as? String, "low")
+        XCTAssertNil(obj["input"])
+        XCTAssertEqual(obj["messages"] as? [[String: String]],
+                       [["role": "system", "content": "inst"], ["role": "user", "content": "hi"]])
+        // A GPT model behind a chat API is not a Codex client.
+        let gpt = AppConfig(providers: [Provider(api: .chat, baseURL: "https://x/v1", apiKey: "k", model: "gpt-5")])
+        XCTAssertNil(try ResponsesClient.makeRequest(config: gpt, instructions: "i", input: "hi")
+            .value(forHTTPHeaderField: "originator"))
+    }
+
+    func testProvidersReplaceTheTopLevelEndpoint() throws {
+        let json = #"""
+        {
+          "providers": [
+            "not a provider",
+            {"name": " Work ", "baseURL": "https://work/v1", "apiKey": "sk-REPLACE_ME", "model": "gpt-5-mini"},
+            {"name": "DeepSeek", "api": "Chat", "baseURL": "https://api.deepseek.com", "apiKey": " sk-1\n",
+             "model": "deepseek-chat", "reasoningEffort": "low"},
+            {"name": 7, "api": "smoke signals", "baseURL": ["x"]}
+          ],
+          "provider": "DeepSeek",
+          "prompts": {"polish": "Make it friendly.", "fix": 3}
+        }
+        """#
+        var config = try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8))
+        XCTAssertEqual(config.providers.map(\.name), ["Work", "DeepSeek", ""])
+        XCTAssertEqual(config.providers.map(\.api), [.responses, .chat, .responses])
+        XCTAssertEqual(config.providers[2].baseURL, "")
+        XCTAssertEqual(config.activeProviderIndex, 1)
+        XCTAssertEqual(config.activeProvider.apiKey, "sk-1")
+        XCTAssertEqual(config.activeProvider.reasoningEffort, "low")
+        XCTAssertTrue(config.isConfigured)
+        XCTAssertEqual(config.prompts, ["polish": "Make it friendly."])
+
+        config.provider = "Work"  // a placeholder key
+        XCTAssertFalse(config.isConfigured)
+        config.provider = "Nobody"  // the first, then
+        XCTAssertEqual(config.activeProviderIndex, 0)
+        config.provider = nil
+        XCTAssertEqual(config.activeProvider.name, "Work")
+    }
+
+    func testTheTopLevelEndpointServesUntilThereAreProviders() throws {
+        let legacy = try JSONDecoder().decode(AppConfig.self, from: Data(
+            #"{"baseURL":"https://x/v1","apiKey":"sk-1","model":"m","providers":"OpenAI","prompts":[1]}"#.utf8))
+        XCTAssertNil(legacy.activeProviderIndex)
+        XCTAssertEqual(legacy.activeProvider, Provider(baseURL: "https://x/v1", apiKey: "sk-1", model: "m"))
+        XCTAssertEqual(legacy.prompts, [:])
+        XCTAssertTrue(legacy.isConfigured)
+        // An empty list (or one with no objects) is no list: the top-level
+        // keys are required again.
+        XCTAssertThrowsError(try JSONDecoder().decode(AppConfig.self, from: Data(#"{"providers":[1]}"#.utf8)))
+    }
+
     func testLegacyConfigIsCopiedOnce() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("cfg-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: dir) }
