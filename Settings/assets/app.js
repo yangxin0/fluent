@@ -149,6 +149,95 @@ $("#showKey").addEventListener("click", () => {
   $("#showKey").textContent = t($("#showKey").dataset.source);
 });
 
+// MARK: - ⇧⇧ notice previews
+
+// Each style of the ⇧⇧ notice (toggleNotice), on and then off, drawn after
+// the input method's Sources/Fluent/ToggleNotice.swift, in its points.
+function noticePreview(style) {
+  const css = (property, value) => `style="${property}:var(--n-${value})"`;
+  const fill = (value) => css("fill", value);
+
+  // The menu bar's FL badge: 22×16 with a corner radius of 5, at height h.
+  // "on" and "off" have white letters (the badge style); "cut" is indigo with
+  // letters in the panel's colour, as if cut out; "outline" is for off.
+  function badge(x, y, h, look) {
+    const w = (h * 22) / 16, r = (h * 5) / 16, stroke = h * 0.155;
+    const at = (fx, fy) => `${(x + fx * w).toFixed(2)},${(y + fy * h).toFixed(2)}`;
+    const letters = (color, width) => `<path d="M${at(.217, .721)}L${at(.217, .279)}L${at(.414, .279)}`
+      + `M${at(.217, .5)}L${at(.383, .5)}M${at(.6, .279)}L${at(.6, .721)}L${at(.797, .721)}" fill="none" `
+      + `style="stroke:${color}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    if (look === "outline") {
+      return `<rect x="${x + .75}" y="${y + .75}" width="${w - 1.5}" height="${h - 1.5}" rx="${r - .75}" fill="none" `
+        + `${css("stroke", "second")} stroke-width="1.5"/>` + letters("var(--n-second)", stroke * .85);
+    }
+    return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" ${fill(look === "off" ? "off" : "indigo")}/>`
+      + letters(look === "cut" ? "var(--n-panel)" : "#fff", stroke);
+  }
+
+  // A body of w×h with corner radius r, its tail's tip at (tip, top) when
+  // there is one.
+  function panel(x, y, w, h, r, tip) {
+    const top = tip === undefined ? y : y + 7;
+    let d = `M${x + r},${top}`;
+    if (tip !== undefined) d += `L${tip - 7},${top}L${tip},${y}L${tip + 7},${top}`;
+    d += `L${x + w - r},${top}A${r},${r} 0 0 1 ${x + w},${top + r}L${x + w},${top + h - r}`
+      + `A${r},${r} 0 0 1 ${x + w - r},${top + h}L${x + r},${top + h}A${r},${r} 0 0 1 ${x},${top + h - r}`
+      + `L${x},${top + r}A${r},${r} 0 0 1 ${x + r},${top}Z`;
+    return { svg: `<path d="${d}" ${fill("panel")} ${css("stroke", "edge")} stroke-width=".5" filter="url(#shadow-${style})"/>`, top };
+  }
+
+  const word = (x, midY, on) => `<text x="${x}" y="${midY + 5.3}" font-size="15" font-weight="600" `
+    + `${fill(on ? "label" : "second")}>${on ? "On" : "Off"}</text>`;
+  const keys = (x, midY) => [0, 21].map((dx) => `<rect x="${x + dx + .3}" y="${midY - 8.7}" width="17.4" height="17.4" rx="4.5" `
+    + `${fill("key")} ${css("stroke", "edge")} stroke-width=".6"/><text x="${x + dx + 9}" y="${midY + 4.3}" font-size="12" `
+    + `font-weight="500" text-anchor="middle" ${fill("second")}>⇧</text>`).join("");
+
+  const metrics = {
+    pill: { height: 34, radius: 17, badge: 18, leading: 10, trailing: 14, word: true, keys: true },
+    bubble: { height: 32, radius: 9, badge: 22, leading: 10, trailing: 12, word: true, keys: false },
+    keys: { height: 32, radius: 9, badge: 22, leading: 9, trailing: 9, minWidth: 52, word: false, keys: true },
+  };
+
+  // One scene: a caret, and the notice 6 points under it.
+  function scene(cx, on) {
+    const caretBottom = 22, top = caretBottom + 6;
+    const caret = (x) => `<rect x="${x - 1}" y="${caretBottom - 16}" width="2" height="16" rx="1" ${fill("caret")}/>`;
+    if (style === "badge") {
+      const w = 33;
+      return caret(cx) + `<rect x="${cx - w / 2}" y="${top + 1.5}" width="${w}" height="24" rx="7.5" fill="#000" `
+        + `opacity=".25" filter="url(#blur-${style})"/>` + badge(cx - w / 2, top, 24, on ? "on" : "off");
+    }
+    const m = metrics[style];
+    const items = ["badge", ...(m.word ? ["word"] : []), ...(m.keys && !on ? ["keys"] : [])];
+    const widths = { badge: (m.badge * 22) / 16, word: on ? 21 : 24, keys: 39 };
+    const width = Math.max(m.minWidth || 0, m.leading + m.trailing
+      + items.reduce((sum, item, i) => sum + widths[item] + (i ? (item === "keys" ? 10 : 8) : 0), 0));
+    const x = cx - width / 2;
+    // The pill starts at the caret, like the candidate bar; bubbles point at it.
+    const caretX = style === "pill" ? x + 1 : cx;
+    const shape = panel(x, top, width, m.height, m.radius, style === "pill" ? undefined : cx);
+    const midY = shape.top + m.height / 2;
+    let out = caret(caretX) + shape.svg;
+    let at = items.length === 1 ? cx - widths.badge / 2 : x + m.leading;
+    items.forEach((item, i) => {
+      if (i) at += item === "keys" ? 10 : 8;
+      if (item === "badge") out += badge(at, midY - m.badge / 2, m.badge, on ? "cut" : "outline");
+      if (item === "word") out += word(at, midY, on);
+      if (item === "keys") out += keys(at, midY);
+      at += widths[item];
+    });
+    return out;
+  }
+
+  return `<svg viewBox="0 0 320 76" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, BlinkMacSystemFont, sans-serif">`
+    + `<defs><filter id="shadow-${style}" x="-20%" y="-30%" width="140%" height="180%">`
+    + `<feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity=".2"/></filter>`
+    + `<filter id="blur-${style}" x="-30%" y="-30%" width="160%" height="180%"><feGaussianBlur stdDeviation="2.5"/></filter></defs>`
+    + `<rect width="320" height="76" ${fill("doc")}/>` + scene(80, true) + scene(240, false) + `</svg>`;
+}
+
+for (const el of $$(".preview[data-preview]")) el.innerHTML = noticePreview(el.dataset.preview);
+
 // MARK: - Status
 
 function check(id, state) {

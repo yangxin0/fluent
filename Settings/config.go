@@ -19,7 +19,7 @@ const placeholderKey = "sk-REPLACE_ME"
 // editableKeys are the keys the pages may set.
 var editableKeys = map[string]bool{
 	"baseURL": true, "apiKey": true, "model": true, "reasoningEffort": true,
-	"debounceMs": true, "timeoutSeconds": true, "appearance": true,
+	"debounceMs": true, "timeoutSeconds": true, "appearance": true, "toggleNotice": true,
 	"terminalMode": true, "terminalApps": true, "terminalCellWidth": true,
 	"chinese": true, "pinyinAbbreviations": true, "fuzzyPinyin": true,
 }

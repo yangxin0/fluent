@@ -83,11 +83,11 @@ final class CandidateBarController {
     }
 
     /// The ⇧⇧ toggle's notice at the caret, which hides itself.
-    func flash(enabled: Bool, appearance: String, near caretRect: NSRect) {
+    func flash(enabled: Bool, style: ToggleNoticeStyle, appearance: String, near caretRect: NSRect) {
         flashToken += 1
         let token = flashToken
         panel.orderOut(nil)
-        notice.show(enabled: enabled, appearance: appearance, near: caretRect)
+        notice.show(enabled: enabled, style: style, appearance: appearance, near: caretRect)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in
             guard let self, self.flashToken == token else { return }
             self.hide()

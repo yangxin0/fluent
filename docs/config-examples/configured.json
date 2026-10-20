@@ -6,6 +6,7 @@
   "debounceMs": 350,
   "timeoutSeconds": 10,
   "appearance": "dark",
+  "toggleNotice": "pill",
   "terminalMode": "always",
   "terminalApps": ["com.example.terminal"],
   "terminalCellWidth": 9.7,

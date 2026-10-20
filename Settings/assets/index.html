@@ -122,7 +122,7 @@
 
   <section class="view" id="appearance">
     <h1 data-t>Appearance</h1>
-    <p class="lede" data-t>How the candidate bar looks, and how Fluent treats terminal apps.</p>
+    <p class="lede" data-t>How the candidate bar and the ⇧⇧ notice look, and how Fluent treats terminal apps.</p>
     <div class="card form">
       <div class="row"><span class="label" data-t>Candidate bar</span>
         <div class="choice" data-key="appearance" data-default="auto">
@@ -130,6 +130,13 @@
           <button data-value="light" data-t>Light</button>
           <button data-value="dark" data-t>Dark</button>
         </div></div>
+      <div class="row top"><span class="label" data-t>⇧⇧ notice</span>
+        <div class="stack"><div class="choice tiles" data-key="toggleNotice" data-default="badge">
+          <button data-value="badge"><span class="preview" data-preview="badge"></span><span data-t>Badge</span></button>
+          <button data-value="pill"><span class="preview" data-preview="pill"></span><span data-t>Pill</span></button>
+          <button data-value="bubble"><span class="preview" data-preview="bubble"></span><span data-t>Bubble</span></button>
+          <button data-value="keys"><span class="preview" data-preview="keys"></span><span data-t>Bubble + keys</span></button>
+        </div><span class="hint" data-t>Shown at the caret for a moment when you double-tap Shift: on, then off.</span></div></div>
       <div class="row"><span class="label" data-t>Settings language</span>
         <div class="choice" id="language">
           <button data-value="system" data-t>System</button>

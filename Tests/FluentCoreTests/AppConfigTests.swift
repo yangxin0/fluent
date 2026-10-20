@@ -10,6 +10,19 @@ final class AppConfigTests: XCTestCase {
         XCTAssertTrue(config.isConfigured)
     }
 
+    func testToggleNoticePreference() throws {
+        let base = #""baseURL":"u","apiKey":"k","model":"m""#
+        func pref(_ json: String) throws -> String {
+            try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8)).toggleNoticePreference
+        }
+        XCTAssertEqual(try pref("{\(base)}"), "badge")
+        XCTAssertEqual(try pref("{\(base),\"toggleNotice\":\"Pill\"}"), "pill")
+        XCTAssertEqual(try pref("{\(base),\"toggleNotice\":\"bubble\"}"), "bubble")
+        XCTAssertEqual(try pref("{\(base),\"toggleNotice\":\"keys\"}"), "keys")
+        XCTAssertEqual(try pref("{\(base),\"toggleNotice\":\"nonsense\"}"), "badge")
+        XCTAssertEqual(try pref("{\(base),\"toggleNotice\":2}"), "badge")
+    }
+
     func testAppearancePreferenceNormalization() throws {
         func pref(_ json: String) throws -> String {
             try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8)).appearancePreference

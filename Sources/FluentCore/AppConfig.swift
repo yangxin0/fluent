@@ -7,6 +7,11 @@ public struct AppConfig: Codable, Equatable {
     public var reasoningEffort: String?
     /// Panel color scheme: "auto" (follow system), "light", or "dark".
     public var appearance: String?
+    /// What ⇧⇧ shows: "badge" (the FL badge alone, the default), "pill"
+    /// (badge and On/Off in a capsule), "bubble" (badge and On/Off in a
+    /// bubble pointing at the caret) or "keys" (that bubble with the badge
+    /// alone, and the ⇧⇧ keys when off).
+    public var toggleNotice: String?
     /// Terminal handling: "auto" (detect terminal apps), "always", or "never".
     /// Terminals clip marked text at the window edge, so for them the panel
     /// also shows the typed text once the composition nears the edge.
@@ -47,7 +52,7 @@ public struct AppConfig: Codable, Equatable {
     }
 
     public init(baseURL: String, apiKey: String, model: String, reasoningEffort: String? = nil,
-                appearance: String? = nil, terminalMode: String? = nil,
+                appearance: String? = nil, toggleNotice: String? = nil, terminalMode: String? = nil,
                 terminalApps: [String]? = nil, terminalCellWidth: Double? = nil,
                 chinese: String? = nil, pinyinAbbreviations: Bool? = nil, fuzzyPinyin: [String]? = nil,
                 debounceMs: Int = AppConfig.defaultDebounceMs,
@@ -57,6 +62,7 @@ public struct AppConfig: Codable, Equatable {
         self.model = model
         self.reasoningEffort = reasoningEffort
         self.appearance = appearance
+        self.toggleNotice = toggleNotice
         self.terminalMode = terminalMode
         self.terminalApps = terminalApps
         self.terminalCellWidth = terminalCellWidth
@@ -68,7 +74,7 @@ public struct AppConfig: Codable, Equatable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case baseURL, apiKey, model, reasoningEffort, appearance, terminalMode, terminalApps,
+        case baseURL, apiKey, model, reasoningEffort, appearance, toggleNotice, terminalMode, terminalApps,
              terminalCellWidth, chinese, pinyinAbbreviations, fuzzyPinyin, debounceMs, timeoutSeconds
     }
 
@@ -78,6 +84,16 @@ public struct AppConfig: Codable, Equatable {
         case "light": return "light"
         case "dark": return "dark"
         default: return "auto"
+        }
+    }
+
+    /// Normalized ⇧⇧ notice; unknown/missing values mean "badge".
+    public var toggleNoticePreference: String {
+        switch toggleNotice?.lowercased() {
+        case "pill": return "pill"
+        case "bubble": return "bubble"
+        case "keys": return "keys"
+        default: return "badge"
         }
     }
 
@@ -116,6 +132,7 @@ public struct AppConfig: Codable, Equatable {
         model = try required(.model)
         reasoningEffort = optional(String.self, .reasoningEffort)
         appearance = optional(String.self, .appearance)
+        toggleNotice = optional(String.self, .toggleNotice)
         terminalMode = optional(String.self, .terminalMode)
         terminalApps = optional([String].self, .terminalApps)
         terminalCellWidth = optional(Double.self, .terminalCellWidth)

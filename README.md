@@ -84,6 +84,11 @@ whole reply.
 `appearance` controls the candidate bar's color scheme: `"auto"` follows the
 system light/dark setting (and updates live when it changes), or force it with
 `"light"` / `"dark"`.
+`toggleNotice` is what double-tapping Shift shows at the caret: `"badge"`
+(the FL badge alone, the default), `"pill"` (the badge and On/Off in a
+capsule, with the ⇧⇧ keys when off), `"bubble"` (the badge and On/Off in a
+bubble pointing at the caret) or `"keys"` (that bubble with the badge alone,
+and the ⇧⇧ keys when off). Settings ▸ Appearance shows each one.
 `terminalMode` handles terminal emulators, which draw marked text as a single
 row and clip it at the window edge. In terminal mode the composition stays
 inline as usual, but once it is about to reach the edge the panel also shows
@@ -126,8 +131,9 @@ you typed.
 **Double-tap Shift** turns the IME off: every key then passes straight
 through to the app — handy for terminal commands, code, or anything you
 don't want rewritten. The FL badge flashes under the caret, indigo for on
-and grey for off; double-tap Shift again (or use the IME menu ▸ *Enabled*)
-to turn it back on. The toggle resets to *on* at relaunch.
+and grey for off (Settings ▸ Appearance has other styles); double-tap Shift
+again (or use the IME menu ▸ *Enabled*) to turn it back on. The toggle
+resets to *on* at relaunch.
 
 ## Chinese (小鹤双拼 or 全拼)
 

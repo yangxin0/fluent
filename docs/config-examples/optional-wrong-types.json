@@ -5,6 +5,7 @@
   "debounceMs": "fast",
   "timeoutSeconds": [10],
   "chinese": 1,
+  "toggleNotice": true,
   "pinyinAbbreviations": "yes",
   "fuzzyPinyin": "zh=z"
 }

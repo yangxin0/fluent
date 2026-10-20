@@ -1,7 +1,7 @@
 import Cocoa
 
 /// Placement and color scheme for Fluent's floating panels (the candidate
-/// bar and the ⇧⇧ badge): next to the caret, light/dark as configured.
+/// bar and the ⇧⇧ notice): next to the caret, light/dark as configured.
 enum PanelPlacement {
     /// A borderless, non-activating floating panel: it never takes focus from
     /// the client app.

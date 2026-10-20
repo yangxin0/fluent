@@ -197,6 +197,30 @@ select { cursor: default; -webkit-appearance: none; appearance: none; padding-ri
 }
 .choice button:hover:not(.on) { background: var(--pill-hover); }
 .choice button.on { background: var(--accent); color: var(--accent-fg); }
+
+/* Picture choice: each value's preview over its name, the chosen one
+   ringed. The ⇧⇧ notice previews take the input method's colours. */
+.stack > .tiles { align-self: stretch; }
+.choice.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.choice.tiles button {
+  height: auto; padding: 6px 6px 7px; border-radius: 10px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 5px; font-size: 12px;
+}
+.choice.tiles button.on { background: var(--pill); color: var(--accent); font-weight: 600; box-shadow: inset 0 0 0 2px var(--accent); }
+.preview { display: block; }
+.preview svg { display: block; width: 100%; height: auto; border-radius: 6px; }
+.preview {
+  --n-doc: #ffffff; --n-caret: #007aff; --n-panel: #f6f6f8; --n-edge: rgba(0, 0, 0, .14);
+  --n-label: #1d1d1f; --n-second: #85858a; --n-key: #ffffff;
+  --n-indigo: #5b52e8; --n-off: #aeaeb2;
+}
+@media (prefers-color-scheme: dark) {
+  .preview {
+    --n-doc: #1c1c1e; --n-caret: #0a84ff; --n-panel: #333337; --n-edge: rgba(255, 255, 255, .14);
+    --n-label: #f5f5f7; --n-second: #98989d; --n-key: #48484c;
+    --n-indigo: #7c74ff; --n-off: #636366;
+  }
+}
 .card.disabled { opacity: .5; pointer-events: none; }
 
 /* Buttons */

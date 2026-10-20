@@ -297,8 +297,10 @@ class InputController: IMKInputController {
             // Don't strand an in-progress composition as marked text.
             commitRaw()
         }
-        let appearance = Shared.configStore.current()?.appearancePreference ?? "auto"
-        CandidateBarController.shared.flash(enabled: Shared.enabled, appearance: appearance, near: caretRect())
+        let config = Shared.configStore.current()
+        let style = ToggleNoticeStyle(rawValue: config?.toggleNoticePreference ?? "") ?? .badge
+        CandidateBarController.shared.flash(enabled: Shared.enabled, style: style,
+                                            appearance: config?.appearancePreference ?? "auto", near: caretRect())
     }
 
     // MARK: - 小鹤双拼

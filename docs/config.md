@@ -21,6 +21,7 @@ repository; a writer writes the file the link points at and keeps the link.
 | `debounceMs` | number | `350` | Wait after typing, clamped to 0–10000 |
 | `timeoutSeconds` | number | `10` | How long a reply may stay silent, clamped to 1–300 |
 | `appearance` | string | `"auto"` | Candidate bar: `"auto"`, `"light"` or `"dark"` |
+| `toggleNotice` | string | `"badge"` | What ⇧⇧ shows: `"badge"`, `"pill"`, `"bubble"` or `"keys"` |
 | `terminalMode` | string | `"auto"` | `"auto"`, `"always"` or `"never"` |
 | `terminalApps` | array of strings | `[]` | More terminals, as bundle identifiers |
 | `terminalCellWidth` | number | measured | A terminal cell's width in points |

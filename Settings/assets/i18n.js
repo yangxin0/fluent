@@ -73,11 +73,19 @@ const I18N = {
     "Forgot the learned words": "已清除学习记录",
 
     // Appearance
-    "How the candidate bar looks, and how Fluent treats terminal apps.": "候选栏的外观，以及 Fluent 如何对待终端 App。",
+    "How the candidate bar and the ⇧⇧ notice look, and how Fluent treats terminal apps.":
+      "候选栏和 ⇧⇧ 提示的外观，以及 Fluent 如何对待终端 App。",
     "Candidate bar": "候选栏",
     "System": "跟随系统",
     "Light": "浅色",
     "Dark": "深色",
+    "⇧⇧ notice": "⇧⇧ 提示",
+    "Badge": "徽标",
+    "Pill": "胶囊",
+    "Bubble": "气泡",
+    "Bubble + keys": "气泡 + 按键",
+    "Shown at the caret for a moment when you double-tap Shift: on, then off.":
+      "双击 Shift 时在光标处短暂显示：左为开启，右为关闭。",
     "Settings language": "设置界面语言",
     "Terminal mode": "终端模式",
     "Automatic": "自动",
