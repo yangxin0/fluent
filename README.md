@@ -25,7 +25,7 @@ The bar starts with the mode's badge (`双` while typing 小鹤双拼, `拼` for
 from the input-method menu in the menu bar, or **Ctrl+Tab** while composing
 English.
 The last mode is remembered. Each mode's prompt can be replaced with your
-own in Settings ▸ Lang, where *Try* runs a sample through it.
+own in Settings ▸ English, where *Try* runs a sample through it.
 
 ## Install
 
