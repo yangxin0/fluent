@@ -115,9 +115,10 @@ private enum FLBadge {
         return NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
     }
 
-    static func draw(in rect: NSRect, _ look: Look) {
+    /// `letterScale` sizes the letters against the menu bar's.
+    static func draw(in rect: NSRect, _ look: Look, letterScale: CGFloat = 1) {
         guard let cg = NSGraphicsContext.current?.cgContext else { return }
-        let line = letters(capHeight: rect.height * 8.5 / 16)
+        let line = letters(capHeight: rect.height * 8.5 / 16 * letterScale)
         // Centred on their ink, like the menu bar's.
         let ink = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
         func drawLetters() {
@@ -169,6 +170,8 @@ private enum FLBadge {
 private final class FloatingBadgeView: NSView {
     static let badgeSize = FLBadge.size(height: 24)
     static let padding: CGFloat = 6
+    /// Smaller letters than the menu bar's: at this size they crowd it.
+    static let letterScale: CGFloat = 0.8
 
     var enabled = true {
         didSet { needsDisplay = true }
@@ -186,7 +189,7 @@ private final class FloatingBadgeView: NSView {
         color.setFill()
         FLBadge.shape(rect).fill()
         NSGraphicsContext.restoreGraphicsState()
-        FLBadge.draw(in: rect, .filled(color))
+        FLBadge.draw(in: rect, .filled(color), letterScale: Self.letterScale)
     }
 }
 

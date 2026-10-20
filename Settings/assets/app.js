@@ -335,9 +335,11 @@ function noticePreview(style) {
   // The menu bar's FL badge: 22×16 with a corner radius of 5, at height h.
   // "on" and "off" have white letters (the badge style); "cut" is indigo with
   // letters in the panel's colour, as if cut out; "outline" is for off.
-  function badge(x, y, h, look) {
-    const w = (h * 22) / 16, r = (h * 5) / 16, stroke = h * 0.155;
-    const at = (fx, fy) => `${(x + fx * w).toFixed(2)},${(y + fy * h).toFixed(2)}`;
+  // `scale` sizes the letters, centred on their ink, against the menu bar's.
+  function badge(x, y, h, look, scale = 1) {
+    const w = (h * 22) / 16, r = (h * 5) / 16, stroke = h * 0.155 * scale;
+    const at = (fx, fy) => `${(x + (0.5 + (fx - 0.507) * scale) * w).toFixed(2)},`
+      + `${(y + (0.5 + (fy - 0.5) * scale) * h).toFixed(2)}`;
     const letters = (color, width) => `<path d="M${at(.217, .721)}L${at(.217, .279)}L${at(.414, .279)}`
       + `M${at(.217, .5)}L${at(.383, .5)}M${at(.6, .279)}L${at(.6, .721)}L${at(.797, .721)}" fill="none" `
       + `style="stroke:${color}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"/>`;
@@ -380,7 +382,7 @@ function noticePreview(style) {
     if (style === "badge") {
       const w = 33;
       return caret(cx) + `<rect x="${cx - w / 2}" y="${top + 1.5}" width="${w}" height="24" rx="7.5" fill="#000" `
-        + `opacity=".25" filter="url(#blur-${style})"/>` + badge(cx - w / 2, top, 24, on ? "on" : "off");
+        + `opacity=".25" filter="url(#blur-${style})"/>` + badge(cx - w / 2, top, 24, on ? "on" : "off", 0.8);
     }
     const m = metrics[style];
     const items = ["badge", ...(m.word ? ["word"] : []), ...(m.keys && !on ? ["keys"] : [])];
