@@ -9,6 +9,7 @@ const I18N = {
     "English": "英文",
     "Chinese": "中文",
     "Appearance": "外观",
+    "Advanced": "高级",
     "About": "关于",
 
     // Setup
@@ -81,6 +82,7 @@ const I18N = {
     "Trying…": "正在试…",
     "Reset to default": "恢复默认",
     "Your words": "你的词",
+    "Settings most people never need to change.": "多数人用不着改的设置。",
     "Prefix keys": "前缀键",
     "Add": "添加",
     "Remove": "删除",

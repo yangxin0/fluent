@@ -144,7 +144,7 @@ bar says why (`Config error: "apiKey" is missing`).
 | Space / punctuation | Just text — composition continues until Enter (punctuation, a space or a digit typed with nothing composed goes straight in) |
 | Cmd-shortcuts, Tab, ↑ ↓ | Commit raw text, then act normally |
 | Shift, Shift (double tap) | Toggle the IME **on/off** |
-| A prefix key you listed (e.g. Ctrl-X) | Goes to the app, and so does the next key, instead of starting a composition: the N in Ctrl-X N, the c in tmux's Ctrl-B c. Set them in Settings ▸ English ▸ *Prefix keys* (none by default) |
+| A prefix key you listed (e.g. Ctrl-X) | Goes to the app, and so does the next key, instead of starting a composition: the N in Ctrl-X N, the c in tmux's Ctrl-B c. Set them in Settings ▸ Advanced ▸ *Prefix keys* (none by default) |
 
 Switching apps or clicking elsewhere commits the raw text — nothing you type
 is ever silently lost. If the API is unreachable, Enter simply inserts what
