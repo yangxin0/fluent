@@ -81,6 +81,13 @@ const I18N = {
     "Trying…": "正在试…",
     "Reset to default": "恢复默认",
     "Your words": "你的词",
+    "Prefix keys": "前缀键",
+    "Add": "添加",
+    "Remove": "删除",
+    "Press a shortcut… (Esc to cancel)": "按下快捷键…（Esc 取消）",
+    "Use Control, Option or Command with a key.": "请同时按住 Control、Option 或 Command 中的一个。",
+    "After one of these shortcuts, the next key goes straight to the app instead of starting a composition: the N in Ctrl-X N, the c in tmux's Ctrl-B c.":
+      "按下这些快捷键之一后，下一个键直接交给 App，不会开始输入：例如 Ctrl-X N 里的 N、tmux 的 Ctrl-B c 里的 c。",
     "Words Fluent keeps in English instead of reading them as pinyin, one per line: product names, jargon. Pressing Enter in the Chinese bar adds the letters you typed.":
       "Fluent 当作英文、不按拼音读的词，每行一个：产品名、术语等。在中文候选栏里按回车，会把你敲的字母加进来。",
     "Timing": "时间",

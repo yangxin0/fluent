@@ -82,6 +82,9 @@ public struct AppConfig: Decodable, Equatable {
     public var candidateTextSize: Double?
     /// Chinese candidates in one row of the bar, clamped to 5–9; default 6.
     public var candidatePageSize: Double?
+    /// Shortcuts after which the next key goes straight to the app (Ctrl-X
+    /// in Ctrl-X N), as `KeyCombo` names; none by default.
+    public var prefixKeys: [String] = []
     /// What ⇧⇧ shows: "badge" (the FL badge alone, the default), "pill"
     /// (badge and On/Off in a capsule), "bubble" (badge and On/Off in a
     /// bubble pointing at the caret) or "keys" (that bubble with the badge
@@ -163,7 +166,7 @@ public struct AppConfig: Decodable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case baseURL, apiKey, model, reasoningEffort, providers, provider, prompts, appearance,
-             candidateBarSize, candidateTextSize, candidatePageSize, toggleNotice,
+             candidateBarSize, candidateTextSize, candidatePageSize, prefixKeys, toggleNotice,
              terminalMode, terminalApps, terminalCellWidth, chinese, pinyinAbbreviations, fuzzyPinyin,
              debounceMs, timeoutSeconds
     }
@@ -262,6 +265,8 @@ public struct AppConfig: Decodable, Equatable {
         candidateBarSize = optional(String.self, .candidateBarSize)
         candidateTextSize = optional(Double.self, .candidateTextSize)
         candidatePageSize = optional(Double.self, .candidatePageSize)
+        // Each entry on its own: one that isn't a shortcut is dropped.
+        prefixKeys = (optional([Lenient<String>].self, .prefixKeys) ?? []).compactMap { $0.value.flatMap(KeyCombo.normalized) }
         toggleNotice = optional(String.self, .toggleNotice)
         terminalMode = optional(String.self, .terminalMode)
         terminalApps = optional([String].self, .terminalApps)

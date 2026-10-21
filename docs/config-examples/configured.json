@@ -9,6 +9,7 @@
   "candidateBarSize": "large",
   "candidateTextSize": 20,
   "candidatePageSize": 7,
+  "prefixKeys": ["ctrl-x", "ctrl-b"],
   "toggleNotice": "pill",
   "terminalMode": "always",
   "terminalApps": ["com.example.terminal"],

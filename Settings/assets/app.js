@@ -105,6 +105,7 @@ function fill() {
   fillProviders();
   fillPrompt();
   fillBarPreview();
+  fillPrefixKeys();
 }
 
 /** The field's value as the config wants it; null removes the key. */
@@ -437,6 +438,93 @@ $("#yourWords").addEventListener("change", async () => {
   $("#yourWords").value = reply.words.join("\n");
   toast(t("Saved"));
 });
+
+// MARK: - Prefix keys
+
+// Names as the config writes them (docs/config.md, KeyCombo.swift):
+// modifiers ctrl, opt, shift, cmd, then the key, joined by "-".
+const namedKeys = {
+  Space: "space", Tab: "tab", Enter: "return", NumpadEnter: "return", Escape: "escape", Backspace: "delete",
+  ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down",
+};
+const codeKeys = {
+  Minus: "-", Equal: "=", BracketLeft: "[", BracketRight: "]", Backslash: "\\", Semicolon: ";",
+  Quote: "'", Comma: ",", Period: ".", Slash: "/", Backquote: "`",
+};
+
+/** The name of a key press, or null when it isn't a shortcut. */
+function comboName(event) {
+  if (!(event.ctrlKey || event.altKey || event.metaKey)) return null;
+  const code = event.code;
+  let key = namedKeys[code] ?? (/^F([1-9]|1[0-2])$/.test(code) ? code.toLowerCase() : null);
+  if (!key && code.startsWith("Key")) key = code.slice(3).toLowerCase();
+  if (!key && code.startsWith("Digit") && !event.shiftKey) key = code.slice(5);
+  // Symbols as typed without Option, which would turn them into other characters.
+  if (!key) key = event.altKey ? codeKeys[code] : (event.key.length === 1 ? event.key.toLowerCase() : null);
+  if (!key) return null;
+  const mods = [["ctrl", event.ctrlKey], ["opt", event.altKey], ["shift", event.shiftKey], ["cmd", event.metaKey]]
+    .filter(([, on]) => on).map(([name]) => name);
+  return [...mods, key].join("-");
+}
+
+/** ⌃X for ctrl-x: how the Mac writes shortcuts. */
+function comboLabel(name) {
+  const symbols = { ctrl: "⌃", opt: "⌥", shift: "⇧", cmd: "⌘" };
+  const parts = name.endsWith("--") ? [...name.slice(0, -2).split("-").filter(Boolean), "-"] : name.split("-");
+  const key = parts.pop();
+  const shown = { space: "Space", tab: "Tab", return: "Return", escape: "Esc", delete: "Delete",
+    left: "←", right: "→", up: "↑", down: "↓" }[key] ?? key.toUpperCase();
+  return parts.map((part) => symbols[part] ?? part).join("") + shown;
+}
+
+const prefixList = () => (Array.isArray(config.prefixKeys) ? config.prefixKeys.filter((k) => typeof k === "string") : []);
+
+function fillPrefixKeys() {
+  $("#prefixKeys").replaceChildren(...prefixList().map((name) => {
+    const chip = document.createElement("span");
+    chip.className = "combo";
+    chip.textContent = comboLabel(name);
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "×";
+    remove.title = t("Remove");
+    remove.addEventListener("click", () => {
+      const rest = prefixList().filter((k) => k !== name);
+      save("prefixKeys", rest.length ? rest : null);
+    });
+    chip.append(remove);
+    return chip;
+  }));
+}
+
+let recordingPrefix = false;
+
+function stopRecording() {
+  recordingPrefix = false;
+  $("#addPrefix").classList.remove("on");
+  $("#prefixStatus").textContent = "";
+}
+
+$("#addPrefix").addEventListener("click", () => {
+  if (recordingPrefix) return stopRecording();
+  recordingPrefix = true;
+  $("#addPrefix").classList.add("on");
+  $("#prefixStatus").textContent = t("Press a shortcut… (Esc to cancel)");
+});
+
+document.addEventListener("keydown", (event) => {
+  if (!recordingPrefix || ["Control", "Alt", "Shift", "Meta"].includes(event.key)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  if (event.key === "Escape" && !(event.ctrlKey || event.altKey || event.metaKey)) return stopRecording();
+  const name = comboName(event);
+  if (!name) {
+    $("#prefixStatus").textContent = t("Use Control, Option or Command with a key.");
+    return;
+  }
+  stopRecording();
+  if (!prefixList().includes(name)) save("prefixKeys", [...prefixList(), name]);
+}, true);
 
 // MARK: - Candidate bar preview
 

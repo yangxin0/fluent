@@ -39,6 +39,8 @@ private enum Key {
 
 private let maxCompositionLength = 500
 private let maxChineseKeys = 60
+/// How long after a prefix key the next key still goes straight to the app.
+private let prefixWindow: TimeInterval = 2
 /// Rows of a page of candidates (Settings ▸ Appearance) in the expanded bar.
 private let chineseGridRows = 5
 /// Chinese readings shown after an English word that is also pinyin; the
@@ -54,6 +56,9 @@ class InputController: IMKInputController {
     /// The last text this IME committed in this client was Chinese: then
     /// punctuation is Chinese too, and pinyin goes first more readily.
     private var lastCommitWasChinese = false
+    /// Until when the next key goes straight to the app: set by one of the
+    /// config's prefix keys (Ctrl-X in Ctrl-X N, #23).
+    private var prefixDeadline: Date?
     private var punctuation = ChinesePunctuation()
 
     override init!(server: IMKServer!, delegate: Any!, client inputClient: Any!) {
@@ -169,6 +174,18 @@ class InputController: IMKInputController {
 
     private func handleKeyDown(_ event: NSEvent) -> Bool {
         guard Shared.enabled else { return false }
+
+        // The key after a prefix key belongs to the app's own shortcut
+        // (`n` in Ctrl-X N): it goes straight there, never into a
+        // composition. The prefix itself passes through below, committing
+        // whatever was composed first.
+        if let deadline = prefixDeadline {
+            prefixDeadline = nil
+            if Date() < deadline, !state.isComposing { return false }
+        }
+        if isPrefixKey(event) {
+            prefixDeadline = Date().addingTimeInterval(prefixWindow)
+        }
 
         let flags = event.modifierFlags.intersection([.command, .control, .option, .shift, .function])
 
@@ -529,6 +546,30 @@ class InputController: IMKInputController {
         state.cursor = 0
         state.insert(text)
         afterEdit()
+    }
+
+    /// Whether `event` is one of the config's prefix keys.
+    private func isPrefixKey(_ event: NSEvent) -> Bool {
+        guard let keys = Shared.configStore.current()?.prefixKeys, !keys.isEmpty,
+              let name = Self.comboName(of: event) else { return false }
+        return keys.contains(name)
+    }
+
+    /// The `KeyCombo` name of a key event, the way Settings names a
+    /// recorded key: letters, digits and symbols by the character without
+    /// modifiers, other keys by name.
+    static func comboName(of event: NSEvent) -> String? {
+        let flags = event.modifierFlags
+        let named: [UInt16: String] = [
+            49: "space", 48: "tab", 36: "return", 76: "return", 53: "escape", 51: "delete",
+            123: "left", 124: "right", 125: "down", 126: "up",
+            122: "f1", 120: "f2", 99: "f3", 118: "f4", 96: "f5", 97: "f6",
+            98: "f7", 100: "f8", 101: "f9", 109: "f10", 103: "f11", 111: "f12",
+        ]
+        let key = named[event.keyCode] ?? event.charactersIgnoringModifiers ?? ""
+        guard key.count == 1 || named[event.keyCode] != nil else { return nil }
+        return KeyCombo.name(ctrl: flags.contains(.control), opt: flags.contains(.option),
+                             shift: flags.contains(.shift), cmd: flags.contains(.command), key: key)
     }
 
     /// Candidates in one row of the Chinese bar (Settings ▸ Appearance).

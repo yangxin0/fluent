@@ -297,6 +297,14 @@ input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
 .tag { flex: none; padding: 0 4px; font-size: 12px; font-weight: 600; color: var(--green); }
 .card > .add { padding: 8px 0 10px; border-top: .5px solid var(--line-2); }
 textarea#prompt { font-family: var(--font); font-size: 13px; }
+/* Prefix keys: one chip per shortcut, × to remove */
+.combos { display: flex; flex-wrap: wrap; gap: 6px; }
+.combos:empty { display: none; }
+.combo { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 4px 0 10px;
+  border-radius: 7px; background: var(--pill); font: 600 13px var(--font); letter-spacing: .04em; }
+.combo button { width: 18px; height: 18px; border-radius: 5px; color: var(--muted); font-size: 14px; line-height: 1; }
+.combo button:hover { background: var(--pill-hover); color: var(--fg); }
+.pill.on { background: var(--accent); color: var(--accent-fg); }
 .result { color: var(--fg-2); -webkit-user-select: text; user-select: text; }
 .result.ok { color: var(--green); }
 .result.bad { color: var(--red); }

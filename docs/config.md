@@ -27,6 +27,7 @@ repository; a writer writes the file the link points at and keeps the link.
 | `candidateBarSize` | string | `"medium"` | The bar's padding, number labels and badge: `"small"`, `"medium"` or `"large"` |
 | `candidateTextSize` | number | `18` | The candidates' text size in points, clamped to 14–28; the bar grows to fit it |
 | `candidatePageSize` | number | `6` | Chinese candidates in one row of the bar, rounded and clamped to 5–9 |
+| `prefixKeys` | array of strings | `[]` | Shortcuts after which the next key goes straight to the app, such as `"ctrl-x"` (below) |
 | `toggleNotice` | string | `"badge"` | What ⇧⇧ shows: `"badge"`, `"pill"`, `"bubble"` or `"keys"` |
 | `terminalMode` | string | `"auto"` | `"auto"`, `"always"` or `"never"` |
 | `terminalApps` | array of strings | `[]` | More terminals, as bundle identifiers |
@@ -74,6 +75,18 @@ is sent as the Codex CLI (`originator: codex_cli_rs`). For Chat Completions
 it is the one `user` message, and the reply is the
 `choices[0].delta.content` chunks until a chunk with a `finish_reason`
 (`length` or `content_filter` mean it was cut short) or `data: [DONE]`.
+
+**Prefix keys.** Each entry of `prefixKeys` names a shortcut: modifiers in
+the order `ctrl`, `opt`, `shift`, `cmd`, then the key, joined by `-`
+(`ctrl-x`, `ctrl-shift-b`, `cmd-k`, `opt-f1`, `ctrl--` for Control and the
+minus key). The key is a letter, digit or symbol as typed without
+modifiers, or `space`, `tab`, `return`, `escape`, `delete`, `left`, `right`,
+`up`, `down` or `f1`–`f12`. Either case and the aliases `control`,
+`option`, `alt` and `command` are read, and an entry without Control,
+Option or Command is dropped. The shortcut itself goes to the app as any
+shortcut does, inserting what was composed first; the key after it, if it
+comes within 2 seconds, goes straight to the app too instead of starting a
+composition.
 
 **Prompts.** `prompts` maps `fix`, `polish` and `translate` to your own
 prompt for that mode; a mode that is missing, blank or not a string uses
