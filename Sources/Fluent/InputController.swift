@@ -81,6 +81,7 @@ class InputController: IMKInputController {
     override func activateServer(_ sender: Any!) {
         ctlLog.notice("activateServer: \(self.client()?.bundleIdentifier() ?? "?", privacy: .public) enabled=\(Shared.enabled, privacy: .public)")
         ShiftTapMonitor.shared.sessionActivated(self)
+        PrefixKeyTap.shared.sessionActivated(self, keys: prefixKeys())
         state.reset()
         lastCommitWasChinese = false
         CandidateBarController.shared.hide()
@@ -89,6 +90,7 @@ class InputController: IMKInputController {
     override func deactivateServer(_ sender: Any!) {
         ctlLog.notice("deactivateServer: \(self.client()?.bundleIdentifier() ?? "?", privacy: .public)")
         ShiftTapMonitor.shared.sessionDeactivated(self)
+        PrefixKeyTap.shared.sessionDeactivated(self)
         // Focus is leaving — never silently drop what the user typed.
         commitRaw()
     }
@@ -178,13 +180,19 @@ class InputController: IMKInputController {
         // The key after a prefix key belongs to the app's own shortcut
         // (`n` in Ctrl-X N): it goes straight there, never into a
         // composition. The prefix itself passes through below, committing
-        // whatever was composed first.
-        if let deadline = prefixDeadline {
-            prefixDeadline = nil
-            if Date() < deadline, !state.isComposing { return false }
-        }
-        if isPrefixKey(event) {
-            prefixDeadline = Date().addingTimeInterval(prefixWindow)
+        // whatever was composed first. Apps that keep Ctrl keys from input
+        // methods (WezTerm) never show us the prefix; then only the
+        // PrefixKeyTap saw it.
+        PrefixKeyTap.shared.update(keys: prefixKeys())
+        let deadline = prefixDeadline
+        prefixDeadline = isPrefixKey(event) ? Date().addingTimeInterval(prefixWindow) : nil
+        if let tapped = PrefixKeyTap.shared.followsPrefix(event, within: prefixWindow) {
+            if tapped, !state.isComposing {
+                ctlLog.notice("the key after a prefix key goes to the app")
+                return false
+            }
+        } else if let deadline, Date() < deadline, !state.isComposing {
+            return false
         }
 
         let flags = event.modifierFlags.intersection([.command, .control, .option, .shift, .function])
@@ -548,10 +556,14 @@ class InputController: IMKInputController {
         afterEdit()
     }
 
+    private func prefixKeys() -> [String] {
+        Shared.configStore.current()?.prefixKeys ?? []
+    }
+
     /// Whether `event` is one of the config's prefix keys.
     private func isPrefixKey(_ event: NSEvent) -> Bool {
-        guard let keys = Shared.configStore.current()?.prefixKeys, !keys.isEmpty,
-              let name = Self.comboName(of: event) else { return false }
+        let keys = prefixKeys()
+        guard !keys.isEmpty, let name = Self.comboName(of: event) else { return false }
         return keys.contains(name)
     }
 

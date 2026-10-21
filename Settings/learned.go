@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"sort"
@@ -106,4 +107,28 @@ func englishWordsStamp(home string) float64 {
 		return 0
 	}
 	return float64(info.ModTime().UnixNano()) / 1e9
+}
+
+// What the input method reports (docs/config.md): `inputMonitoring` says
+// whether it may watch key presses, which prefix keys need in apps that
+// keep them from input methods. It writes the file once it has asked.
+
+func statusPath(home string) string {
+	return filepath.Join(home, "Library", "Application Support", "Fluent", "status.json")
+}
+
+// inputMonitoring is true or false as the input method last reported it,
+// nil when it hasn't.
+func inputMonitoring(home string) any {
+	data, err := os.ReadFile(statusPath(home))
+	if err != nil {
+		return nil
+	}
+	var status struct {
+		InputMonitoring *bool `json:"inputMonitoring"`
+	}
+	if json.Unmarshal(data, &status) != nil || status.InputMonitoring == nil {
+		return nil
+	}
+	return *status.InputMonitoring
 }

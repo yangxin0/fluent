@@ -86,7 +86,10 @@ modifiers, or `space`, `tab`, `return`, `escape`, `delete`, `left`, `right`,
 Option or Command is dropped. The shortcut itself goes to the app as any
 shortcut does, inserting what was composed first; the key after it, if it
 comes within 2 seconds, goes straight to the app too instead of starting a
-composition.
+composition. Some apps never hand an input method a Ctrl key (WezTerm
+passes only plain and Shift keys), so while `prefixKeys` isn't empty the
+input method asks for Input Monitoring and, with it, watches key presses
+during its sessions (below).
 
 **Prompts.** `prompts` maps `fix`, `polish` and `translate` to your own
 prompt for that mode; a mode that is missing, blank or not a string uses
@@ -148,6 +151,20 @@ The input method adds a word when you press Enter in the Chinese bar to
 insert the keys as typed, unless you picked a candidate first. Settings ▸
 English shows and edits the list. Each app writes the whole file at once,
 and the input method rereads it when its modification time changes.
+
+## Input Monitoring
+
+`~/Library/Application Support/Fluent/status.json`, written by the input
+method: `{"inputMonitoring": true}` or `false`, whether macOS lets it watch
+key presses, as it found the last time a session started with prefix keys
+set. It writes the file when that changes; until then there is no file.
+Settings shows it under Advanced ▸ Prefix keys, and nothing while the list
+is empty.
+
+With the permission the input method notes, for the last few key presses
+while one of its sessions is active, only when each came and whether it was
+a prefix key, so the key after a prefix key the app kept to itself still
+goes straight to the app.
 
 ## Settings' own preferences
 

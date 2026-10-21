@@ -479,7 +479,17 @@ function comboLabel(name) {
 
 const prefixList = () => (Array.isArray(config.prefixKeys) ? config.prefixKeys.filter((k) => typeof k === "string") : []);
 
+/** Input Monitoring, which prefix keys need in apps like WezTerm, as the
+ *  input method last reported it (null: it hasn't asked yet). */
+let inputMonitoring = null;
+
+function fillPrefixAccess() {
+  $("#prefixAccess").hidden = prefixList().length === 0;
+  $("#prefixAccessState").textContent = t(inputMonitoring === true ? "Allowed" : inputMonitoring === false ? "Not allowed" : "Not asked yet");
+}
+
 function fillPrefixKeys() {
+  fillPrefixAccess();
   $("#prefixKeys").replaceChildren(...prefixList().map((name) => {
     const chip = document.createElement("span");
     chip.className = "combo";
@@ -669,6 +679,10 @@ async function refreshStatus(force = false) {
   const sub = $("#configured-sub");
   sub.textContent = problem ? t("Config error: {problem}", { problem }) : t(sub.dataset.source);
   $("#learned").textContent = t("{n} words", { n: status.learned });
+  if (status.inputMonitoring !== inputMonitoring) {
+    inputMonitoring = status.inputMonitoring;
+    fillPrefixAccess();
+  }
   $("#version").textContent = status.version;
   $("#configPath").textContent = status.configPath;
   // The input method adds words too (Enter in the Chinese bar).

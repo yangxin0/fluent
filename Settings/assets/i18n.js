@@ -89,6 +89,13 @@ const I18N = {
     "Prefix keys": "前缀键",
     "Add": "添加",
     "Remove": "删除",
+    "Input Monitoring": "输入监控",
+    "Open Privacy & Security": "打开隐私与安全性",
+    "Some apps, such as WezTerm, keep Ctrl keys from input methods. Fluent sees prefix keys there only with Input Monitoring, which macOS asks for the next time you type with Fluent.":
+      "有些 App（如 WezTerm）不把 Ctrl 键交给输入法。要在那里认出前缀键，Fluent 需要“输入监控”权限，下次用 Fluent 打字时 macOS 会询问。",
+    "Allowed": "已允许",
+    "Not allowed": "未允许",
+    "Not asked yet": "尚未询问",
     "Press a shortcut… (Esc to cancel)": "按下快捷键…（Esc 取消）",
     "Use Control, Option or Command with a key.": "请同时按住 Control、Option 或 Command 中的一个。",
     "After one of these shortcuts, the next key goes straight to the app instead of starting a composition: the N in Ctrl-X N, the c in tmux's Ctrl-B c.":

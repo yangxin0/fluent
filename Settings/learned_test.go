@@ -1,6 +1,10 @@
 package main
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestCountLearnedCountsEachWordOnce(t *testing.T) {
 	text := "#tick\t12.0\n" +
@@ -23,5 +27,25 @@ func TestCountLearnedCountsEachWordOnce(t *testing.T) {
 func TestLearnedCountWithoutAFileIsZero(t *testing.T) {
 	if got := learnedCount(t.TempDir()); got != 0 {
 		t.Errorf("got %d", got)
+	}
+}
+
+func TestInputMonitoringIsWhatTheInputMethodReported(t *testing.T) {
+	home := t.TempDir()
+	if got := inputMonitoring(home); got != nil {
+		t.Errorf("without a file: got %v", got)
+	}
+	os.MkdirAll(filepath.Dir(statusPath(home)), 0o755)
+	for text, want := range map[string]any{
+		`{"inputMonitoring": true}`:  true,
+		`{"inputMonitoring": false}`: false,
+		`{"inputMonitoring": "yes"}`: nil,
+		`{}`:                         nil,
+		`not json`:                   nil,
+	} {
+		os.WriteFile(statusPath(home), []byte(text), 0o644)
+		if got := inputMonitoring(home); got != want {
+			t.Errorf("%s: got %v, want %v", text, got, want)
+		}
 	}
 }

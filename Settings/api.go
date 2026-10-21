@@ -23,6 +23,9 @@ const repository = "https://github.com/yangxin0/fluent"
 // inputSourcesSettings is System Settings ▸ Keyboard, where Input Sources is.
 const inputSourcesSettings = "x-apple.systempreferences:com.apple.Keyboard-Settings.extension"
 
+// inputMonitoringSettings is Privacy & Security ▸ Input Monitoring.
+const inputMonitoringSettings = "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
+
 type host struct {
 	home    string
 	config  configFile
@@ -111,6 +114,8 @@ func (h *host) call(ctx context.Context, op string, args object) (any, error) {
 		switch args["what"] {
 		case "inputSources":
 			target = inputSourcesSettings
+		case "inputMonitoring":
+			target = inputMonitoringSettings
 		case "config":
 			h.config.ensure()
 			target = h.config.path
@@ -147,17 +152,18 @@ func (h *host) status() object {
 		problem = state.problem
 	}
 	return object{
-		"installed":     exists(h.inputMethod()),
-		"enabled":       inputSourceAdded(),
-		"selected":      inputSourceSelected(),
-		"configured":    state.configured,
-		"configProblem": problem,
-		"dictionaries":  exists(filepath.Join(resources, "xiaohe.lexicon")) && exists(filepath.Join(resources, "english.txt")),
-		"learned":       learnedCount(h.home),
-		"wordsStamp":    englishWordsStamp(h.home),
-		"configStamp":   h.config.stamp(),
-		"configPath":    "~" + strings.TrimPrefix(h.config.path, h.home),
-		"version":       h.version,
+		"installed":       exists(h.inputMethod()),
+		"enabled":         inputSourceAdded(),
+		"selected":        inputSourceSelected(),
+		"configured":      state.configured,
+		"configProblem":   problem,
+		"dictionaries":    exists(filepath.Join(resources, "xiaohe.lexicon")) && exists(filepath.Join(resources, "english.txt")),
+		"learned":         learnedCount(h.home),
+		"wordsStamp":      englishWordsStamp(h.home),
+		"inputMonitoring": inputMonitoring(h.home),
+		"configStamp":     h.config.stamp(),
+		"configPath":      "~" + strings.TrimPrefix(h.config.path, h.home),
+		"version":         h.version,
 	}
 }
 
