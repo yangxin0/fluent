@@ -109,12 +109,18 @@ bundle-settings:
 
 # Sync bundle contents in place: deleting the installed input method would
 # silently un-register and disable the input source in Text Input Services,
-# so an old Fluent.app is moved to the new name rather than replaced.
+# so an old Fluent.app is moved to the new name rather than replaced. An
+# Input Monitoring grant (prefix keys) belongs to one ad-hoc signature: when
+# that changes, it is reset, so the input method's next request prompts
+# rather than failing while System Settings still shows it on.
 install: bundle
 	if [ -d "$(OLD_INSTALLED)" ] && [ ! -e "$(INSTALLED)" ]; then mv "$(OLD_INSTALLED)" "$(INSTALLED)"; fi
 	mkdir -p "$(INSTALLED)"
-	rsync -a --delete "$(IME_DIST)/" "$(INSTALLED)/"
-	codesign --force --sign - "$(INSTALLED)"
+	old=$$(codesign -dvvv "$(INSTALLED)" 2>&1 | sed -n 's/^CDHash=//p'); \
+	rsync -a --delete "$(IME_DIST)/" "$(INSTALLED)/" && \
+	codesign --force --sign - "$(INSTALLED)" && \
+	new=$$(codesign -dvvv "$(INSTALLED)" 2>&1 | sed -n 's/^CDHash=//p') && \
+	if [ "$$old" != "$$new" ]; then tccutil reset ListenEvent com.yangxin.inputmethod.Fluent >/dev/null; fi
 	swift Scripts/register.swift
 	Scripts/forget-stale-input-caches.sh "$(INSTALLED)"
 	mkdir -p "$(SETTINGS_INSTALLED)"

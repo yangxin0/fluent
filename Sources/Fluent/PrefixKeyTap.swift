@@ -18,6 +18,7 @@ final class PrefixKeyTap {
 
     private struct Press {
         let time: TimeInterval
+        let keyCode: UInt16
         let isPrefix: Bool
     }
 
@@ -30,7 +31,6 @@ final class PrefixKeyTap {
     private var asked = false
     private var lastCheck: TimeInterval = -.infinity
     private var reported: Bool?
-    private var clockLogged = false
 
     private init() {}
 
@@ -76,21 +76,27 @@ final class PrefixKeyTap {
     /// keys IMK hands over can tell.
     func followsPrefix(_ event: NSEvent, within window: TimeInterval) -> Bool? {
         guard let tap, CGEvent.tapIsEnabled(tap: tap) else { return nil }
-        if !clockLogged, let last = presses.last {
-            clockLogged = true
-            tapLog.notice("clocks: key \(event.timestamp, privacy: .public) last press \(last.time, privacy: .public)")
-        }
-        // `event` itself may not have reached the tap yet: look only at
-        // what came before it.
-        guard let before = presses.last(where: { $0.time < event.timestamp - 0.002 }) else { return false }
-        return before.isPrefix && event.timestamp - before.time < window
+        // `event` may not have reached the tap yet, and the copy IMK hands
+        // over is stamped a few milliseconds after the tap's (2.8 ms seen in
+        // WezTerm): find it by its key, then look at the press before it.
+        let mine = presses.lastIndex { $0.keyCode == event.keyCode && abs($0.time - event.timestamp) < 0.03 }
+        let before = mine.map { $0 > 0 ? presses[$0 - 1] : nil } ?? presses.last
+        guard let before, before.isPrefix else { return false }
+        let follows = event.timestamp - before.time < window
+        tapLog.notice("key after a prefix key: found=\(mine != nil, privacy: .public) gap=\(event.timestamp - before.time, privacy: .public)s follows=\(follows, privacy: .public)")
+        return follows
     }
 
+    /// Asks each time it finds no permission: macOS prompts only while
+    /// the answer is undecided, as after `make install` resets the grant
+    /// a new ad-hoc signature no longer matches.
     private func allowed() -> Bool {
         let allowed = CGPreflightListenEventAccess()
-        if !allowed && !asked {
-            asked = true
-            tapLog.notice("asking for Input Monitoring")
+        if !allowed {
+            if !asked {
+                asked = true
+                tapLog.notice("asking for Input Monitoring")
+            }
             CGRequestListenEventAccess()
         }
         report(allowed)
@@ -149,7 +155,7 @@ final class PrefixKeyTap {
         case .keyDown:
             guard let key = NSEvent(cgEvent: event) else { return }
             let isPrefix = InputController.comboName(of: key).map(keys.contains) ?? false
-            presses.append(Press(time: key.timestamp, isPrefix: isPrefix))
+            presses.append(Press(time: key.timestamp, keyCode: key.keyCode, isPrefix: isPrefix))
             if presses.count > 8 {
                 presses.removeFirst(presses.count - 8)
             }
