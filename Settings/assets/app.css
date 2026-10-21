@@ -109,6 +109,8 @@ h1 { font-size: 20px; font-weight: 650; letter-spacing: -.01em; margin-bottom: 4
 .lede { color: var(--fg-2); margin-bottom: 18px; max-width: 54ch; }
 h2 { font-size: 13px; font-weight: 600; color: var(--fg-2); margin: 22px 2px 8px; }
 .lede + h2 { margin-top: 0; }
+/* A line about the section, between its heading and its card. */
+h2 + .note { color: var(--muted); font-size: 12px; margin: -4px 2px 8px; max-width: 64ch; }
 
 .card {
   background: var(--card); border-radius: 12px;

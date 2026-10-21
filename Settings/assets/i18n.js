@@ -83,6 +83,10 @@ const I18N = {
     "Reset to default": "恢复默认",
     "Your words": "你的词",
     "Settings most people never need to change.": "多数人用不着改的设置。",
+    "When Fluent asks the model for a rewrite, and how long it waits for the reply.":
+      "Fluent 何时请求模型改写，以及等待回复多久。",
+    "Fine-tuning for terminal mode (Appearance ▸ Terminals): which apps count as terminals, and how wide a character cell is.":
+      "终端模式（外观 ▸ 终端）的细调：哪些 App 算作终端，以及一个字符格有多宽。",
     "Prefix keys": "前缀键",
     "Add": "添加",
     "Remove": "删除",
