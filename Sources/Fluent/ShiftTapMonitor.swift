@@ -96,7 +96,7 @@ final class ShiftTapMonitor {
         controller.toggleEnabled()
     }
 
-    private static func isCurrentInputSource() -> Bool {
+    static func isCurrentInputSource() -> Bool {
         guard let source = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue(),
               let ptr = TISGetInputSourceProperty(source, kTISPropertyInputSourceID)
         else { return false }

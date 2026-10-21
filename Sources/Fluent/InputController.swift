@@ -20,8 +20,37 @@ private enum Shared {
     }
     /// Double-tap Shift toggles this; when off every key passes through
     /// untouched (for terminals, passwords, code…). Not persisted — a fresh
-    /// launch always starts enabled.
+    /// launch always starts enabled, and so does switching back to Fluent
+    /// from another input source (InputSourceWatcher).
     static var enabled = true
+}
+
+/// Selecting Fluent again after another input source (ABC…) always finds it
+/// on, whatever ⇧⇧ left it at (#25). Switching apps while Fluent stays
+/// selected keeps the toggle.
+final class InputSourceWatcher: NSObject {
+    static let shared = InputSourceWatcher()
+    private var fluentSelected = false
+
+    func start() {
+        fluentSelected = ShiftTapMonitor.isCurrentInputSource()
+        // Delivered even though this background app is never active.
+        DistributedNotificationCenter.default().addObserver(
+            self, selector: #selector(selectionChanged(_:)),
+            name: Notification.Name(kTISNotifySelectedKeyboardInputSourceChanged as String),
+            object: nil, suspensionBehavior: .deliverImmediately)
+    }
+
+    @objc private func selectionChanged(_ notification: Notification) {
+        let selected = ShiftTapMonitor.isCurrentInputSource()
+        guard selected != fluentSelected else { return }
+        fluentSelected = selected
+        ctlLog.notice("input source: Fluent \(selected ? "selected" : "left", privacy: .public), enabled=\(Shared.enabled, privacy: .public)")
+        if selected, !Shared.enabled {
+            Shared.enabled = true
+            ctlLog.notice("enabled is now true (selected again)")
+        }
+    }
 }
 
 private enum Key {

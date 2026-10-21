@@ -161,7 +161,8 @@ through to the app — handy for terminal commands, code, or anything you
 don't want rewritten. The FL badge flashes under the caret, indigo for on
 and grey for off (Settings ▸ Appearance has other styles); double-tap Shift
 again (or use the IME menu ▸ *Enabled*) to turn it back on. The toggle
-resets to *on* at relaunch.
+resets to *on* at relaunch, and whenever you switch to Fluent from another
+input source; switching apps keeps it.
 
 ## Chinese (全拼 or 小鹤双拼)
 
