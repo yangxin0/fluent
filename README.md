@@ -30,8 +30,14 @@ own in Settings ▸ English, where *Try* runs a sample through it.
 ## Install
 
 ```sh
-make install    # build both apps, ad-hoc sign, register the input method
+make signing-identity   # optional, once: a local certificate to sign with
+make install            # build both apps, sign, register the input method
 ```
+
+Without the certificate the apps are signed ad hoc, and macOS forgets their
+Input Monitoring permission (needed for prefix keys in apps like WezTerm)
+with every rebuild; `make signing-identity` adds a self-signed one, "Fluent
+Local Signing", to your login keychain so the permission lasts.
 
 Building needs Xcode (or its command-line tools) for the Swift input method
 and Go for the Settings app; any recent Go will do, as `make` fetches the

@@ -87,9 +87,9 @@ final class PrefixKeyTap {
         return follows
     }
 
-    /// Asks each time it finds no permission: macOS prompts only while
-    /// the answer is undecided, as after `make install` resets the grant
-    /// a new ad-hoc signature no longer matches.
+    /// Asks each time it finds no permission; macOS prompts only while the
+    /// answer is undecided. A grant belongs to the signature: an ad-hoc
+    /// signed build loses it, one signed by `make signing-identity` keeps it.
     private func allowed() -> Bool {
         let allowed = CGPreflightListenEventAccess()
         if !allowed {

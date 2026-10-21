@@ -15,6 +15,8 @@ SETTINGS_DIR       = Settings
 SETTINGS_DIST      = dist/Fluent.app
 SETTINGS_BIN       = .build/settings/Fluent
 SETTINGS_INSTALLED = /Applications/Fluent.app
+# "Fluent Local Signing" once `make signing-identity` made it, else ad hoc.
+SIGN_ID = $(shell security find-identity -p codesigning 2>/dev/null | grep -q '"Fluent Local Signing"' && echo "Fluent Local Signing" || echo -)
 SETTINGS_VERSION   = $(shell /usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' $(SETTINGS_DIR)/build/darwin/Info.plist)
 GO                 = GOTOOLCHAIN=auto go
 # Wails links the webview through cgo: built for the macOS Info.plist names.
@@ -29,7 +31,7 @@ RIME_ICE_DIR   = .build/rime-ice-$(RIME_ICE_REV)
 RIME_ICE_FILES = $(addprefix $(RIME_ICE_DIR)/,cn_dicts/8105.dict.yaml cn_dicts/base.dict.yaml en_dicts/en.dict.yaml)
 DICT_DIR       = .build/dict
 
-.PHONY: build bundle bundle-ime bundle-settings settings settings-icon install register reload logs dev test cli clean icon dict
+.PHONY: build bundle bundle-ime bundle-settings settings settings-icon install signing-identity register reload logs dev test cli clean icon dict
 
 build:
 	swift build
@@ -109,27 +111,26 @@ bundle-settings:
 
 # Sync bundle contents in place: deleting the installed input method would
 # silently un-register and disable the input source in Text Input Services,
-# so an old Fluent.app is moved to the new name rather than replaced. An
-# Input Monitoring grant (prefix keys) belongs to one ad-hoc signature: when
-# that changes, it is reset, so the input method's next request prompts
-# rather than failing while System Settings still shows it on.
+# so an old Fluent.app is moved to the new name rather than replaced.
 install: bundle
 	if [ -d "$(OLD_INSTALLED)" ] && [ ! -e "$(INSTALLED)" ]; then mv "$(OLD_INSTALLED)" "$(INSTALLED)"; fi
 	mkdir -p "$(INSTALLED)"
-	old=$$(codesign -dvvv "$(INSTALLED)" 2>&1 | sed -n 's/^CDHash=//p'); \
-	rsync -a --delete "$(IME_DIST)/" "$(INSTALLED)/" && \
-	codesign --force --sign - "$(INSTALLED)" && \
-	new=$$(codesign -dvvv "$(INSTALLED)" 2>&1 | sed -n 's/^CDHash=//p') && \
-	if [ "$$old" != "$$new" ]; then tccutil reset ListenEvent com.yangxin.inputmethod.Fluent >/dev/null; fi
+	rsync -a --delete "$(IME_DIST)/" "$(INSTALLED)/"
+	codesign --force --sign "$(SIGN_ID)" "$(INSTALLED)"
 	swift Scripts/register.swift
 	Scripts/forget-stale-input-caches.sh "$(INSTALLED)"
 	mkdir -p "$(SETTINGS_INSTALLED)"
 	rsync -a --delete "$(SETTINGS_DIST)/" "$(SETTINGS_INSTALLED)/"
-	codesign --force --sign - "$(SETTINGS_INSTALLED)"
+	codesign --force --sign "$(SIGN_ID)" "$(SETTINGS_INSTALLED)"
+
+# A self-signed identity to sign with instead of ad hoc, so an Input
+# Monitoring grant survives rebuilds (Scripts/signing-identity.sh).
+signing-identity:
+	Scripts/signing-identity.sh
 
 # Build the Settings app and open it from dist/, for working on its pages.
 settings: bundle-settings
-	codesign --force --sign - "$(SETTINGS_DIST)"
+	codesign --force --sign "$(SIGN_ID)" "$(SETTINGS_DIST)"
 	open "$(SETTINGS_DIST)"
 
 # macOS relaunches the IME on the next keystroke in a client app (the
