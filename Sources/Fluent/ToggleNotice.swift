@@ -171,14 +171,7 @@ private final class FloatingBadgeView: NSView {
     /// Smaller letters than the menu bar's: at this size they crowd it.
     static let letterScale: CGFloat = 0.8
 
-    let badgeSize: NSSize
-
-    init(height: CGFloat = 24) {
-        badgeSize = FLBadge.size(height: height)
-        super.init(frame: .zero)
-    }
-
-    required init?(coder: NSCoder) { fatalError("unused") }
+    let badgeSize = FLBadge.size(height: 24)
 
     var enabled = true {
         didSet { needsDisplay = true }
@@ -207,12 +200,11 @@ private final class FloatingBadgeView: NSView {
 }
 
 /// While Fluent is off, the grey FL badge stays by the caret, so the off
-/// state is never in doubt (#26): smaller than the ⇧⇧ notice's, as it sits
-/// over the text below the caret for as long as Fluent is off. Opaque: text
-/// showing through a badge this small reads as a glitch.
+/// state is never in doubt (#26): the ⇧⇧ notice's off badge, the same size
+/// and place, kept on screen.
 final class OffBadgePanel {
     private let panel = PanelPlacement.makePanel()
-    private let badge = FloatingBadgeView(height: 18)
+    private let badge = FloatingBadgeView()
 
     init() {
         panel.ignoresMouseEvents = true

@@ -116,7 +116,7 @@ many Chinese candidates a row holds; Settings ▸ Appearance previews them.
 capsule, with the ⇧⇧ keys when off), `"bubble"` (the badge and On/Off in a
 bubble pointing at the caret) or `"keys"` (that bubble with the badge alone,
 and the ⇧⇧ keys when off). Settings ▸ Appearance shows each one.
-`offBadge` (default `true`) keeps a small grey FL badge by the caret for as
+`offBadge` (default `true`) keeps the grey FL badge by the caret for as
 long as Fluent is off.
 `terminalMode` handles terminal emulators, which draw marked text as a single
 row and clip it at the window edge. In terminal mode the composition stays
@@ -164,7 +164,7 @@ don't want rewritten. The FL badge flashes under the caret, indigo for on
 and grey for off (Settings ▸ Appearance has other styles); double-tap Shift
 again (or use the IME menu ▸ *Enabled*) to turn it back on. The toggle
 resets to *on* at relaunch, and whenever you switch to Fluent from another
-input source; switching apps keeps it. While it's off, a small grey FL badge
+input source; switching apps keeps it. While it's off, the grey FL badge
 stays by the caret (Settings ▸ Appearance ▸ *Keep showing when off*); it
 moves with the caret as you type, so after a mouse click it catches up on the
 next key.
