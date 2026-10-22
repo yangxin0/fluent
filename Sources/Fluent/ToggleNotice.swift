@@ -34,8 +34,7 @@ final class ToggleNoticePanel {
             badge.enabled = enabled
             panel.contentView = badge
             panel.hasShadow = false  // it draws its own
-            frame = PanelPlacement.centredFrame(for: FloatingBadgeView.badgeSize, caretRect: caretRect)
-                .insetBy(dx: -FloatingBadgeView.padding, dy: -FloatingBadgeView.padding)
+            frame = badge.frame(near: caretRect)
         case .pill:
             let size = MaterialNoticeView.size(style: style, enabled: enabled, tail: .none)
             notice.update(style: style, enabled: enabled, tail: .none)
@@ -168,17 +167,31 @@ private enum FLBadge {
 /// The "badge" style: the badge on its own, with white letters and a shadow
 /// it draws itself, in the padding around it.
 private final class FloatingBadgeView: NSView {
-    static let badgeSize = FLBadge.size(height: 24)
     static let padding: CGFloat = 6
     /// Smaller letters than the menu bar's: at this size they crowd it.
     static let letterScale: CGFloat = 0.8
+
+    let badgeSize: NSSize
+
+    init(height: CGFloat = 24) {
+        badgeSize = FLBadge.size(height: height)
+        super.init(frame: .zero)
+    }
+
+    required init?(coder: NSCoder) { fatalError("unused") }
 
     var enabled = true {
         didSet { needsDisplay = true }
     }
 
+    /// The panel's frame for the badge under (or over) the caret.
+    func frame(near caretRect: NSRect) -> NSRect {
+        PanelPlacement.centredFrame(for: badgeSize, caretRect: caretRect)
+            .insetBy(dx: -Self.padding, dy: -Self.padding)
+    }
+
     override func draw(_ dirtyRect: NSRect) {
-        let rect = NSRect(origin: NSPoint(x: Self.padding, y: Self.padding), size: Self.badgeSize)
+        let rect = NSRect(origin: NSPoint(x: Self.padding, y: Self.padding), size: badgeSize)
         let color = enabled ? NoticeColor.indigo : NoticeColor.off
         NSGraphicsContext.saveGraphicsState()
         let shadow = NSShadow()
@@ -190,6 +203,32 @@ private final class FloatingBadgeView: NSView {
         FLBadge.shape(rect).fill()
         NSGraphicsContext.restoreGraphicsState()
         FLBadge.draw(in: rect, .filled(color), letterScale: Self.letterScale)
+    }
+}
+
+/// While Fluent is off, the grey FL badge stays by the caret, so the off
+/// state is never in doubt (#26): smaller than the ⇧⇧ notice's, as it sits
+/// over the text below the caret for as long as Fluent is off. Opaque: text
+/// showing through a badge this small reads as a glitch.
+final class OffBadgePanel {
+    private let panel = PanelPlacement.makePanel()
+    private let badge = FloatingBadgeView(height: 18)
+
+    init() {
+        panel.ignoresMouseEvents = true
+        panel.hasShadow = false  // the badge draws its own
+        badge.enabled = false
+        panel.contentView = badge
+    }
+
+    func show(appearance: String, near caretRect: NSRect) {
+        PanelPlacement.applyAppearance(appearance, to: panel)
+        panel.setFrame(badge.frame(near: caretRect), display: true)
+        panel.orderFrontRegardless()
+    }
+
+    func hide() {
+        panel.orderOut(nil)
     }
 }
 

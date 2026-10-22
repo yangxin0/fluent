@@ -10,6 +10,7 @@
   "prefixKeys": "ctrl-x",
   "chinese": 1,
   "toggleNotice": true,
+  "offBadge": "no",
   "pinyinAbbreviations": "yes",
   "fuzzyPinyin": "zh=z"
 }

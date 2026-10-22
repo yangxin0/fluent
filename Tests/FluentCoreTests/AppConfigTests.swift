@@ -23,6 +23,17 @@ final class AppConfigTests: XCTestCase {
         XCTAssertEqual(try pref("{\(base),\"toggleNotice\":2}"), "badge")
     }
 
+    func testOffBadgeIsOnUnlessTurnedOff() throws {
+        let base = #""baseURL":"u","apiKey":"k","model":"m""#
+        func shows(_ json: String) throws -> Bool {
+            try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8)).showsOffBadge
+        }
+        XCTAssertTrue(try shows("{\(base)}"))
+        XCTAssertTrue(try shows("{\(base),\"offBadge\":true}"))
+        XCTAssertFalse(try shows("{\(base),\"offBadge\":false}"))
+        XCTAssertTrue(try shows("{\(base),\"offBadge\":\"no\"}"))  // the wrong type reads as missing
+    }
+
     func testAppearancePreferenceNormalization() throws {
         func pref(_ json: String) throws -> String {
             try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8)).appearancePreference

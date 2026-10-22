@@ -48,6 +48,7 @@ final class InputSourceWatcher: NSObject {
         ctlLog.notice("input source: Fluent \(selected ? "selected" : "left", privacy: .public), enabled=\(Shared.enabled, privacy: .public)")
         if selected, !Shared.enabled {
             Shared.enabled = true
+            CandidateBarController.shared.hideOffBadge()
             ctlLog.notice("enabled is now true (selected again)")
         }
     }
@@ -114,12 +115,20 @@ class InputController: IMKInputController {
         state.reset()
         lastCommitWasChinese = false
         CandidateBarController.shared.hide()
+        Self.offBadgeOwner = self
+        updateOffBadge(after: 0.15)  // once the client can say where its caret is
     }
 
     override func deactivateServer(_ sender: Any!) {
         ctlLog.notice("deactivateServer: \(self.client()?.bundleIdentifier() ?? "?", privacy: .public)")
         ShiftTapMonitor.shared.sessionDeactivated(self)
         PrefixKeyTap.shared.sessionDeactivated(self)
+        // The next session's activation can come first: only the session
+        // that shows the off badge takes it away.
+        if Self.offBadgeOwner === self {
+            Self.offBadgeOwner = nil
+            CandidateBarController.shared.hideOffBadge()
+        }
         // Focus is leaving — never silently drop what the user typed.
         commitRaw()
     }
@@ -194,6 +203,11 @@ class InputController: IMKInputController {
         // A real keypress between two Shift taps means it wasn't a toggle.
         ShiftTapMonitor.shared.interrupt()
         let handled = handleKeyDown(event)
+        // While off, every key goes to the app and moves its caret: the off
+        // badge follows once the app has handled it.
+        if !Shared.enabled {
+            updateOffBadge()
+        }
         // A key the app handles itself (Return, arrows, a shortcut…) moves
         // on from the Chinese just committed: punctuation and pinyin after it
         // are fresh again. Deleting stays in the Chinese text.
@@ -367,6 +381,29 @@ class InputController: IMKInputController {
         let style = ToggleNoticeStyle(rawValue: config?.toggleNoticePreference ?? "") ?? .badge
         CandidateBarController.shared.flash(enabled: Shared.enabled, style: style,
                                             appearance: config?.appearancePreference ?? "auto", near: caretRect())
+        updateOffBadge(after: 0)
+    }
+
+    /// The session whose caret the off badge sits by.
+    private static weak var offBadgeOwner: InputController?
+    private var offBadgeToken = 0
+
+    /// While Fluent is off, keeps the grey FL badge by the caret (#26),
+    /// unless the config turns it off; else takes it away. Waits `delay`
+    /// for the caret to settle, and only the last call in that time counts.
+    private func updateOffBadge(after delay: TimeInterval = 0.05) {
+        offBadgeToken += 1
+        let token = offBadgeToken
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self, self.offBadgeToken == token, Self.offBadgeOwner === self else { return }
+            let config = Shared.configStore.current()
+            if !Shared.enabled, config?.showsOffBadge ?? true {
+                CandidateBarController.shared.showOffBadge(appearance: config?.appearancePreference ?? "auto",
+                                                           near: self.caretRect())
+            } else {
+                CandidateBarController.shared.hideOffBadge()
+            }
+        }
     }
 
     // MARK: - 小鹤双拼

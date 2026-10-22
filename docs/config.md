@@ -29,6 +29,7 @@ repository; a writer writes the file the link points at and keeps the link.
 | `candidatePageSize` | number | `6` | Chinese candidates in one row of the bar, rounded and clamped to 5–9 |
 | `prefixKeys` | array of strings | `[]` | Shortcuts after which the next key goes straight to the app, such as `"ctrl-x"` (below) |
 | `toggleNotice` | string | `"badge"` | What ⇧⇧ shows: `"badge"`, `"pill"`, `"bubble"` or `"keys"` |
+| `offBadge` | boolean | `true` | While ⇧⇧ has Fluent off, the grey FL badge stays by the caret |
 | `terminalMode` | string | `"auto"` | `"auto"`, `"always"` or `"never"` |
 | `terminalApps` | array of strings | `[]` | More terminals, as bundle identifiers |
 | `terminalCellWidth` | number | measured | A terminal cell's width in points |

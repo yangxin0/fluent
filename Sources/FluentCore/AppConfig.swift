@@ -90,6 +90,9 @@ public struct AppConfig: Decodable, Equatable {
     /// bubble pointing at the caret) or "keys" (that bubble with the badge
     /// alone, and the ⇧⇧ keys when off).
     public var toggleNotice: String?
+    /// While Fluent is off (⇧⇧), the grey FL badge stays by the caret.
+    /// Default on.
+    public var offBadge: Bool?
     /// Terminal handling: "auto" (detect terminal apps), "always", or "never".
     /// Terminals clip marked text at the window edge, so for them the panel
     /// also shows the typed text once the composition nears the edge.
@@ -166,7 +169,7 @@ public struct AppConfig: Decodable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case baseURL, apiKey, model, reasoningEffort, providers, provider, prompts, appearance,
-             candidateBarSize, candidateTextSize, candidatePageSize, prefixKeys, toggleNotice,
+             candidateBarSize, candidateTextSize, candidatePageSize, prefixKeys, toggleNotice, offBadge,
              terminalMode, terminalApps, terminalCellWidth, chinese, pinyinAbbreviations, fuzzyPinyin,
              debounceMs, timeoutSeconds
     }
@@ -202,6 +205,9 @@ public struct AppConfig: Decodable, Equatable {
         let range = AppConfig.candidatePageSizeRange
         return min(max(Int(size.rounded()), range.lowerBound), range.upperBound)
     }
+
+    /// Whether the off badge shows; missing means yes.
+    public var showsOffBadge: Bool { offBadge ?? true }
 
     /// Normalized ⇧⇧ notice; unknown/missing values mean "badge".
     public var toggleNoticePreference: String {
@@ -268,6 +274,7 @@ public struct AppConfig: Decodable, Equatable {
         // Each entry on its own: one that isn't a shortcut is dropped.
         prefixKeys = (optional([Lenient<String>].self, .prefixKeys) ?? []).compactMap { $0.value.flatMap(KeyCombo.normalized) }
         toggleNotice = optional(String.self, .toggleNotice)
+        offBadge = optional(Bool.self, .offBadge)
         terminalMode = optional(String.self, .terminalMode)
         terminalApps = optional([String].self, .terminalApps)
         terminalCellWidth = optional(Double.self, .terminalCellWidth)

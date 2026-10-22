@@ -11,6 +11,7 @@
   "candidatePageSize": 7,
   "prefixKeys": ["ctrl-x", "ctrl-b"],
   "toggleNotice": "pill",
+  "offBadge": false,
   "terminalMode": "always",
   "terminalApps": ["com.example.terminal"],
   "terminalCellWidth": 9.7,

@@ -107,6 +107,11 @@ final class CandidateBarController {
     private let bar = CandidateBarView()
     private let notice = ToggleNoticePanel()
     private var flashToken = 0
+    private let offBadge = OffBadgePanel()
+    /// Where the off badge goes once no ⇧⇧ notice is on screen; nil while
+    /// Fluent is on.
+    private var offBadgeRequest: (appearance: String, caretRect: NSRect)?
+    private var flashing = false
 
     /// Called with the `index` of a clicked cell.
     var onSelect: ((Int) -> Void)?
@@ -129,6 +134,7 @@ final class CandidateBarController {
     func show(_ content: BarContent, appearance: String, metrics: BarMetrics = .standard, near caretRect: NSRect) {
         flashToken += 1  // cancel any pending flash auto-hide
         notice.hide()
+        flashing = false
         present(content, appearance: appearance, metrics: metrics, near: caretRect)
     }
 
@@ -137,16 +143,36 @@ final class CandidateBarController {
         flashToken += 1
         let token = flashToken
         panel.orderOut(nil)
+        offBadge.hide()
+        flashing = true
         notice.show(enabled: enabled, style: style, appearance: appearance, near: caretRect)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in
             guard let self, self.flashToken == token else { return }
             self.hide()
+            self.flashing = false
+            if let request = self.offBadgeRequest {
+                self.offBadge.show(appearance: request.appearance, near: request.caretRect)
+            }
         }
     }
 
     func hide() {
         panel.orderOut(nil)
         notice.hide()
+    }
+
+    /// The grey badge by the caret while Fluent is off; a ⇧⇧ notice still
+    /// on screen goes first.
+    func showOffBadge(appearance: String, near caretRect: NSRect) {
+        offBadgeRequest = (appearance, caretRect)
+        if !flashing {
+            offBadge.show(appearance: appearance, near: caretRect)
+        }
+    }
+
+    func hideOffBadge() {
+        offBadgeRequest = nil
+        offBadge.hide()
     }
 
     private func present(_ content: BarContent, appearance: String, metrics: BarMetrics, near caretRect: NSRect) {
