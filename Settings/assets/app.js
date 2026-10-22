@@ -105,6 +105,7 @@ function fill() {
   fillProviders();
   fillPrompt();
   fillBarPreview();
+  fillNoticePreviews();
   fillPrefixKeys();
 }
 
@@ -331,8 +332,9 @@ $("#showKey").addEventListener("click", () => {
 // MARK: - ⇧⇧ notice previews
 
 // Each style of the ⇧⇧ notice (toggleNotice), on and then off, drawn after
-// the input method's Sources/Fluent/ToggleNotice.swift, in its points.
-function noticePreview(style) {
+// the input method's Sources/Fluent/ToggleNotice.swift, in its points. The
+// "badge" style is `badgeHeight` tall (badgeSize).
+function noticePreview(style, badgeHeight = 18) {
   const css = (property, value) => `style="${property}:var(--n-${value})"`;
   const fill = (value) => css("fill", value);
   // One style attribute: a second one on the element would be dropped.
@@ -386,9 +388,9 @@ function noticePreview(style) {
     const caretBottom = 22, top = caretBottom + 6;
     const caret = (x) => `<rect x="${x - 1}" y="${caretBottom - 16}" width="2" height="16" rx="1" ${fill("caret")}/>`;
     if (style === "badge") {
-      const w = 33;
-      return caret(cx) + `<rect x="${cx - w / 2}" y="${top + 1.5}" width="${w}" height="24" rx="7.5" fill="#000" `
-        + `opacity=".25" filter="url(#blur-${style})"/>` + badge(cx - w / 2, top, 24, on ? "on" : "off", 0.8);
+      const h = badgeHeight, w = (h * 22) / 16;
+      return caret(cx) + `<rect x="${cx - w / 2}" y="${top + 1.5}" width="${w}" height="${h}" rx="${(h * 5) / 16}" `
+        + `fill="#000" opacity=".25" filter="url(#blur-${style})"/>` + badge(cx - w / 2, top, h, on ? "on" : "off", 0.8);
     }
     const m = metrics[style];
     const items = ["badge", ...(m.word ? ["word"] : []), ...(m.keys && !on ? ["keys"] : [])];
@@ -419,7 +421,19 @@ function noticePreview(style) {
     + `<rect width="320" height="76" ${fill("doc")}/>` + scene(80, true) + scene(240, false) + `</svg>`;
 }
 
-for (const el of $$(".preview[data-preview]")) el.innerHTML = noticePreview(el.dataset.preview);
+/** The badge size slider's value, clamped like the input method does. */
+function badgeSize() {
+  return Math.min(Math.max(Number($("[data-key=badgeSize]").value) || 18, 16), 32);
+}
+
+function fillNoticePreviews() {
+  const size = badgeSize();
+  $("#badgeSizeValue").textContent = `${size} pt`;
+  for (const el of $$(".preview[data-preview]")) el.innerHTML = noticePreview(el.dataset.preview, size);
+}
+
+fillNoticePreviews();
+$("[data-key=badgeSize]").addEventListener("input", fillNoticePreviews);
 
 // MARK: - Your English words
 

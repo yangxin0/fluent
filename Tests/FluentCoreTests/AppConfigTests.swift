@@ -34,6 +34,18 @@ final class AppConfigTests: XCTestCase {
         XCTAssertTrue(try shows("{\(base),\"offBadge\":\"no\"}"))  // the wrong type reads as missing
     }
 
+    func testBadgeSizeIsClamped() throws {
+        let base = #""baseURL":"u","apiKey":"k","model":"m""#
+        func size(_ json: String) throws -> Double {
+            try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8)).badgeSizeValue
+        }
+        XCTAssertEqual(try size("{\(base)}"), 18)
+        XCTAssertEqual(try size("{\(base),\"badgeSize\":24}"), 24)
+        XCTAssertEqual(try size("{\(base),\"badgeSize\":8}"), 16)
+        XCTAssertEqual(try size("{\(base),\"badgeSize\":40}"), 32)
+        XCTAssertEqual(try size("{\(base),\"badgeSize\":\"big\"}"), 18)  // the wrong type reads as missing
+    }
+
     func testAppearancePreferenceNormalization() throws {
         func pref(_ json: String) throws -> String {
             try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8)).appearancePreference

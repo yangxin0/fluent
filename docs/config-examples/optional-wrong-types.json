@@ -11,6 +11,7 @@
   "chinese": 1,
   "toggleNotice": true,
   "offBadge": "no",
+  "badgeSize": "big",
   "pinyinAbbreviations": "yes",
   "fuzzyPinyin": "zh=z"
 }

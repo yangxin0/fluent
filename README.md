@@ -117,7 +117,8 @@ capsule, with the ⇧⇧ keys when off), `"bubble"` (the badge and On/Off in a
 bubble pointing at the caret) or `"keys"` (that bubble with the badge alone,
 and the ⇧⇧ keys when off). Settings ▸ Appearance shows each one.
 `offBadge` (default `true`) keeps the grey FL badge by the caret for as
-long as Fluent is off.
+long as Fluent is off, and `badgeSize` (16–32, default 18) is that badge's
+height in points, and the `"badge"` notice's.
 `terminalMode` handles terminal emulators, which draw marked text as a single
 row and clip it at the window edge. In terminal mode the composition stays
 inline as usual, but once it is about to reach the edge the panel also shows

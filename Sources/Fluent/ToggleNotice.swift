@@ -26,12 +26,15 @@ final class ToggleNoticePanel {
         panel.ignoresMouseEvents = true
     }
 
-    func show(enabled: Bool, style: ToggleNoticeStyle, appearance: String, near caretRect: NSRect) {
+    /// `badgeHeight` sizes the "badge" style; the others keep their own.
+    func show(enabled: Bool, style: ToggleNoticeStyle, badgeHeight: CGFloat, appearance: String,
+              near caretRect: NSRect) {
         PanelPlacement.applyAppearance(appearance, to: panel)
         let frame: NSRect
         switch style {
         case .badge:
             badge.enabled = enabled
+            badge.height = badgeHeight
             panel.contentView = badge
             panel.hasShadow = false  // it draws its own
             frame = badge.frame(near: caretRect)
@@ -171,7 +174,12 @@ private final class FloatingBadgeView: NSView {
     /// Smaller letters than the menu bar's: at this size they crowd it.
     static let letterScale: CGFloat = 0.8
 
-    let badgeSize = FLBadge.size(height: 24)
+    /// Settings ▸ Appearance ▸ Badge size (`badgeSize`).
+    var height: CGFloat = 18 {
+        didSet { needsDisplay = true }
+    }
+
+    var badgeSize: NSSize { FLBadge.size(height: height) }
 
     var enabled = true {
         didSet { needsDisplay = true }
@@ -201,7 +209,7 @@ private final class FloatingBadgeView: NSView {
 
 /// While Fluent is off, the grey FL badge stays by the caret, so the off
 /// state is never in doubt (#26): the ⇧⇧ notice's off badge, the same size
-/// and place, kept on screen.
+/// (`badgeSize`) and place, kept on screen.
 final class OffBadgePanel {
     private let panel = PanelPlacement.makePanel()
     private let badge = FloatingBadgeView()
@@ -213,8 +221,9 @@ final class OffBadgePanel {
         panel.contentView = badge
     }
 
-    func show(appearance: String, near caretRect: NSRect) {
+    func show(height: CGFloat, appearance: String, near caretRect: NSRect) {
         PanelPlacement.applyAppearance(appearance, to: panel)
+        badge.height = height
         panel.setFrame(badge.frame(near: caretRect), display: true)
         panel.orderFrontRegardless()
     }

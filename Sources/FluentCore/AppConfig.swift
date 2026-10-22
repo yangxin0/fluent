@@ -93,6 +93,9 @@ public struct AppConfig: Decodable, Equatable {
     /// While Fluent is off (⇧⇧), the grey FL badge stays by the caret.
     /// Default on.
     public var offBadge: Bool?
+    /// The floating FL badge's height in points: the "badge" notice and the
+    /// badge kept while off. Clamped to 16–32, default 18.
+    public var badgeSize: Double?
     /// Terminal handling: "auto" (detect terminal apps), "always", or "never".
     /// Terminals clip marked text at the window edge, so for them the panel
     /// also shows the typed text once the composition nears the edge.
@@ -120,6 +123,8 @@ public struct AppConfig: Decodable, Equatable {
     public static let candidateTextSizeRange = 14.0...28.0
     public static let defaultCandidatePageSize = 6
     public static let candidatePageSizeRange = 5...9
+    public static let defaultBadgeSize = 18.0
+    public static let badgeSizeRange = 16.0...32.0
 
     public static let defaultDebounceMs = 350
     public static let defaultTimeoutSeconds = 10.0
@@ -169,7 +174,7 @@ public struct AppConfig: Decodable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case baseURL, apiKey, model, reasoningEffort, providers, provider, prompts, appearance,
-             candidateBarSize, candidateTextSize, candidatePageSize, prefixKeys, toggleNotice, offBadge,
+             candidateBarSize, candidateTextSize, candidatePageSize, prefixKeys, toggleNotice, offBadge, badgeSize,
              terminalMode, terminalApps, terminalCellWidth, chinese, pinyinAbbreviations, fuzzyPinyin,
              debounceMs, timeoutSeconds
     }
@@ -196,6 +201,13 @@ public struct AppConfig: Decodable, Equatable {
     public var candidateTextSizeValue: Double {
         guard let size = candidateTextSize, size.isFinite else { return AppConfig.defaultCandidateTextSize }
         let range = AppConfig.candidateTextSizeRange
+        return min(max(size, range.lowerBound), range.upperBound)
+    }
+
+    /// The FL badge's height, clamped; missing or not finite means 18.
+    public var badgeSizeValue: Double {
+        guard let size = badgeSize, size.isFinite else { return AppConfig.defaultBadgeSize }
+        let range = AppConfig.badgeSizeRange
         return min(max(size, range.lowerBound), range.upperBound)
     }
 
@@ -275,6 +287,7 @@ public struct AppConfig: Decodable, Equatable {
         prefixKeys = (optional([Lenient<String>].self, .prefixKeys) ?? []).compactMap { $0.value.flatMap(KeyCombo.normalized) }
         toggleNotice = optional(String.self, .toggleNotice)
         offBadge = optional(Bool.self, .offBadge)
+        badgeSize = optional(Double.self, .badgeSize)
         terminalMode = optional(String.self, .terminalMode)
         terminalApps = optional([String].self, .terminalApps)
         terminalCellWidth = optional(Double.self, .terminalCellWidth)

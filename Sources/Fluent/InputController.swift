@@ -380,6 +380,7 @@ class InputController: IMKInputController {
         let config = Shared.configStore.current()
         let style = ToggleNoticeStyle(rawValue: config?.toggleNoticePreference ?? "") ?? .badge
         CandidateBarController.shared.flash(enabled: Shared.enabled, style: style,
+                                            badgeHeight: CGFloat(config?.badgeSizeValue ?? AppConfig.defaultBadgeSize),
                                             appearance: config?.appearancePreference ?? "auto", near: caretRect())
         updateOffBadge(after: 0)
     }
@@ -398,8 +399,9 @@ class InputController: IMKInputController {
             guard let self, self.offBadgeToken == token, Self.offBadgeOwner === self else { return }
             let config = Shared.configStore.current()
             if !Shared.enabled, config?.showsOffBadge ?? true {
-                CandidateBarController.shared.showOffBadge(appearance: config?.appearancePreference ?? "auto",
-                                                           near: self.caretRect())
+                CandidateBarController.shared.showOffBadge(
+                    height: CGFloat(config?.badgeSizeValue ?? AppConfig.defaultBadgeSize),
+                    appearance: config?.appearancePreference ?? "auto", near: self.caretRect())
             } else {
                 CandidateBarController.shared.hideOffBadge()
             }

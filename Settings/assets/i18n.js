@@ -149,6 +149,7 @@ const I18N = {
     "Shown at the caret for a moment when you double-tap Shift: on, then off.":
       "双击 Shift 时在光标处短暂显示：左为开启，右为关闭。",
     "Keep showing when off": "关闭时一直显示",
+    "Badge size": "徽标大小",
     "While Fluent is off, a grey FL badge stays by the caret.": "Fluent 关闭期间，灰色 FL 标记一直留在光标旁。",
     "Terminal mode": "终端模式",
     "Automatic": "自动",

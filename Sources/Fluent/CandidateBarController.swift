@@ -110,7 +110,7 @@ final class CandidateBarController {
     private let offBadge = OffBadgePanel()
     /// Where the off badge goes once no ⇧⇧ notice is on screen; nil while
     /// Fluent is on.
-    private var offBadgeRequest: (appearance: String, caretRect: NSRect)?
+    private var offBadgeRequest: (height: CGFloat, appearance: String, caretRect: NSRect)?
     private var flashing = false
 
     /// Called with the `index` of a clicked cell.
@@ -139,19 +139,21 @@ final class CandidateBarController {
     }
 
     /// The ⇧⇧ toggle's notice at the caret, which hides itself.
-    func flash(enabled: Bool, style: ToggleNoticeStyle, appearance: String, near caretRect: NSRect) {
+    func flash(enabled: Bool, style: ToggleNoticeStyle, badgeHeight: CGFloat, appearance: String,
+               near caretRect: NSRect) {
         flashToken += 1
         let token = flashToken
         panel.orderOut(nil)
         offBadge.hide()
         flashing = true
-        notice.show(enabled: enabled, style: style, appearance: appearance, near: caretRect)
+        notice.show(enabled: enabled, style: style, badgeHeight: badgeHeight, appearance: appearance,
+                    near: caretRect)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in
             guard let self, self.flashToken == token else { return }
             self.hide()
             self.flashing = false
             if let request = self.offBadgeRequest {
-                self.offBadge.show(appearance: request.appearance, near: request.caretRect)
+                self.offBadge.show(height: request.height, appearance: request.appearance, near: request.caretRect)
             }
         }
     }
@@ -163,10 +165,10 @@ final class CandidateBarController {
 
     /// The grey badge by the caret while Fluent is off; a ⇧⇧ notice still
     /// on screen goes first.
-    func showOffBadge(appearance: String, near caretRect: NSRect) {
-        offBadgeRequest = (appearance, caretRect)
+    func showOffBadge(height: CGFloat, appearance: String, near caretRect: NSRect) {
+        offBadgeRequest = (height, appearance, caretRect)
         if !flashing {
-            offBadge.show(appearance: appearance, near: caretRect)
+            offBadge.show(height: height, appearance: appearance, near: caretRect)
         }
     }
 
