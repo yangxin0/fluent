@@ -29,6 +29,41 @@ own in Settings ▸ English, where *Try* runs a sample through it.
 
 ## Install
 
+Fluent needs macOS 13 or later.
+
+### From a release
+
+[Releases](https://github.com/yangxin0/fluent/releases) have a zip for Apple
+silicon Macs, `Fluent-<version>-macos-arm64.zip`, that unpacks to a folder
+with both apps.
+
+1. Unzip it. The apps are signed ad hoc and not notarized, so take them out
+   of quarantine first, or macOS refuses to open them:
+
+   ```sh
+   cd ~/Downloads/Fluent-0.1.0
+   xattr -dr com.apple.quarantine Fluent-Input.app Fluent.app
+   ```
+
+2. Move the input method into your input methods folder, and Settings into
+   Applications:
+
+   ```sh
+   mkdir -p ~/Library/Input\ Methods
+   mv Fluent-Input.app ~/Library/Input\ Methods/
+   mv Fluent.app /Applications/
+   ```
+
+3. Log out and back in, so macOS finds the new input method. Then add it
+   (below).
+
+To update, replace both apps the same way, then log out and back in. Prefix
+keys in apps like WezTerm need Input Monitoring, which macOS ties to the
+app's signature: an ad-hoc signed release has to be granted it again after
+each update.
+
+### From source
+
 ```sh
 make signing-identity   # optional, once: a local certificate to sign with
 make install            # build both apps, sign, register the input method
@@ -43,7 +78,7 @@ Building needs Xcode (or its command-line tools) for the Swift input method
 and Go for the Settings app; any recent Go will do, as `make` fetches the
 version `Settings/go.mod` names.
 
-This installs two apps:
+### The two apps
 
 - **`~/Library/Input Methods/Fluent-Input.app`**, the input method. It was
   `Fluent.app` before; `make install` moves an old one to the new name in
@@ -53,7 +88,9 @@ This installs two apps:
   *Open Fluent Settings…*). It is optional: the input method runs on its
   own and reads the config file itself.
 
-Then (one-time, macOS requires manual consent for third-party input sources):
+### Add the input source
+
+Once, as macOS requires your consent for third-party input sources:
 
 1. **System Settings ▸ Keyboard ▸ Text Input ▸ Input Sources ▸ Edit… ▸ +**
 2. Under **English**, add **Fluent**.
@@ -251,6 +288,7 @@ make test       # unit tests: the Swift core (SSE parser, config, prompts, Chine
 make logs       # tail the IME's os_log output
 swift run fluent-cli --mode polish "helo wrold how r u"   # test the API path without the IME (--help)
 make dict       # download the pinned rime-ice dictionaries and compile them (bundle/install run it)
+make release    # optimized build of both apps, signed ad hoc, zipped into dist/ for a GitHub release
 make cli ARGS='--xiaohe veui nihc'   # 小鹤双拼 candidates from the compiled dictionary
 make cli ARGS='--pinyin nihao zg'    # full pinyin (--no-abbreviations, --fuzzy zh=z,an=ang)
 ```

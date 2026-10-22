@@ -6,7 +6,9 @@ IME_DIST      = dist/$(IME_NAME).app
 INSTALL_DIR   = $(HOME)/Library/Input Methods
 INSTALLED     = $(INSTALL_DIR)/$(IME_NAME).app
 OLD_INSTALLED = $(INSTALL_DIR)/Fluent.app
-BIN           = .build/debug/Fluent
+# `make release` builds with CONFIG=release; everything else is a debug build.
+CONFIG       ?= debug
+BIN           = .build/$(CONFIG)/Fluent
 
 # The Settings app (Fluent.app): Go + Wails in Settings/, the way magpie is
 # built, sharing no code with the input method. Go fetches the toolchain
@@ -31,10 +33,10 @@ RIME_ICE_DIR   = .build/rime-ice-$(RIME_ICE_REV)
 RIME_ICE_FILES = $(addprefix $(RIME_ICE_DIR)/,cn_dicts/8105.dict.yaml cn_dicts/base.dict.yaml en_dicts/en.dict.yaml)
 DICT_DIR       = .build/dict
 
-.PHONY: build bundle bundle-ime bundle-settings settings settings-icon install signing-identity register reload logs dev test cli clean icon dict
+.PHONY: build bundle bundle-ime bundle-settings settings settings-icon install release signing-identity register reload logs dev test cli clean icon dict
 
 build:
-	swift build
+	swift build -c $(CONFIG)
 
 test:
 	swift test
@@ -122,6 +124,22 @@ install: bundle
 	mkdir -p "$(SETTINGS_INSTALLED)"
 	rsync -a --delete "$(SETTINGS_DIST)/" "$(SETTINGS_INSTALLED)/"
 	codesign --force --sign "$(SIGN_ID)" "$(SETTINGS_INSTALLED)"
+
+# Both apps for a GitHub release, optimized and signed ad hoc (a local
+# signing identity means nothing on another Mac), in one zip that unpacks to
+# a Fluent-<version> folder: dist/Fluent-<version>-macos-<arch>.zip.
+VERSION     = $(shell /usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Resources/Info.plist)
+RELEASE_DIR = dist/release/Fluent-$(VERSION)
+RELEASE_ZIP = dist/Fluent-$(VERSION)-macos-$(shell uname -m).zip
+release:
+	$(MAKE) bundle CONFIG=release
+	rm -rf dist/release "$(RELEASE_ZIP)"
+	mkdir -p "$(RELEASE_DIR)"
+	cp -R "$(IME_DIST)" "$(SETTINGS_DIST)" "$(RELEASE_DIR)/"
+	codesign --force --sign - "$(RELEASE_DIR)/$(IME_NAME).app"
+	codesign --force --sign - "$(RELEASE_DIR)/Fluent.app"
+	ditto -c -k --norsrc --keepParent "$(RELEASE_DIR)" "$(RELEASE_ZIP)"
+	shasum -a 256 "$(RELEASE_ZIP)"
 
 # A self-signed identity to sign with instead of ad hoc, so an Input
 # Monitoring grant survives rebuilds (Scripts/signing-identity.sh).
