@@ -98,12 +98,27 @@ Once, as macOS requires your consent for third-party input sources:
 
 ## Configure
 
-Use the Settings app (`/Applications/Fluent.app`, or IME menu ▸ *Open
-Fluent Settings…*), in English or 简体中文: it edits
-`~/.config/fluent/config.json`, one key at a time, leaving the rest of the
-file as you wrote it. You can also edit the file by hand (a template is
-created on first run, or your config from before the rename to Fluent is
-copied over):
+Everything is in the Settings app (`/Applications/Fluent.app`, or IME
+menu ▸ *Open Fluent Settings…*), in English or 简体中文:
+
+- **Setup** checks that Fluent is installed, added and selected.
+- **LLM** holds the providers Fluent sends your text to: any
+  OpenAI-compatible endpoint that streams (the Responses API or Chat
+  Completions). Keep several and pick the one in use, here or in the IME
+  menu.
+- **English** has the Fix, Polish and Translate prompts, which you can make
+  your own, and your English words.
+- **Chinese** picks 全拼 or 小鹤双拼 (or off), with abbreviations and fuzzy
+  pinyin.
+- **Voice** holds the speech engines and the talk shortcuts.
+- **Appearance** styles the candidate bar and the ⇧⇧ notice, and turns
+  terminal mode on or off: in a terminal, which cuts the composition off
+  at the window edge, the bar shows what you typed too.
+- **Advanced** has prefix keys, timing and terminal fine-tuning.
+
+Settings saves to `~/.config/fluent/config.json`, one setting at a time,
+and leaves the rest of the file as you wrote it. You can edit the file by
+hand too:
 
 ```json
 {
@@ -112,71 +127,13 @@ copied over):
     {"name": "DeepSeek", "api": "chat", "baseURL": "https://api.deepseek.com", "apiKey": "sk-...", "model": "deepseek-chat"}
   ],
   "provider": "OpenAI",
-  "prompts": {
-    "polish": "Rewrite it as a friendly native speaker would, keeping it short."
-  },
-  "appearance": "auto",
-  "terminalMode": "auto",
-  "chinese": "pinyin",
-  "debounceMs": 350,
-  "timeoutSeconds": 10
+  "chinese": "pinyin"
 }
 ```
 
-Every key, and how the two apps share the file, is in
-[docs/config.md](docs/config.md).
-Each provider speaks the Responses API (`"api": "responses"`, the default)
-or Chat Completions (`"chat"`); point `baseURL` at its `/v1` root.
-`provider` is the one in use, also picked from Settings ▸ LLM or the IME
-menu. A config from before providers, with `baseURL`, `apiKey` and `model`
-at the top level, still works as one provider; Settings moves them into the
-list when you first save a provider.
-`reasoningEffort` (optional, e.g. `"low"` or `"none"`) is sent as
-`reasoning.effort` (`reasoning_effort` for Chat Completions). For models
-whose name starts with `gpt` or contains `codex`, Responses requests
-identify as the Codex CLI (`originator: codex_cli_rs`), which some gateways
-require. `prompts` replaces a mode's built-in prompt (`fix`, `polish`,
-`translate`); the rule "Only reply the result and nothing else." always
-follows it, so the reply can be inserted as is. Prompt and rule go right
-before your text in one message, as nextai-translator sends them, so text
-that reads like a request is translated or rewritten rather than answered. `timeoutSeconds` is how
-long the stream may stay silent before the rewrite fails, not a cap on the
-whole reply.
-`appearance` controls the candidate bar's color scheme: `"auto"` follows the
-system light/dark setting (and updates live when it changes), or force it with
-`"light"` / `"dark"`. `candidateBarSize` (`"small"`, `"medium"`, `"large"`)
-sizes the bar's padding, number labels and badge, `candidateTextSize` (14–28,
-default 18) the candidates' text, and `candidatePageSize` (5–9, default 6) how
-many Chinese candidates a row holds; Settings ▸ Appearance previews them.
-`toggleNotice` is what double-tapping Shift shows at the caret: `"badge"`
-(the FL badge alone, the default), `"pill"` (the badge and On/Off in a
-capsule, with the ⇧⇧ keys when off), `"bubble"` (the badge and On/Off in a
-bubble pointing at the caret) or `"keys"` (that bubble with the badge alone,
-and the ⇧⇧ keys when off). Settings ▸ Appearance shows each one.
-`offBadge` (default `true`) keeps the grey FL badge by the caret for as
-long as Fluent is off, and `badgeSize` (16–32, default 18) is that badge's
-height in points, and the `"badge"` notice's.
-`terminalMode` handles terminal emulators, which draw marked text as a single
-row and clip it at the window edge. In terminal mode the composition stays
-inline as usual, but once it is about to reach the edge the panel also shows
-your typed text with a caret (like Rime's non-inline preedit) until you commit.
-`"auto"` detects common terminals (Terminal.app, iTerm2, WezTerm, Ghostty,
-Alacritty, kitty, Warp, …); force it on or off with `"always"` / `"never"`.
-Add more apps to the whitelist with `"terminalApps": ["com.example.term"]`
-(bundle identifiers). Edge detection measures the terminal's cell width from
-what the app reports; if it triggers too early or late, set the exact width in
-points with `"terminalCellWidth": 9.7`.
-`chinese` picks the one Chinese input method (see below): `"pinyin"`
-(full pinyin, the default), `"xiaohe"` (小鹤双拼) or `"off"`; the IME menu
-offers the same choice and writes it here. For full pinyin,
-`"pinyinAbbreviations"` (default `true`) lets an initial alone spell a
-syllable (`zg` → 中国), and `"fuzzyPinyin"` lists pairs to treat as the same,
-e.g. `["zh=z", "ch=c", "sh=s", "n=l", "an=ang", "en=eng", "in=ing"]`
-(default none).
-Config changes are picked up automatically (or use IME menu ▸ *Reload Config*).
-The file holds your API key, so Fluent keeps it readable only by you. A
-wrongly typed optional key is ignored; if the file can't be used at all, the
-bar says why (`Config error: "apiKey" is missing`).
+Changes apply from your next keystroke. The file holds your API key, so
+Fluent keeps it readable only by you, and if it can't use the file, the bar
+says why. Every setting is described in [docs/config.md](docs/config.md).
 
 ## Keys while composing
 
