@@ -103,7 +103,9 @@ header.top button { --wails-draggable: no-drag; }
 .seg button:hover:not(.on) { color: var(--fg-2); }
 .seg button.on { color: var(--fg); background: var(--seg-thumb); box-shadow: var(--seg-edge); }
 
-main { flex: 1; overflow-y: auto; padding: 22px 24px 40px; }
+main { flex: 1; overflow-y: auto; padding: 22px 24px 40px; scrollbar-width: none; }
+/* The pages scroll without a scrollbar (#29), with a trackpad or wheel. */
+main::-webkit-scrollbar { display: none; }
 .view { display: none; max-width: 620px; margin: 0 auto; }
 .view.on { display: block; animation: rise .22s var(--ease); }
 @keyframes rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
