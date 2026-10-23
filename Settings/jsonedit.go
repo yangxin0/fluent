@@ -67,9 +67,9 @@ func setKey(text []byte, key string, value any) ([]byte, error) {
 	return splice(last.valueEnd, last.valueEnd, ","+indent+entry), nil
 }
 
-// firstKeys come first in an object (a provider), in the order the pages
-// show them; the other keys follow sorted.
-var firstKeys = []string{"name", "api", "baseURL", "apiKey", "model"}
+// firstKeys come first in an object (a provider, a voice engine), in the
+// order the pages show them; the other keys follow sorted.
+var firstKeys = []string{"name", "api", "type", "baseURL", "apiKey", "appId", "accessToken", "model", "resourceId"}
 
 // encodeValue is value as JSON: strings with only what JSON needs escaped,
 // arrays as `[a, b]`, objects as `{"a": 1}`, numbers in their shortest form.
@@ -108,9 +108,15 @@ func encodeValue(value any, indent string) (string, error) {
 			}
 			return strings.Compare(a, b)
 		})
+		// Inside an object on lines of its own, a nested object or list of
+		// objects (voice.engines) gets lines of its own too.
+		inner := ""
+		if strings.Contains(indent, "\n") {
+			inner = indent + "  "
+		}
 		for _, key := range keys {
 			name, _ := encodeValue(key, "")
-			s, err := encodeValue(v[key], "")
+			s, err := encodeValue(v[key], inner)
 			if err != nil {
 				return "", err
 			}

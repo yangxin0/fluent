@@ -123,6 +123,9 @@ class InputController: IMKInputController {
         ctlLog.notice("deactivateServer: \(self.client()?.bundleIdentifier() ?? "?", privacy: .public)")
         ShiftTapMonitor.shared.sessionDeactivated(self)
         PrefixKeyTap.shared.sessionDeactivated(self)
+        if VoiceInput.shared.isOwned(by: self) {
+            VoiceInput.shared.cancel()
+        }
         // The next session's activation can come first: only the session
         // that shows the off badge takes it away.
         if Self.offBadgeOwner === self {
@@ -134,6 +137,9 @@ class InputController: IMKInputController {
     }
 
     override func commitComposition(_ sender: Any!) {
+        if VoiceInput.shared.isOwned(by: self) {
+            VoiceInput.shared.cancel()
+        }
         commitRaw()
     }
 
@@ -200,8 +206,10 @@ class InputController: IMKInputController {
             return false
         }
         guard event.type == .keyDown else { return false }
-        // A real keypress between two Shift taps means it wasn't a toggle.
+        // A real keypress between two Shift taps means it wasn't a toggle,
+        // and one with the hold-to-talk key down means a shortcut.
         ShiftTapMonitor.shared.interrupt()
+        VoiceHoldKey.shared.interrupt()
         let handled = handleKeyDown(event)
         // While off, every key goes to the app and moves its caret: the off
         // badge follows once the app has handled it.
@@ -218,7 +226,21 @@ class InputController: IMKInputController {
     }
 
     private func handleKeyDown(_ event: NSEvent) -> Bool {
+        // While voice input listens, Esc cancels, the toggle key stops, and
+        // other keys wait: the composition is what is being heard.
+        if VoiceInput.shared.isOwned(by: self) {
+            if event.keyCode == Key.escape {
+                VoiceInput.shared.cancel()
+            } else if isVoiceToggleKey(event) {
+                VoiceInput.shared.stop()
+            }
+            return true
+        }
         guard Shared.enabled else { return false }
+        if isVoiceToggleKey(event), voiceEngine() != nil {
+            startVoice()
+            return true
+        }
 
         // The key after a prefix key belongs to the app's own shortcut
         // (`n` in Ctrl-X N): it goes straight there, never into a
@@ -1027,6 +1049,104 @@ class InputController: IMKInputController {
         state.reset()
     }
 
+    // MARK: - Voice input (#28)
+
+    /// Hold to talk goes to the session whose client has focus.
+    static func installVoice() {
+        VoiceHoldKey.shared.key = {
+            let voice = Shared.configStore.current()?.voice
+            return voice?.activeEngine?.isConfigured == true ? voice?.holdKey ?? .off : .off
+        }
+        VoiceHoldKey.shared.onStart = { ShiftTapMonitor.shared.currentController?.startVoice() }
+        VoiceHoldKey.shared.onStop = { VoiceInput.shared.stop() }
+    }
+
+    /// The engine a recording would use, while voice input can start here:
+    /// Fluent on and selected, and an engine set up.
+    private func voiceEngine() -> VoiceEngine? {
+        guard Shared.enabled, ShiftTapMonitor.isCurrentInputSource(),
+              let engine = Shared.configStore.current()?.voice.activeEngine, engine.isConfigured else { return nil }
+        return engine
+    }
+
+    private func isVoiceToggleKey(_ event: NSEvent) -> Bool {
+        guard let key = Shared.configStore.current()?.voice.toggleKey else { return false }
+        return Self.comboName(of: event) == key
+    }
+
+    func startVoice() {
+        guard !VoiceInput.shared.isActive, let engine = voiceEngine() else { return }
+        commitRaw()
+        var hotwords: [String] = []
+        if Shared.configStore.current()?.voice.hotwords ?? true, let input = ChineseInput.shared {
+            input.refreshEnglishWords()
+            hotwords = VolcengineFrame.hotwords(input.english.yours)
+        }
+        VoiceInput.shared.start(engine: engine, hotwords: hotwords, delegate: self)
+    }
+
+    private func showVoiceMark(_ text: String) {
+        client()?.setMarkedText(
+            NSAttributedString(string: text, attributes: markAttributes(kTSMHiliteConvertedText)),
+            selectionRange: NSRange(location: (text as NSString).length, length: 0),
+            replacementRange: NSRange(location: NSNotFound, length: 0))
+    }
+
+    /// The bar while voice input works: a mic badge and what was heard.
+    private func showVoiceBar(_ text: String, comment: String? = nil) {
+        let config = Shared.configStore.current()
+        var content = BarContent()
+        content.badgeSymbol = "mic.fill"
+        content.cells = [BarContent.Cell(text: text, comment: comment, number: nil, index: 0)]
+        let bar = CandidateBarController.shared
+        bar.onSelect = nil
+        bar.onPage = nil
+        bar.onToggleExpanded = nil
+        bar.show(content, appearance: config?.appearancePreference ?? "auto", metrics: BarMetrics(config),
+                 near: caretRect())
+    }
+
+    func voiceHeard(_ text: String, finishing: Bool) {
+        showVoiceMark(text)
+        if text.isEmpty {
+            showVoiceBar(finishing ? "…" : "Listening…")
+        } else {
+            showVoiceBar(text, comment: finishing ? "…" : nil)
+        }
+    }
+
+    func voiceFinished(_ text: String) {
+        showVoiceMark("")
+        CandidateBarController.shared.hide()
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        if Shared.configStore.current()?.voice.afterSpeaking == .improve {
+            // Like typed text: the current mode improves it, Enter inserts
+            // the improvement and Shift+Enter what was said.
+            state.reset()
+            state.insert(text)
+            updateMarkedText()
+            requestRewrite()
+            refreshPanel()
+        } else {
+            commit(text)
+        }
+    }
+
+    func voiceFailed(_ message: String) {
+        showVoiceMark("")
+        showVoiceBar("⚠ \(message)")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
+            guard let self, !VoiceInput.shared.isActive, !self.state.isComposing else { return }
+            CandidateBarController.shared.hide()
+        }
+    }
+
+    func voiceCancelled() {
+        showVoiceMark("")
+        CandidateBarController.shared.hide()
+    }
+
     // MARK: - Menu actions (IMK may pass the NSMenuItem or a dictionary)
 
     private func menuItem(from sender: Any?) -> NSMenuItem? {
@@ -1089,3 +1209,6 @@ class InputController: IMKInputController {
         }
     }
 }
+
+/// What voice input hears shows as the composition; see the voice section.
+extension InputController: VoiceSessionDelegate {}

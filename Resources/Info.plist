@@ -20,6 +20,8 @@
     <string>6.0</string>
     <key>LSBackgroundOnly</key>
     <true/>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Fluent records your voice while you hold or toggle the voice key, and sends it to the speech engine you set up, to type what you say.</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
 

@@ -12,6 +12,7 @@
   "toggleNotice": true,
   "offBadge": "no",
   "badgeSize": "big",
+  "voice": "on",
   "pinyinAbbreviations": "yes",
   "fuzzyPinyin": "zh=z"
 }

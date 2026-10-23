@@ -41,6 +41,9 @@ final class ShiftTapMonitor {
         monLog.notice("global flagsChanged monitor installed: \(self.usesGlobalMonitor, privacy: .public)")
     }
 
+    /// The session whose client has focus, if any.
+    var currentController: InputController? { activeController }
+
     func sessionActivated(_ controller: InputController) {
         activeController = controller
         detector.interrupt()
@@ -67,6 +70,7 @@ final class ShiftTapMonitor {
     }
 
     private func handle(_ event: NSEvent, source: StaticString) {
+        VoiceHoldKey.shared.flagsChanged(event)
         let mods = event.modifierFlags.intersection([.command, .control, .option, .shift, .function])
         let isShiftKey = event.keyCode == UInt16(kVK_Shift) || event.keyCode == UInt16(kVK_RightShift)
         monLog.debug("\(source, privacy: .public) flagsChanged keyCode=\(event.keyCode, privacy: .public) mods=\(mods.rawValue, privacy: .public)")

@@ -297,6 +297,8 @@ input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
 .providers li + li { margin-top: 2px; }
 .providers li:hover:not(.on) { background: var(--pill); }
 .providers li.on { background: var(--accent-soft); }
+.providers li.empty { color: var(--muted); font-size: 12.5px; }
+.providers li.empty:hover { background: none; }
 .providers .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .providers .sub { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tag { flex: none; padding: 0 4px; font-size: 12px; font-weight: 600; color: var(--green); }

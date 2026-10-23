@@ -30,6 +30,7 @@ repository; a writer writes the file the link points at and keeps the link.
 | `prefixKeys` | array of strings | `[]` | Shortcuts after which the next key goes straight to the app, such as `"ctrl-x"` (below) |
 | `toggleNotice` | string | `"badge"` | What ⇧⇧ shows: `"badge"`, `"pill"`, `"bubble"` or `"keys"` |
 | `offBadge` | boolean | `true` | While ⇧⇧ has Fluent off, the grey FL badge stays by the caret |
+| `voice` | object | `{}` | Voice input: speech engines and shortcuts (below) |
 | `badgeSize` | number | `18` | The FL badge's height in points, for the `"badge"` notice and the badge kept while off, clamped to 16–32 |
 | `terminalMode` | string | `"auto"` | `"auto"`, `"always"` or `"never"` |
 | `terminalApps` | array of strings | `[]` | More terminals, as bundle identifiers |
@@ -93,6 +94,42 @@ passes only plain and Shift keys), so while `prefixKeys` isn't empty the
 input method asks for Input Monitoring and, with it, watches key presses
 during its sessions (below).
 
+**Voice.** `voice` is an object; a missing or mistyped key in it reads as
+its default, and a `voice` that isn't an object as `{}`:
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `engines` | array of objects | `[]` | Saved speech engines (below) |
+| `engine` | string | the first | The `name` of the engine in use |
+| `holdKey` | string | `"right-option"` | Held alone to talk: `"off"`, `"right-option"`, `"right-command"` or `"fn"` |
+| `toggleKey` | string | none | A shortcut, named as in `prefixKeys`, pressed to start and again to stop |
+| `afterSpeaking` | string | `"insert"` | `"insert"` the text as recognized, or `"improve"` it: it becomes the composition, as if typed |
+| `hotwords` | boolean | `true` | Send your English words (below) to the engine as hotwords, at most 60 |
+
+Each object in `engines` is one service and its credentials; an element
+that isn't an object doesn't count:
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | string | `""` | What the Voice page calls it, and what `engine` names |
+| `type` | string | `"volcengine"` | `"volcengine"`: 豆包流式语音识别; more types are to come, and one this version doesn't know isn't set up |
+| `apiKey` | string | `""` | The new Volcengine console's API key, sent as `X-Api-Key` |
+| `appId`, `accessToken` | string | `""` | The old console's App ID and Access Token (`X-Api-App-Key`, `X-Api-Access-Key`), used while `apiKey` is empty |
+| `resourceId` | string | `"volc.seedasr.sauc.duration"` | `X-Api-Resource-Id`: model 2.0 (`volc.seedasr.…`) or 1.0 (`volc.bigasr.…`), by the hour (`….duration`) or concurrent (`….concurrent`) |
+
+Values are trimmed. An engine is set up once its type is known and it has
+an `apiKey`, or an `appId` and `accessToken`; until the engine in use is,
+neither shortcut does anything, and both act only while Fluent is on and
+selected. Holding the hold key alone for 0.3 s starts a recording, and a
+key pressed with it makes it a shortcut instead. The input method streams
+the microphone (it asks for the permission on first use) to
+`wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async` in 200 ms
+packets of 16 kHz, 16-bit mono PCM, uncompressed, with the two-pass mode,
+punctuation and digits on; what it hears shows as the composition. Letting
+go, or the toggle key again, sends the last packet and takes the final
+text; Esc cancels, and a recording stops by itself after 60 s. Settings'
+*Test* sends one second of silence with an engine's credentials.
+
 **Prompts.** `prompts` maps `fix`, `polish` and `translate` to your own
 prompt for that mode; a mode that is missing, blank or not a string uses
 the built-in prompt (Polish and Translate are nextai-translator's, Fix one
@@ -119,7 +156,10 @@ each one makes: both apps' tests read them (`ConfigExamplesTests` in Swift,
 text, so the other keys keep their order, spacing and number formatting.
 Where the file puts its keys on lines of their own, Settings writes an
 object a line per key and a list of objects (`providers`) a line per
-object, `name`, `api`, `baseURL`, `apiKey` and `model` first. A
+object, `name`, `api`, `baseURL`, `apiKey` and `model` first; inside an
+object written a line per key, a nested list of objects (`voice.engines`)
+gets a line per object too, `name`, `type`, `apiKey`, `appId`,
+`accessToken` and `resourceId` first. A
 missing file is created from the starter template; when it is missing but
 `~/.config/english-input/config.json` (Fluent's name before) exists, that
 one is copied instead.

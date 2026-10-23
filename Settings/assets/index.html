@@ -14,6 +14,7 @@
     <button data-view="llm" data-t>LLM</button>
     <button data-view="english" data-t>English</button>
     <button data-view="chinese" data-t>Chinese</button>
+    <button data-view="voice" data-t>Voice</button>
     <button data-view="appearance" data-t>Appearance</button>
     <button data-view="advanced" data-t>Advanced</button>
     <button data-view="about" data-t>About</button>
@@ -151,6 +152,67 @@
       <div class="row top"><span class="label" data-t>Learned words</span>
         <div class="stack"><span class="field"><span class="value" id="learned"></span><button class="pill danger" id="forget" data-t>Forget learned words</button></span>
           <span class="hint" data-t>Words you pick move ahead of the others, the way Rime learns them.</span></div></div>
+    </div>
+  </section>
+
+  <section class="view" id="voice">
+    <h1 data-t>Voice</h1>
+
+    <h2 data-t>Engines</h2>
+    <div class="card">
+      <ul class="providers" id="voiceEngines"></ul>
+      <div class="add"><button class="pill" id="addEngine" data-t>Add engine</button></div>
+    </div>
+    <div class="card form" id="voiceEngine">
+      <label class="row"><span class="label" data-t>Name</span>
+        <input data-field="name" type="text" spellcheck="false" autocomplete="off"></label>
+      <label class="row"><span class="label" data-t>Engine</span>
+        <select data-field="type">
+          <option value="volcengine" data-t>豆包流式语音识别 (Volcengine)</option>
+        </select></label>
+      <label class="row"><span class="label" data-t>API key</span>
+        <span class="field"><input data-field="apiKey" id="voiceApiKey" type="password" spellcheck="false" autocomplete="off"><button type="button" class="pill" id="showVoiceKey" data-t>Show</button></span></label>
+      <div class="row top"><span class="label" data-t>Old console</span>
+        <span class="stack"><span class="field"><input data-field="appId" type="text" placeholder="App ID" spellcheck="false" autocomplete="off"><input data-field="accessToken" type="password" placeholder="Access Token" spellcheck="false" autocomplete="off"></span>
+          <span class="hint" data-t>Only without an API key: the App ID and Access Token from Volcengine's old console.</span></span></div>
+      <label class="row"><span class="label" data-t>Model</span>
+        <select data-field="resourceId">
+          <option value="volc.seedasr.sauc.duration" data-t>Doubao 2.0, by the hour</option>
+          <option value="volc.seedasr.sauc.concurrent" data-t>Doubao 2.0, concurrent</option>
+          <option value="volc.bigasr.sauc.duration" data-t>Doubao 1.0, by the hour</option>
+          <option value="volc.bigasr.sauc.concurrent" data-t>Doubao 1.0, concurrent</option>
+        </select></label>
+      <div class="row"><span class="label"></span>
+        <div class="field"><button class="primary" id="voiceTest" data-t>Test</button><span class="result" id="voiceTestResult"></span>
+          <button class="pill danger end" id="deleteEngine" data-t>Delete</button></div></div>
+    </div>
+
+    <h2 data-t>Shortcuts</h2>
+    <div class="card form">
+      <div class="row top"><span class="label" data-t>Hold to talk</span>
+        <span class="stack"><div class="choice" id="holdKey">
+            <button data-value="off" data-t>Off</button>
+            <button data-value="right-option" data-t>Right ⌥</button>
+            <button data-value="right-command" data-t>Right ⌘</button>
+            <button data-value="fn">Fn</button>
+          </div>
+          <span class="hint" data-t>Hold the key alone, speak, and let go. It works in every app.</span></span></div>
+      <div class="row top"><span class="label" data-t>Press to talk</span>
+        <span class="stack"><span class="field"><span class="combos" id="toggleKey"></span><button type="button" class="pill" id="recordToggle" data-t>Set</button>
+            <span class="hint" id="toggleStatus"></span></span>
+          <span class="hint" data-t>Press the shortcut to start and again to stop; Esc cancels. Apps that keep shortcuts from input methods, such as WezTerm, don't pass it on: hold to talk there.</span></span></div>
+    </div>
+
+    <h2 data-t>Text</h2>
+    <div class="card form">
+      <div class="row top"><span class="label" data-t>When you stop</span>
+        <span class="stack"><div class="choice" id="afterSpeaking">
+            <button data-value="insert" data-t>Insert as recognized</button>
+            <button data-value="improve" data-t>Improve with the current mode</button>
+          </div>
+          <span class="hint" data-t>Improve: what you said becomes the composition and the current mode improves it, like typed text. Enter inserts the improvement, Shift+Enter what you said.</span></span></div>
+      <label class="row"><span class="label" data-t>Hotwords</span>
+        <span class="field"><input type="checkbox" class="switch" id="voiceHotwords"><span class="hint" data-t>Send your English words (English ▸ Your words), so the engine spells them right.</span></span></label>
     </div>
   </section>
 

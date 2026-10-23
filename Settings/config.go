@@ -21,7 +21,7 @@ const placeholderKey = "sk-REPLACE_ME"
 var editableKeys = map[string]bool{
 	"baseURL": true, "apiKey": true, "model": true, "reasoningEffort": true,
 	"providers": true, "provider": true, "prompts": true,
-	"debounceMs": true, "timeoutSeconds": true, "appearance": true, "toggleNotice": true, "offBadge": true, "badgeSize": true,
+	"debounceMs": true, "timeoutSeconds": true, "appearance": true, "toggleNotice": true, "offBadge": true, "badgeSize": true, "voice": true,
 	"candidateBarSize": true, "candidateTextSize": true, "candidatePageSize": true, "prefixKeys": true,
 	"terminalMode": true, "terminalApps": true, "terminalCellWidth": true,
 	"chinese": true, "pinyinAbbreviations": true, "fuzzyPinyin": true,

@@ -79,6 +79,9 @@ func (h *host) call(ctx context.Context, op string, args object) (any, error) {
 		return object{"ok": h.config.set(key, args["value"]) == nil}, nil
 	case "test":
 		return h.test(ctx, args), nil
+	case "voice.test":
+		m, _ := args["engine"].(map[string]any)
+		return testVoice(ctx, voiceEngineOf(m)), nil
 	case "try":
 		return h.try(ctx, args), nil
 	case "prompts.defaults":

@@ -21,6 +21,7 @@ autoreleasepool {
     log.info("Fluent IMKServer started (\(connectionName, privacy: .public))")
     ShiftTapMonitor.shared.start()
     InputSourceWatcher.shared.start()
+    InputController.installVoice()
     ChineseInput.preload()
     app.run()
 }

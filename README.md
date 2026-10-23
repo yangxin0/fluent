@@ -279,6 +279,32 @@ them, use Settings ▸ Chinese ▸ *Forget learned words*.
 The dictionaries come from [rime-ice](https://github.com/iDvel/rime-ice):
 `make install` downloads and compiles them (see `make dict` below).
 
+## Voice input
+
+Talk instead of typing: Fluent sends what you say to a speech engine and
+types the text. Set it up in Settings ▸ Voice:
+
+- **Engines.** Add an engine with your key: 豆包流式语音识别 (Volcengine)
+  takes the new console's API key, or the old console's App ID and Access
+  Token, and the model you bought (2.0 or 1.0, by the hour or concurrent).
+  *Test* sends a second of silence to check the key. Keep several and pick
+  the one in use.
+- **Hold to talk.** Hold Right ⌥ (or Right ⌘, Fn) alone, speak, and let go.
+  It works in every app; a key pressed with it keeps it a shortcut.
+- **Press to talk.** Record a shortcut: press it to start and again to stop.
+  Apps that keep shortcuts from input methods, such as WezTerm, don't pass
+  it on.
+- **When you stop**, the text is inserted as recognized, or becomes the
+  composition so the current mode improves it (Enter inserts the
+  improvement, Shift+Enter what you said).
+- **Hotwords.** Your English words go to the engine, so it spells them
+  right.
+
+While you speak, what the engine hears so far shows underlined at the
+caret, with a microphone in the bar; Esc cancels, and a recording stops by
+itself after 60 seconds. macOS asks once for the microphone. Audio leaves
+your Mac only while a recording runs, and only for the engine in use.
+
 ## Development
 
 ```sh

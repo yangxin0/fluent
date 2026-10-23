@@ -26,6 +26,9 @@ struct BarContent {
     /// Mode letter (`F`/`P`/`T`), or `双` / `拼` for shuangpin / full pinyin,
     /// before the cells.
     var badge: String?
+    /// An SF Symbol in the badge instead of letters (`mic.fill` while voice
+    /// input listens).
+    var badgeSymbol: String?
     /// For terminals: the typed text with a caret, on its own line.
     var typed: TypedText?
     var cells: [Cell] = []
@@ -261,8 +264,9 @@ private final class CandidateBarView: NSView {
 
         var x = inset
         badgeFrame = nil
-        if let badge = content.badge {
-            let width = max(22 * s, ceil(Self.measure(badge, m.badgeFont)) + 10 * s)
+        if content.badge != nil || content.badgeSymbol != nil {
+            let letters = content.badge.map { ceil(Self.measure($0, m.badgeFont)) + 10 * s } ?? 0
+            let width = max(22 * s, letters)
             let frame = NSRect(x: x + 3 * s, y: top + (m.pillHeight - 20 * s) / 2, width: width, height: 20 * s)
             badgeFrame = frame
             x = frame.maxX + 4 * s
@@ -376,7 +380,18 @@ private final class CandidateBarView: NSView {
             typedString(typed).draw(with: typedFrame, options: [.usesLineFragmentOrigin])
         }
 
-        if let badgeFrame, let badge = content.badge {
+        if let badgeFrame, let symbol = content.badgeSymbol {
+            NSColor.quaternaryLabelColor.setFill()
+            NSBezierPath(roundedRect: badgeFrame, xRadius: 6 * m.scale, yRadius: 6 * m.scale).fill()
+            let configuration = NSImage.SymbolConfiguration(pointSize: 11 * m.scale, weight: .bold)
+                .applying(NSImage.SymbolConfiguration(paletteColors: [.secondaryLabelColor]))
+            if let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
+                .withSymbolConfiguration(configuration) {
+                let size = image.size
+                image.draw(in: NSRect(x: badgeFrame.midX - size.width / 2, y: badgeFrame.midY - size.height / 2,
+                                      width: size.width, height: size.height))
+            }
+        } else if let badgeFrame, let badge = content.badge {
             NSColor.quaternaryLabelColor.setFill()
             NSBezierPath(roundedRect: badgeFrame, xRadius: 6 * m.scale, yRadius: 6 * m.scale).fill()
             let text = NSAttributedString(string: badge, attributes: [

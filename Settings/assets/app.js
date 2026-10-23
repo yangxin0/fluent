@@ -107,6 +107,7 @@ function fill() {
   fillBarPreview();
   fillNoticePreviews();
   fillPrefixKeys();
+  fillVoice();
 }
 
 /** The field's value as the config wants it; null removes the key. */
@@ -548,6 +549,239 @@ document.addEventListener("keydown", (event) => {
   }
   stopRecording();
   if (!prefixList().includes(name)) save("prefixKeys", [...prefixList(), name]);
+}, true);
+
+// MARK: - Voice
+
+// Voice input (docs/config.md, `voice`): the engines, the shortcuts and
+// what the text becomes, all in the one `voice` object.
+
+let voiceSelected = 0;
+let recordingToggle = false;
+const holdKeys = ["off", "right-option", "right-command", "fn"];
+const voiceConfig = () => (isObject(config.voice) ? config.voice : {});
+const engineList = () => (Array.isArray(voiceConfig().engines) ? voiceConfig().engines.filter(isObject) : []);
+const resourceLabels = {
+  "volc.seedasr.sauc.duration": "Doubao 2.0, by the hour",
+  "volc.seedasr.sauc.concurrent": "Doubao 2.0, concurrent",
+  "volc.bigasr.sauc.duration": "Doubao 1.0, by the hour",
+  "volc.bigasr.sauc.concurrent": "Doubao 1.0, concurrent",
+};
+const textOf = (value) => (typeof value === "string" ? value.trim() : "");
+
+/** The engine in use: the one `voice.engine` names, else the first. */
+function activeEngineIndex(list) {
+  const index = list.findIndex((engine) => nameOf(engine) === textOf(voiceConfig().engine));
+  return index < 0 ? 0 : index;
+}
+
+/** Saves `voice` with changes merged in; null removes a key. */
+function saveVoice(changes) {
+  const voice = { ...voiceConfig() };
+  for (const [key, value] of Object.entries(changes)) {
+    if (value === null) delete voice[key]; else voice[key] = value;
+  }
+  return save("voice", Object.keys(voice).length ? voice : null);
+}
+
+function fillVoice() {
+  const list = engineList();
+  voiceSelected = Math.max(0, Math.min(voiceSelected, list.length - 1));
+  const active = activeEngineIndex(list);
+  $("#voiceEngines").replaceChildren(...list.map((engine, index) => {
+    const row = document.createElement("li");
+    row.dataset.index = index;
+    row.classList.toggle("on", index === voiceSelected);
+    const label = document.createElement("div");
+    label.className = "text";
+    const name = document.createElement("b");
+    name.textContent = nameOf(engine) || t("Unnamed");
+    const sub = document.createElement("span");
+    sub.className = "sub";
+    const keyed = textOf(engine.apiKey) || (textOf(engine.appId) && textOf(engine.accessToken));
+    sub.textContent = `${t(resourceLabels[textOf(engine.resourceId) || "volc.seedasr.sauc.duration"] ?? textOf(engine.resourceId))} · ${keyed ? t("Key set") : t("No key")}`;
+    label.append(name, sub);
+    row.append(label);
+    if (index === active) {
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = t("In use");
+      row.append(tag);
+    } else {
+      const use = document.createElement("button");
+      use.className = "pill";
+      use.dataset.use = index;
+      use.textContent = t("Use");
+      row.append(use);
+    }
+    return row;
+  }));
+  if (!list.length) {
+    const empty = document.createElement("li");
+    empty.className = "empty";
+    empty.textContent = t("No engine yet: add one to talk instead of typing.");
+    $("#voiceEngines").append(empty);
+  }
+  $("#voiceEngine").hidden = !list.length;
+  const engine = list[voiceSelected] ?? {};
+  for (const el of $$("#voiceEngine [data-field]")) {
+    if (el === document.activeElement) continue;
+    const value = textOf(engine[el.dataset.field]);
+    el.value = el.dataset.field === "type" ? value.toLowerCase() || "volcengine"
+      : el.dataset.field === "resourceId" ? value || "volc.seedasr.sauc.duration" : value;
+  }
+  const voice = voiceConfig();
+  markChoice($("#holdKey"), holdKeys.includes(textOf(voice.holdKey).toLowerCase()) ? textOf(voice.holdKey).toLowerCase() : "right-option");
+  markChoice($("#afterSpeaking"), textOf(voice.afterSpeaking).toLowerCase() === "improve" ? "improve" : "insert");
+  $("#voiceHotwords").checked = voice.hotwords !== false;
+  const key = textOf(voice.toggleKey);
+  $("#toggleKey").replaceChildren();
+  if (key) {
+    const chip = document.createElement("span");
+    chip.className = "combo";
+    chip.textContent = comboLabel(key);
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "×";
+    remove.title = t("Remove");
+    remove.addEventListener("click", () => saveVoice({ toggleKey: null }));
+    chip.append(remove);
+    $("#toggleKey").append(chip);
+  }
+  if (!recordingToggle) $("#recordToggle").textContent = t(key ? "Change" : "Set");
+}
+
+/** One field of the engine in the form; null removes it. */
+function editEngine(field, value) {
+  const list = engineList().map((engine) => ({ ...engine }));
+  const engine = list[voiceSelected];
+  if (!engine) return;
+  const inUse = voiceSelected === activeEngineIndex(list);
+  if (field === "name") {
+    const taken = list.some((other, index) => index !== voiceSelected && nameOf(other) === value);
+    if (!value || taken) {
+      toast(t(value ? "Another engine has that name." : "An engine needs a name."), true);
+      $("#voiceEngine [data-field=name]").value = nameOf(engine);
+      return;
+    }
+  }
+  if (value === null) delete engine[field]; else engine[field] = value;
+  if (JSON.stringify(list) === JSON.stringify(engineList())) return;
+  $("#voiceTestResult").textContent = "";
+  // Renaming the one in use renames it in `voice.engine` too.
+  saveVoice(field === "name" && inUse && "engine" in voiceConfig() ? { engines: list, engine: value } : { engines: list });
+}
+
+for (const el of $$("#voiceEngine input[data-field], #voiceEngine select[data-field]")) {
+  el.addEventListener("change", () => editEngine(el.dataset.field, el.value.trim() || null));
+}
+
+$("#voiceEngines").addEventListener("click", (event) => {
+  const use = event.target.closest("button[data-use]");
+  if (use) return saveVoice({ engine: nameOf(engineList()[Number(use.dataset.use)]) });
+  const row = event.target.closest("li[data-index]");
+  if (!row || Number(row.dataset.index) === voiceSelected) return;
+  voiceSelected = Number(row.dataset.index);
+  $("#voiceTestResult").textContent = "";
+  fillVoice();
+});
+
+$("#addEngine").addEventListener("click", () => {
+  const list = engineList().map((engine) => ({ ...engine }));
+  let n = list.length + 1;
+  while (list.some((engine) => nameOf(engine) === t("Engine {n}", { n }))) n++;
+  list.push({ name: t("Engine {n}", { n }), type: "volcengine", resourceId: "volc.seedasr.sauc.duration" });
+  voiceSelected = list.length - 1;
+  $("#voiceTestResult").textContent = "";
+  saveVoice({ engines: list });
+  $("#voiceEngine [data-field=name]").select();
+});
+
+$("#deleteEngine").addEventListener("click", async () => {
+  const list = engineList();
+  const engine = list[voiceSelected];
+  if (!engine) return;
+  const reply = await fluent("confirm", {
+    title: t("Delete {name}?", { name: nameOf(engine) || t("Unnamed") }),
+    detail: t("Its keys go with it."),
+    confirm: t("Delete"),
+    cancel: t("Cancel"),
+  });
+  if (!reply.ok) return;
+  const rest = list.filter((_, index) => index !== voiceSelected);
+  const changes = { engines: rest.length ? rest : null };
+  // Deleting the one in use puts the first one left in use.
+  if (voiceSelected === activeEngineIndex(list) && "engine" in voiceConfig()) changes.engine = rest.length ? nameOf(rest[0]) : null;
+  voiceSelected = Math.min(voiceSelected, Math.max(rest.length - 1, 0));
+  $("#voiceTestResult").textContent = "";
+  saveVoice(changes);
+});
+
+$("#showVoiceKey").addEventListener("click", () => {
+  const field = $("#voiceApiKey");
+  field.type = field.type === "password" ? "text" : "password";
+  $("#showVoiceKey").dataset.source = field.type === "password" ? "Show" : "Hide";
+  $("#showVoiceKey").textContent = t($("#showVoiceKey").dataset.source);
+});
+
+// The engine in the form, as edited: it may not be the one in use.
+$("#voiceTest").addEventListener("click", async () => {
+  const button = $("#voiceTest");
+  const result = $("#voiceTestResult");
+  button.disabled = true;
+  result.className = "result";
+  result.textContent = t("Testing…");
+  const reply = await fluent("voice.test", { engine: engineList()[voiceSelected] });
+  button.disabled = false;
+  const logid = reply.logid ? ` · logid ${reply.logid}` : "";
+  if (reply.ok) {
+    result.className = "result ok";
+    result.textContent = `✓ ${t("The engine took the key")} · ${(reply.ms / 1000).toFixed(1)} s`;
+  } else {
+    result.className = "result bad";
+    result.textContent = reply.code === "notConfigured"
+      ? t("Set an API key, or an App ID and Access Token, first.") : `⚠ ${reply.error}${logid}`;
+  }
+});
+
+$("#holdKey").addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-value]");
+  if (button && !button.classList.contains("on")) saveVoice({ holdKey: button.dataset.value });
+});
+$("#afterSpeaking").addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-value]");
+  if (button && !button.classList.contains("on")) saveVoice({ afterSpeaking: button.dataset.value });
+});
+$("#voiceHotwords").addEventListener("change", () => saveVoice({ hotwords: $("#voiceHotwords").checked }));
+
+function stopRecordingToggle() {
+  recordingToggle = false;
+  $("#recordToggle").classList.remove("on");
+  $("#toggleStatus").textContent = "";
+  fillVoice();
+}
+
+$("#recordToggle").addEventListener("click", () => {
+  if (recordingToggle) return stopRecordingToggle();
+  recordingToggle = true;
+  $("#recordToggle").classList.add("on");
+  $("#toggleStatus").textContent = t("Press a shortcut… (Esc to cancel)");
+});
+
+document.addEventListener("keydown", (event) => {
+  if (!recordingToggle || ["Control", "Alt", "Shift", "Meta"].includes(event.key)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  if (event.key === "Escape" && !(event.ctrlKey || event.altKey || event.metaKey)) return stopRecordingToggle();
+  const name = comboName(event);
+  if (!name) {
+    $("#toggleStatus").textContent = t("Use Control, Option or Command with a key.");
+    return;
+  }
+  recordingToggle = false;
+  $("#recordToggle").classList.remove("on");
+  $("#toggleStatus").textContent = "";
+  saveVoice({ toggleKey: name });
 }, true);
 
 // MARK: - Candidate bar preview

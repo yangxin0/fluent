@@ -13,6 +13,16 @@
   "toggleNotice": "pill",
   "offBadge": false,
   "badgeSize": 22,
+  "voice": {
+    "engines": [
+      {"name": "Doubao", "type": "volcengine", "apiKey": "REPLACE_ME", "resourceId": "volc.seedasr.sauc.duration"}
+    ],
+    "engine": "Doubao",
+    "holdKey": "right-command",
+    "toggleKey": "ctrl-opt-v",
+    "afterSpeaking": "improve",
+    "hotwords": false
+  },
   "terminalMode": "always",
   "terminalApps": ["com.example.terminal"],
   "terminalCellWidth": 9.7,

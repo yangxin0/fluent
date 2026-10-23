@@ -144,3 +144,29 @@ func TestCRLFFilesKeepTheirLineEnds(t *testing.T) {
 		t.Errorf("got %q", got)
 	}
 }
+
+func TestAListOfObjectsInsideAnObjectGetsLinesOfItsOwn(t *testing.T) {
+	voice := map[string]any{
+		"engines":  []any{map[string]any{"type": "volcengine", "apiKey": "k", "name": "Doubao"}},
+		"holdKey":  "right-option",
+		"hotwords": true,
+	}
+	got := edit(t, "{\n  \"a\": 1\n}\n", "voice", voice)
+	want := `{
+  "a": 1,
+  "voice": {
+    "engines": [
+      {"name": "Doubao", "type": "volcengine", "apiKey": "k"}
+    ],
+    "holdKey": "right-option",
+    "hotwords": true
+  }
+}
+`
+	if got != want {
+		t.Errorf("got\n%s", got)
+	}
+	if got := edit(t, `{"a": 1}`, "voice", voice); !strings.HasPrefix(got, `{"a": 1, "voice": {"engines": [{"name": "Doubao"`) {
+		t.Errorf("one line: %q", got)
+	}
+}
