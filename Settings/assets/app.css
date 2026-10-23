@@ -78,25 +78,26 @@ button { border: 0; background: none; cursor: default; }
 
 /* The header is the title bar, as in magpie: the window's traffic lights
    sit at its left (they centre 25.75pt from the top), the tabs in the
-   middle. It drags the window; its buttons stay clicks. */
+   middle. It drags the window; its buttons stay clicks. The same padding
+   on both sides keeps the tabs centred and clear of the traffic lights. */
 header.top {
-  flex: none; position: relative; display: flex; align-items: center;
-  height: 50px; padding: 2px 14px 0 96px;
+  flex: none; position: relative; display: flex; align-items: center; justify-content: center;
+  height: 50px; padding: 2px 86px 0;
   border-bottom: .5px solid var(--line);
   --wails-draggable: drag;
 }
 header.top button { --wails-draggable: no-drag; }
 
 .seg {
-  position: absolute; left: 50%; top: calc(50% + 1px); transform: translate(-50%, -50%);
   display: flex; justify-content: center; gap: 2px; padding: 2px;
-  /* Its own width, not the half of the header left of 50%, or
-     Chinese labels wrap a character per line. */
+  /* Its own width, or Chinese labels wrap a character per line. */
   width: max-content;
   border-radius: 8px; background: var(--seg-track);
 }
 .seg button {
-  height: 24px; padding: 0 14px; border-radius: 6px; white-space: nowrap;
+  /* Narrower as the window is, so the eight tabs fit down to its 640pt
+     minimum: 14pt each side from a 760pt window, 6pt at the least. */
+  height: 24px; padding: 0 clamp(6px, calc((100vw - 534px) / 16), 14px); border-radius: 6px; white-space: nowrap;
   font-size: 12.5px; color: var(--ctl-fg);
   transition: color .15s var(--ease), background .15s var(--ease);
 }
