@@ -190,13 +190,14 @@
     <h2 data-t>Shortcuts</h2>
     <div class="card form">
       <div class="row top"><span class="label" data-t>Hold to talk</span>
-        <span class="stack"><div class="choice" id="holdKey">
-            <button data-value="off" data-t>Off</button>
-            <button data-value="right-option" data-t>Right ⌥</button>
-            <button data-value="right-command" data-t>Right ⌘</button>
+        <span class="stack"><span class="field"><span class="choice" id="holdKey">
             <button data-value="fn">Fn</button>
-          </div>
-          <span class="hint" data-t>Hold the key alone, speak, and let go. It works in every app.</span>
+            <button data-value="left-command" data-t>Left ⌘</button>
+            <button data-value="left-option" data-t>Left ⌥</button>
+            <button data-value="off" data-t>Off</button>
+          </span><span class="combos" id="holdCustom"></span><button type="button" class="pill" id="recordHold" data-t>Set</button>
+            <span class="hint" id="holdStatus"></span></span>
+          <span class="hint" data-t>Hold it, speak, and let go. A key held alone works in every app; a shortcut only where the app passes shortcuts to input methods.</span>
           <span class="field warn" id="fnWarning" hidden><span class="hint" id="fnWarningText"></span>
             <button type="button" class="pill" data-open="inputSources" data-t>Open Keyboard Settings</button></span></span></div>
       <div class="row top"><span class="label" data-t>Press to talk</span>

@@ -30,7 +30,7 @@ final class VoiceSettingsTests: XCTestCase {
         XCTAssertEqual(voice.activeEngine?.resourceId, "volc.bigasr.sauc.concurrent")
         XCTAssertEqual(voice.engines[0].resourceId, VoiceEngine.defaultResourceId)
         XCTAssertTrue(voice.engines[0].isConfigured)  // the old console's pair
-        XCTAssertEqual(voice.holdKey, .rightCommand)
+        XCTAssertEqual(voice.holdKey, .modifier(.rightCommand))
         XCTAssertEqual(voice.toggleKey, "ctrl-opt-v")
         XCTAssertEqual(voice.afterSpeaking, .improve)
         XCTAssertFalse(voice.hotwords)
@@ -50,6 +50,21 @@ final class VoiceSettingsTests: XCTestCase {
         XCTAssertNil(voice.toggleKey)  // no Control, Option or Command
         XCTAssertEqual(voice.afterSpeaking, .insert)
         XCTAssertTrue(voice.hotwords)
+    }
+
+    func testHoldKeys() throws {
+        typealias Hold = VoiceSettings.HoldKey
+        XCTAssertEqual(Hold(name: "Fn"), .fn)
+        XCTAssertEqual(Hold(name: "off"), .off)
+        XCTAssertEqual(Hold(name: "left-command"), .modifier(.leftCommand))
+        XCTAssertEqual(Hold(name: "right-option"), .modifier(.rightOption))  // a preset before
+        XCTAssertEqual(Hold(name: "Left-Shift"), .modifier(.leftShift))
+        XCTAssertEqual(Hold(name: "control-space"), .shortcut("ctrl-space"))
+        XCTAssertEqual(Hold(name: "ctrl-opt-v")?.name, "ctrl-opt-v")
+        XCTAssertNil(Hold(name: "shift"))  // which side?
+        XCTAssertNil(Hold(name: "v"))  // a key alone is typing
+        XCTAssertEqual(try decode(#"{"holdKey":"left-option"}"#).holdKey, .modifier(.leftOption))
+        XCTAssertEqual(try decode(#"{"holdKey":"nonsense"}"#).holdKey, .fn)
     }
 
     func testAVoiceThatIsNotAnObject() throws {

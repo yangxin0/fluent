@@ -561,7 +561,28 @@ let recordingToggle = false;
 /** What macOS does with 🌐 (Fn) pressed alone, from the status poll. */
 let fnKeyAction = 0;
 const fnActions = { 1: "switches the input source", 2: "shows Emoji & Symbols", 3: "starts Dictation", "-1": "may act on it" };
-const holdKeys = ["off", "right-option", "right-command", "fn"];
+let recordingHold = false;
+/** The side-specific modifier pressed alone so far while recording a hold key. */
+let holdModifier = null;
+const holdPresets = ["fn", "left-command", "left-option", "off"];
+const modifierSides = {
+  ControlLeft: "left-control", ControlRight: "right-control", AltLeft: "left-option", AltRight: "right-option",
+  MetaLeft: "left-command", MetaRight: "right-command", ShiftLeft: "left-shift", ShiftRight: "right-shift",
+};
+const modifierLabels = {
+  "left-control": "Left ⌃", "right-control": "Right ⌃", "left-option": "Left ⌥", "right-option": "Right ⌥",
+  "left-command": "Left ⌘", "right-command": "Right ⌘", "left-shift": "Left ⇧", "right-shift": "Right ⇧",
+};
+
+/** The hold key as the input method reads it: a preset, a side's
+ *  modifier, or a shortcut (ctrl-space); anything else is Fn. */
+function holdKeyOf(voice) {
+  const name = textOf(voice.holdKey).toLowerCase();
+  if (holdPresets.includes(name) || name in modifierLabels) return name;
+  return /^((ctrl|opt|shift|cmd)-)+./.test(name) && /(^|-)(ctrl|opt|cmd)-/.test(name) ? name : "fn";
+}
+
+const holdLabel = (name) => (name in modifierLabels ? t(modifierLabels[name]) : comboLabel(name));
 const voiceConfig = () => (isObject(config.voice) ? config.voice : {});
 const engineList = () => (Array.isArray(voiceConfig().engines) ? voiceConfig().engines.filter(isObject) : []);
 const resourceLabels = {
@@ -634,8 +655,23 @@ function fillVoice() {
       : el.dataset.field === "resourceId" ? value || "volc.seedasr.sauc.duration" : value;
   }
   const voice = voiceConfig();
-  const holdKey = holdKeys.includes(textOf(voice.holdKey).toLowerCase()) ? textOf(voice.holdKey).toLowerCase() : "fn";
+  const holdKey = holdKeyOf(voice);
   markChoice($("#holdKey"), holdKey);
+  // A key recorded with Set, not one of the presets: a chip, × goes back to Fn.
+  $("#holdCustom").replaceChildren();
+  if (!holdPresets.includes(holdKey)) {
+    const chip = document.createElement("span");
+    chip.className = "combo on";
+    chip.textContent = holdLabel(holdKey);
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "×";
+    remove.title = t("Remove");
+    remove.addEventListener("click", () => saveVoice({ holdKey: null }));
+    chip.append(remove);
+    $("#holdCustom").append(chip);
+  }
+  if (!recordingHold) $("#recordHold").textContent = t("Set");
   // Fn is macOS's 🌐 key too: it acts on it when you let go.
   $("#fnWarning").hidden = holdKey !== "fn" || fnKeyAction === 0;
   $("#fnWarningText").textContent = t("When you let go of Fn, macOS also {action}: set Keyboard ▸ Press 🌐 key to ▸ Do Nothing, or pick another key.",
@@ -761,6 +797,55 @@ $("#afterSpeaking").addEventListener("click", (event) => {
   if (button && !button.classList.contains("on")) saveVoice({ afterSpeaking: button.dataset.value });
 });
 $("#voiceHotwords").addEventListener("change", () => saveVoice({ hotwords: $("#voiceHotwords").checked }));
+
+function stopRecordingHold() {
+  recordingHold = false;
+  holdModifier = null;
+  $("#recordHold").classList.remove("on");
+  $("#holdStatus").textContent = "";
+  fillVoice();
+}
+
+$("#recordHold").addEventListener("click", () => {
+  if (recordingHold) return stopRecordingHold();
+  recordingHold = true;
+  holdModifier = null;
+  $("#recordHold").classList.add("on");
+  $("#holdStatus").textContent = t("Press a key to hold, alone or with a key… (Esc to cancel)");
+});
+
+// A modifier counts once it is let go with no key pressed in between
+// (Left ⌘ alone); a key with Control, Option or Command makes a shortcut.
+document.addEventListener("keydown", (event) => {
+  if (!recordingHold) return;
+  event.preventDefault();
+  event.stopPropagation();
+  if (event.code in modifierSides) {
+    holdModifier = modifierSides[event.code];
+    return;
+  }
+  holdModifier = null;
+  if (event.key === "Escape" && !(event.ctrlKey || event.altKey || event.metaKey)) return stopRecordingHold();
+  const name = comboName(event);
+  if (!name) {
+    $("#holdStatus").textContent = t("Hold a modifier alone, or use Control, Option or Command with a key.");
+    return;
+  }
+  recordingHold = false;
+  saveVoice({ holdKey: name });
+  stopRecordingHold();
+}, true);
+
+document.addEventListener("keyup", (event) => {
+  if (!recordingHold || !(event.code in modifierSides)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  if (holdModifier !== modifierSides[event.code]) return;
+  const name = holdModifier;
+  recordingHold = false;
+  saveVoice({ holdKey: name });
+  stopRecordingHold();
+}, true);
 
 function stopRecordingToggle() {
   recordingToggle = false;

@@ -101,7 +101,7 @@ its default, and a `voice` that isn't an object as `{}`:
 |---|---|---|---|
 | `engines` | array of objects | `[]` | Saved speech engines (below) |
 | `engine` | string | the first | The `name` of the engine in use |
-| `holdKey` | string | `"fn"` | Held alone to talk: `"off"`, `"fn"`, `"right-option"` or `"right-command"` |
+| `holdKey` | string | `"fn"` | Held to talk: `"off"`, `"fn"`, one side's modifier alone (`"left-command"`, `"right-option"`, `"left-control"`, `"right-shift"`, …), or a shortcut named as in `prefixKeys` (`"ctrl-space"`) |
 | `toggleKey` | string | none | A shortcut, named as in `prefixKeys`, pressed to start and again to stop |
 | `afterSpeaking` | string | `"insert"` | `"insert"` the text as recognized, or `"improve"` it: it becomes the composition, as if typed |
 | `hotwords` | boolean | `true` | Send your English words (below) to the engine as hotwords, at most 60 |
@@ -120,8 +120,12 @@ that isn't an object doesn't count:
 Values are trimmed. An engine is set up once its type is known and it has
 an `apiKey`, or an `appId` and `accessToken`; until the engine in use is,
 neither shortcut does anything, and both act only while Fluent is on and
-selected. Holding the hold key alone for 0.3 s starts a recording, and a
-key pressed with it makes it a shortcut instead. The input method streams
+selected. A modifier held alone for 0.3 s starts a recording and letting go
+stops it; a held shortcut starts one at once and stops when its key (or its
+modifiers) is let go. A key pressed with the hold key before the recording
+starts makes it a shortcut instead; one pressed during a recording cancels
+it and goes to the app; and letting go after any key went to the app,
+even one the app kept to itself, discards the recording. The input method streams
 the microphone (it asks for the permission on first use) to
 `wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async` in 200 ms
 packets of 16 kHz, 16-bit mono PCM, uncompressed, with the two-pass mode,

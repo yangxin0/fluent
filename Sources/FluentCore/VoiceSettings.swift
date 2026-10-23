@@ -62,12 +62,47 @@ public struct VoiceEngine: Decodable, Equatable {
 
 /// Voice input (`voice`): the engines, and how a recording starts and ends.
 public struct VoiceSettings: Decodable, Equatable {
-    /// A modifier held alone to talk.
-    public enum HoldKey: String, CaseIterable {
+    /// What is held to talk: Fn or one side's modifier alone, or a
+    /// shortcut, from its press until its key is let go.
+    public enum HoldKey: Equatable {
         case off
-        case rightOption = "right-option"
-        case rightCommand = "right-command"
         case fn
+        case modifier(Modifier)
+        case shortcut(String)
+
+        public enum Modifier: String, CaseIterable {
+            case leftControl = "left-control", rightControl = "right-control"
+            case leftOption = "left-option", rightOption = "right-option"
+            case leftCommand = "left-command", rightCommand = "right-command"
+            case leftShift = "left-shift", rightShift = "right-shift"
+        }
+
+        /// `off`, `fn`, a modifier such as `left-command`, or a `KeyCombo`
+        /// name such as `ctrl-space`; nil for anything else.
+        public init?(name: String) {
+            let name = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            switch name {
+            case "off": self = .off
+            case "fn": self = .fn
+            default:
+                if let modifier = Modifier(rawValue: name) {
+                    self = .modifier(modifier)
+                } else if let combo = KeyCombo.normalized(name) {
+                    self = .shortcut(combo)
+                } else {
+                    return nil
+                }
+            }
+        }
+
+        public var name: String {
+            switch self {
+            case .off: "off"
+            case .fn: "fn"
+            case .modifier(let modifier): modifier.rawValue
+            case .shortcut(let combo): combo
+            }
+        }
     }
 
     /// What the recognized text becomes.
@@ -81,7 +116,7 @@ public struct VoiceSettings: Decodable, Equatable {
     public var engines: [VoiceEngine] = []
     /// The `name` of the engine in use; else the first.
     public var engine: String?
-    public var holdKey: HoldKey = .fn
+    public var holdKey = HoldKey.fn
     /// A `KeyCombo` name that starts and stops a recording; none by default.
     public var toggleKey: String?
     public var afterSpeaking: AfterSpeaking = .insert
@@ -101,7 +136,7 @@ public struct VoiceSettings: Decodable, Equatable {
         }
         engines = optional([LenientVoiceEngine].self, .engines)?.compactMap(\.value) ?? []
         engine = optional(String.self, .engine)
-        holdKey = optional(String.self, .holdKey).flatMap { HoldKey(rawValue: $0.lowercased()) } ?? .fn
+        holdKey = optional(String.self, .holdKey).flatMap(HoldKey.init(name:)) ?? .fn
         toggleKey = optional(String.self, .toggleKey).flatMap(KeyCombo.normalized)
         afterSpeaking = optional(String.self, .afterSpeaking)
             .flatMap { AfterSpeaking(rawValue: $0.lowercased()) } ?? .insert

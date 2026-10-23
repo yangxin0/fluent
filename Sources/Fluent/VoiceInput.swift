@@ -151,33 +151,48 @@ final class VoiceInput {
     }
 }
 
-/// Hold to talk: a modifier held alone for a moment starts a recording, and
-/// letting go of it stops one. A key pressed with it (⌥E for é, ⌥B in a
-/// shell) or another modifier means it was a shortcut, not talking. Fed
-/// the global flagsChanged events ShiftTapMonitor sees, so it works in apps
-/// that hand an input method no modifiers.
+/// Hold to talk: Fn or one side's modifier held alone for a moment starts
+/// a recording, and letting go of it stops one; a shortcut held (`ctrl-space`)
+/// starts one at once, and letting go of its key stops it. Modifiers come
+/// from the global flagsChanged events ShiftTapMonitor sees, so they work
+/// in apps that hand an input method no modifiers.
+///
+/// It must not get in the way of shortcuts made with the same key (⌘C with
+/// Left ⌘): a key pressed before the recording starts makes it a shortcut,
+/// one pressed during a recording cancels it and goes to the app (see
+/// InputController), and letting go after any key went to the app, even
+/// one Fluent never saw, discards what was recorded.
 final class VoiceHoldKey {
     static let shared = VoiceHoldKey()
-    /// How long the key has to be held alone before recording starts.
+    /// How long a modifier has to be held alone before recording starts.
     static let delay: TimeInterval = 0.3
 
-    /// The key to watch, read on each event.
+    /// The key to watch, read on each event: `.off` while voice can't start.
     var key: () -> VoiceSettings.HoldKey = { .off }
     var onStart: () -> Void = {}
     var onStop: () -> Void = {}
+    var onCancel: () -> Void = {}
 
     private var pending: DispatchWorkItem?
     /// A recording this key started is running.
-    private var holding = false
+    private(set) var isHolding = false
+    /// Key presses so far when it started, for a modifier hold.
+    private var keysAtStart: UInt32?
+    /// The held shortcut's key and modifiers, for a shortcut hold.
+    private var shortcut: (keyCode: UInt16, flags: NSEvent.ModifierFlags)?
+    private var poll: Timer?
 
     func flagsChanged(_ event: NSEvent) {
-        let target = key()
-        guard target != .off, let code = Self.keyCode(target) else {
+        let modifiers = event.modifierFlags.intersection([.command, .control, .option, .shift, .function])
+        if let shortcut, isHolding {
+            // Letting go of the shortcut's modifiers lets go of it.
+            if !modifiers.isSuperset(of: shortcut.flags) { release() }
+            return
+        }
+        guard let (code, flag) = Self.modifierKey(key()) else {
             interrupt()
             return
         }
-        let flag = Self.flag(target)
-        let modifiers = event.modifierFlags.intersection([.command, .control, .option, .shift, .function])
         guard event.keyCode == code else {
             interrupt()  // another modifier: a shortcut
             return
@@ -190,7 +205,8 @@ final class VoiceHoldKey {
                 self.pending = nil
                 // A key pressed with it, even one the app kept to itself.
                 guard Self.keyDownCount() == keysAtPress else { return }
-                self.holding = true
+                self.isHolding = true
+                self.keysAtStart = keysAtPress
                 self.onStart()
             }
             pending?.cancel()
@@ -198,11 +214,31 @@ final class VoiceHoldKey {
             DispatchQueue.main.asyncAfter(deadline: .now() + Self.delay, execute: item)
         } else {
             interrupt()
-            if holding {
-                holding = false
-                onStop()
-            }
+            release()
         }
+    }
+
+    /// The held shortcut was pressed (seen through IMK): recording starts
+    /// now and stops when its key comes up.
+    func shortcutPressed(_ event: NSEvent) {
+        guard !isHolding else { return }
+        isHolding = true
+        keysAtStart = nil
+        let flags = event.modifierFlags.intersection([.command, .control, .option, .shift])
+        shortcut = (event.keyCode, flags)
+        onStart()
+        // Watch the key itself; if its state can't be read (it reads up
+        // while plainly down), letting go of the modifiers ends it instead.
+        let code = CGKeyCode(event.keyCode)
+        guard CGEventSource.keyState(.combinedSessionState, key: code) else { return }
+        poll = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+            if !CGEventSource.keyState(.combinedSessionState, key: code) { self?.release() }
+        }
+    }
+
+    /// Whether `event` is the held shortcut repeating.
+    func isHeldShortcut(_ event: NSEvent) -> Bool {
+        isHolding && shortcut?.keyCode == event.keyCode
     }
 
     /// A key went to the app while the hold key was down: not talking.
@@ -211,20 +247,47 @@ final class VoiceHoldKey {
         pending = nil
     }
 
-    static func keyCode(_ key: VoiceSettings.HoldKey) -> UInt16? {
-        switch key {
-        case .rightOption: 61
-        case .rightCommand: 54
-        case .fn: 63
-        case .off: nil
+    /// The recording this key started was cancelled: let go of it quietly.
+    func abandon() {
+        interrupt()
+        reset()
+    }
+
+    private func release() {
+        guard isHolding else { return }
+        let keysAtStart = self.keysAtStart
+        reset()
+        if let keysAtStart, Self.keyDownCount() != keysAtStart {
+            onCancel()  // a shortcut went to the app meanwhile
+        } else {
+            onStop()
         }
     }
 
-    static func flag(_ key: VoiceSettings.HoldKey) -> NSEvent.ModifierFlags {
+    private func reset() {
+        isHolding = false
+        keysAtStart = nil
+        shortcut = nil
+        poll?.invalidate()
+        poll = nil
+    }
+
+    /// The key code and flag of a hold key that is a modifier alone.
+    static func modifierKey(_ key: VoiceSettings.HoldKey) -> (UInt16, NSEvent.ModifierFlags)? {
         switch key {
-        case .rightOption: .option
-        case .rightCommand: .command
-        case .fn, .off: .function
+        case .fn: (63, .function)
+        case .modifier(let modifier):
+            switch modifier {
+            case .leftControl: (59, .control)
+            case .rightControl: (62, .control)
+            case .leftOption: (58, .option)
+            case .rightOption: (61, .option)
+            case .leftCommand: (55, .command)
+            case .rightCommand: (54, .command)
+            case .leftShift: (56, .shift)
+            case .rightShift: (60, .shift)
+            }
+        case .off, .shortcut: nil
         }
     }
 

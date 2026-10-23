@@ -227,16 +227,32 @@ class InputController: IMKInputController {
 
     private func handleKeyDown(_ event: NSEvent) -> Bool {
         // While voice input listens, Esc cancels, the toggle key stops, and
-        // other keys wait: the composition is what is being heard.
+        // other keys wait: the composition is what is being heard. In a
+        // recording the hold key started, another key means a shortcut made
+        // with that key (⌘C with Left ⌘): the recording goes, the key goes on.
         if VoiceInput.shared.isOwned(by: self) {
-            if event.keyCode == Key.escape {
-                VoiceInput.shared.cancel()
-            } else if isVoiceToggleKey(event) {
-                VoiceInput.shared.stop()
+            if VoiceHoldKey.shared.isHeldShortcut(event) {
+                return true  // the held shortcut repeating
             }
-            return true
+            if VoiceHoldKey.shared.isHolding {
+                VoiceHoldKey.shared.abandon()
+                VoiceInput.shared.cancel()
+                if event.keyCode == Key.escape { return true }
+            } else {
+                if event.keyCode == Key.escape {
+                    VoiceInput.shared.cancel()
+                } else if isVoiceToggleKey(event) {
+                    VoiceInput.shared.stop()
+                }
+                return true
+            }
         }
         guard Shared.enabled else { return false }
+        if case .shortcut(let name) = voiceSettings().holdKey, Self.comboName(of: event) == name,
+           voiceEngine() != nil {
+            VoiceHoldKey.shared.shortcutPressed(event)
+            return true
+        }
         if isVoiceToggleKey(event), voiceEngine() != nil {
             startVoice()
             return true
@@ -1059,6 +1075,11 @@ class InputController: IMKInputController {
         }
         VoiceHoldKey.shared.onStart = { ShiftTapMonitor.shared.currentController?.startVoice() }
         VoiceHoldKey.shared.onStop = { VoiceInput.shared.stop() }
+        VoiceHoldKey.shared.onCancel = { VoiceInput.shared.cancel() }
+    }
+
+    private func voiceSettings() -> VoiceSettings {
+        Shared.configStore.current()?.voice ?? VoiceSettings()
     }
 
     /// The engine a recording would use, while voice input can start here:
