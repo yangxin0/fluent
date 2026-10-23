@@ -164,6 +164,7 @@ func (h *host) status() object {
 		"learned":         learnedCount(h.home),
 		"wordsStamp":      englishWordsStamp(h.home),
 		"inputMonitoring": inputMonitoring(h.home),
+		"fnKeyAction":     fnKeyAction(),
 		"configStamp":     h.config.stamp(),
 		"configPath":      "~" + strings.TrimPrefix(h.config.path, h.home),
 		"version":         h.version,

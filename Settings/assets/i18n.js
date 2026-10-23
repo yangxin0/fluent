@@ -180,6 +180,13 @@ const I18N = {
     "Improve: what you said becomes the composition and the current mode improves it, like typed text. Enter inserts the improvement, Shift+Enter what you said.":
       "改写：说的话成为输入内容，由当前模式像打字一样改写。Enter 输入改写结果，Shift+Enter 输入原话。",
     "Hotwords": "热词",
+    "When you let go of Fn, macOS also {action}: set Keyboard ▸ Press 🌐 key to ▸ Do Nothing, or pick another key.":
+      "松开 Fn 时，macOS 还会{action}：把 键盘 ▸ 按下 🌐 键时 设为“不执行任何操作”，或换一个键。",
+    "switches the input source": "切换输入法",
+    "shows Emoji & Symbols": "显示表情与符号",
+    "starts Dictation": "开始听写",
+    "may act on it": "可能执行它的操作",
+    "Open Keyboard Settings": "打开键盘设置",
     "Send your English words (English ▸ Your words), so the engine spells them right.":
       "把你的英文单词（英文 ▸ 你的单词）作为热词发送，让引擎拼对它们。",
     "Key set": "已设密钥",

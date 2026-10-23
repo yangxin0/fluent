@@ -10,7 +10,7 @@ final class VoiceSettingsTests: XCTestCase {
     func testDefaults() throws {
         let config = try JSONDecoder().decode(AppConfig.self, from: Data(#"{"baseURL":"u","apiKey":"k","model":"m"}"#.utf8))
         XCTAssertEqual(config.voice, VoiceSettings())
-        XCTAssertEqual(config.voice.holdKey, .rightOption)
+        XCTAssertEqual(config.voice.holdKey, .fn)
         XCTAssertEqual(config.voice.afterSpeaking, .insert)
         XCTAssertTrue(config.voice.hotwords)
         XCTAssertNil(config.voice.toggleKey)
@@ -46,7 +46,7 @@ final class VoiceSettingsTests: XCTestCase {
         XCTAssertEqual(voice.engines.count, 1)
         XCTAssertNil(voice.engines[0].kind)  // a type this version doesn't know
         XCTAssertFalse(voice.engines[0].isConfigured)
-        XCTAssertEqual(voice.holdKey, .rightOption)
+        XCTAssertEqual(voice.holdKey, .fn)
         XCTAssertNil(voice.toggleKey)  // no Control, Option or Command
         XCTAssertEqual(voice.afterSpeaking, .insert)
         XCTAssertTrue(voice.hotwords)

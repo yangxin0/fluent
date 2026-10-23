@@ -59,6 +59,19 @@ static int darkMode(void) {
 	return dark;
 }
 
+// What macOS does when the 🌐 (Fn) key is pressed alone: System Settings ▸
+// Keyboard ▸ "Press 🌐 key to": 0 nothing, 1 change the input source,
+// 2 show Emoji & Symbols, 3 start Dictation; -1 when never set.
+static int fnKeyAction(void) {
+	CFStringRef app = CFSTR("com.apple.HIToolbox");
+	CFPreferencesAppSynchronize(app);
+	CFPropertyListRef value = CFPreferencesCopyAppValue(CFSTR("AppleFnUsageType"), app);
+	int action = -1;
+	if (value != NULL && CFGetTypeID(value) == CFNumberGetTypeID()) CFNumberGetValue((CFNumberRef)value, kCFNumberIntType, &action);
+	if (value != NULL) CFRelease(value);
+	return action;
+}
+
 static void postDistributed(const char *name) {
 	CFStringRef n = CFStringCreateWithCString(NULL, name, kCFStringEncodingUTF8);
 	CFNotificationCenterPostNotification(CFNotificationCenterGetDistributedCenter(), n, NULL, NULL, true);
@@ -106,6 +119,10 @@ func preferredLanguage() string {
 }
 
 func darkMode() bool { return C.darkMode() != 0 }
+
+// fnKeyAction is what macOS does with 🌐 (Fn) alone, which a hold-to-talk
+// Fn shares: 0 nothing, 1 input source, 2 emoji, 3 dictation, -1 unset.
+func fnKeyAction() int { return int(C.fnKeyAction()) }
 
 func postDistributed(name string) {
 	n := C.CString(name)

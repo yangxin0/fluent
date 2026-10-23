@@ -101,7 +101,7 @@ its default, and a `voice` that isn't an object as `{}`:
 |---|---|---|---|
 | `engines` | array of objects | `[]` | Saved speech engines (below) |
 | `engine` | string | the first | The `name` of the engine in use |
-| `holdKey` | string | `"right-option"` | Held alone to talk: `"off"`, `"right-option"`, `"right-command"` or `"fn"` |
+| `holdKey` | string | `"fn"` | Held alone to talk: `"off"`, `"fn"`, `"right-option"` or `"right-command"` |
 | `toggleKey` | string | none | A shortcut, named as in `prefixKeys`, pressed to start and again to stop |
 | `afterSpeaking` | string | `"insert"` | `"insert"` the text as recognized, or `"improve"` it: it becomes the composition, as if typed |
 | `hotwords` | boolean | `true` | Send your English words (below) to the engine as hotwords, at most 60 |

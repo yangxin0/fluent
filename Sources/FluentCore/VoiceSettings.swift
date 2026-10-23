@@ -81,7 +81,7 @@ public struct VoiceSettings: Decodable, Equatable {
     public var engines: [VoiceEngine] = []
     /// The `name` of the engine in use; else the first.
     public var engine: String?
-    public var holdKey: HoldKey = .rightOption
+    public var holdKey: HoldKey = .fn
     /// A `KeyCombo` name that starts and stops a recording; none by default.
     public var toggleKey: String?
     public var afterSpeaking: AfterSpeaking = .insert
@@ -101,7 +101,7 @@ public struct VoiceSettings: Decodable, Equatable {
         }
         engines = optional([LenientVoiceEngine].self, .engines)?.compactMap(\.value) ?? []
         engine = optional(String.self, .engine)
-        holdKey = optional(String.self, .holdKey).flatMap { HoldKey(rawValue: $0.lowercased()) } ?? .rightOption
+        holdKey = optional(String.self, .holdKey).flatMap { HoldKey(rawValue: $0.lowercased()) } ?? .fn
         toggleKey = optional(String.self, .toggleKey).flatMap(KeyCombo.normalized)
         afterSpeaking = optional(String.self, .afterSpeaking)
             .flatMap { AfterSpeaking(rawValue: $0.lowercased()) } ?? .insert

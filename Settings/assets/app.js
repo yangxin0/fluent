@@ -558,6 +558,9 @@ document.addEventListener("keydown", (event) => {
 
 let voiceSelected = 0;
 let recordingToggle = false;
+/** What macOS does with 🌐 (Fn) pressed alone, from the status poll. */
+let fnKeyAction = 0;
+const fnActions = { 1: "switches the input source", 2: "shows Emoji & Symbols", 3: "starts Dictation", "-1": "may act on it" };
 const holdKeys = ["off", "right-option", "right-command", "fn"];
 const voiceConfig = () => (isObject(config.voice) ? config.voice : {});
 const engineList = () => (Array.isArray(voiceConfig().engines) ? voiceConfig().engines.filter(isObject) : []);
@@ -631,7 +634,12 @@ function fillVoice() {
       : el.dataset.field === "resourceId" ? value || "volc.seedasr.sauc.duration" : value;
   }
   const voice = voiceConfig();
-  markChoice($("#holdKey"), holdKeys.includes(textOf(voice.holdKey).toLowerCase()) ? textOf(voice.holdKey).toLowerCase() : "right-option");
+  const holdKey = holdKeys.includes(textOf(voice.holdKey).toLowerCase()) ? textOf(voice.holdKey).toLowerCase() : "fn";
+  markChoice($("#holdKey"), holdKey);
+  // Fn is macOS's 🌐 key too: it acts on it when you let go.
+  $("#fnWarning").hidden = holdKey !== "fn" || fnKeyAction === 0;
+  $("#fnWarningText").textContent = t("When you let go of Fn, macOS also {action}: set Keyboard ▸ Press 🌐 key to ▸ Do Nothing, or pick another key.",
+    { action: t(fnActions[fnKeyAction] ?? fnActions["-1"]) });
   markChoice($("#afterSpeaking"), textOf(voice.afterSpeaking).toLowerCase() === "improve" ? "improve" : "insert");
   $("#voiceHotwords").checked = voice.hotwords !== false;
   const key = textOf(voice.toggleKey);
@@ -927,6 +935,10 @@ async function refreshStatus(force = false) {
   const sub = $("#configured-sub");
   sub.textContent = problem ? t("Config error: {problem}", { problem }) : t(sub.dataset.source);
   $("#learned").textContent = t("{n} words", { n: status.learned });
+  if (status.fnKeyAction !== fnKeyAction) {
+    fnKeyAction = status.fnKeyAction;
+    fillVoice();
+  }
   if (status.inputMonitoring !== inputMonitoring) {
     inputMonitoring = status.inputMonitoring;
     fillPrefixAccess();

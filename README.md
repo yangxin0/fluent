@@ -289,8 +289,10 @@ types the text. Set it up in Settings ▸ Voice:
   Token, and the model you bought (2.0 or 1.0, by the hour or concurrent).
   *Test* sends a second of silence to check the key. Keep several and pick
   the one in use.
-- **Hold to talk.** Hold Right ⌥ (or Right ⌘, Fn) alone, speak, and let go.
-  It works in every app; a key pressed with it keeps it a shortcut.
+- **Hold to talk.** Hold Fn (or Right ⌥, Right ⌘) alone, speak, and let go.
+  It works in every app; a key pressed with it keeps it a shortcut. If
+  System Settings ▸ Keyboard has *Press 🌐 key to* do something, macOS does
+  that too when you let go of Fn: set it to *Do Nothing*, or pick another key.
 - **Press to talk.** Record a shortcut: press it to start and again to stop.
   Apps that keep shortcuts from input methods, such as WezTerm, don't pass
   it on.
